@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMotor : MonoBehaviour
@@ -28,6 +30,11 @@ public class PlayerMotor : MonoBehaviour
             return;
         }
 
+        if (player.Stats == null)
+        {
+            return;
+        }
+
         if (input.sqrMagnitude > 1f)
         {
             input.Normalize();
@@ -51,7 +58,7 @@ public class PlayerMotor : MonoBehaviour
         }
 
         Vector3 targetVelocity = direction * speed * controlMultiplier;
-        float step = player.MoveAcceleration * Time.deltaTime;
+        float step = player.Stats.MoveAcceleration * Time.deltaTime;
 
         currentHorizontalVelocity = Vector3.MoveTowards(currentHorizontalVelocity, targetVelocity, step);
         currentHorizontalVelocity.y = 0f;
@@ -67,10 +74,15 @@ public class PlayerMotor : MonoBehaviour
             return;
         }
 
+        if (player.Stats == null)
+        {
+            return;
+        }
+
         currentHorizontalVelocity = Vector3.MoveTowards(
             currentHorizontalVelocity,
             Vector3.zero,
-            player.MoveDeceleration * Time.deltaTime);
+            player.Stats.MoveDeceleration * Time.deltaTime);
         currentHorizontalVelocity.y = 0f;
 
         if (currentHorizontalVelocity.sqrMagnitude <= StopVelocityThreshold)
@@ -117,7 +129,7 @@ public class PlayerMotor : MonoBehaviour
         {
             if (!_hasLoggedMissingPlayer)
             {
-                Debug.LogError("PlayerMotor 缺少 PlayerController，请确认脚本挂在 Player 根节点上。", this);
+                Debug.LogError("PlayerMotor 缺少 PlayerController，请确认脚本挂在 Player 根节点上", this);
                 _hasLoggedMissingPlayer = true;
             }
 

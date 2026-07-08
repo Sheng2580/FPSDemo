@@ -1,22 +1,10 @@
 using UnityEngine;
+using PlayerData;
 
 public class PlayerController : CharacterBase<PlayerModel>
 {
     [SerializeField] private PlayerModel playerModel;
-
-    [Header("基础移动参数")]
-    [SerializeField] private float walkSpeed = 4.5f;
-    [SerializeField] private float runSpeed = 6.5f;
-    [SerializeField] private float moveInputDeadZone = 0.05f;
-    [SerializeField] private float moveAcceleration = 18f;
-    [SerializeField] private float moveDeceleration = 24f;
-
-    [Header("跳跃参数")]
-    [SerializeField] private float jumpHeight = 1.2f;
-    [SerializeField] private float jumpBufferTime = 0.15f;
-    [SerializeField] private float coyoteTime = 0.12f;
-    [SerializeField] private float airMoveControl = 0.65f;
-    [SerializeField] private float jumpEndVerticalVelocity = 0f;
+    [SerializeField] private PlayerDefaultConfigAsset defaultConfigAsset;
 
     private PlayerStateType _currentStateType;
     private PlayerStateType _previousStateType;
@@ -28,16 +16,7 @@ public class PlayerController : CharacterBase<PlayerModel>
     public PlayerStateType PreviousStateType => _previousStateType;
     public PlayerCameraController CameraController { get; private set; }
     public PlayerMotor Motor { get; private set; }
-    public float WalkSpeed => walkSpeed;
-    public float RunSpeed => runSpeed;
-    public float MoveInputDeadZone => moveInputDeadZone;
-    public float MoveAcceleration => moveAcceleration;
-    public float MoveDeceleration => moveDeceleration;
-    public float JumpHeight => jumpHeight;
-    public float JumpBufferTime => jumpBufferTime;
-    public float CoyoteTime => coyoteTime;
-    public float AirMoveControl => airMoveControl;
-    public float JumpEndVerticalVelocity => jumpEndVerticalVelocity;
+    public PlayerStats Stats { get; private set; }
     public float Gravity => gravity;
     public Vector3 CurrentHorizontalVelocity { get; private set; }
     public bool HasBufferedJump => _jumpBufferTimer > 0f;
@@ -45,12 +24,14 @@ public class PlayerController : CharacterBase<PlayerModel>
 
     private void Awake()
     {
+        InitPlayerStats();
+
         CameraController = GetComponent<PlayerCameraController>();
         Motor = GetComponent<PlayerMotor>();
 
         if (Motor == null && !_hasLoggedMissingMotor)
         {
-            Debug.LogError("PlayerController 缺少 PlayerMotor，请在 Player 根节点上挂载 PlayerMotor。", this);
+            Debug.LogError("PlayerController 缺少 PlayerMotor，请在 Player 根节点上挂载 PlayerMotor", this);
             _hasLoggedMissingMotor = true;
         }
         else if (Motor != null)
@@ -86,6 +67,21 @@ public class PlayerController : CharacterBase<PlayerModel>
     {
         base.Update();
         UpdateJumpTimers();
+    }
+
+    /// <summary>
+    /// 初始化玩家数值层
+    /// </summary>
+    private void InitPlayerStats()
+    {
+        PlayerBaseConfig baseConfig = defaultConfigAsset != null && defaultConfigAsset.config != null
+            ? defaultConfigAsset.config
+            : PlayerBaseConfig.CreateDefault();
+
+        PlayerSaveData saveData = PlayerSaveData.CreateNew();
+
+        Stats = new PlayerStats();
+        Stats.Init(baseConfig, saveData);
     }
 
     /// <summary>
@@ -137,9 +133,18 @@ public class PlayerController : CharacterBase<PlayerModel>
 
     private void UpdateJumpTimers()
     {
+        if (Stats == null)
+        {
+            InitPlayerStats();
+            if (Stats == null)
+            {
+                return;
+            }
+        }
+
         if (GameInputManger.Instance != null && GameInputManger.Instance.Jump)
         {
-            _jumpBufferTimer = jumpBufferTime;
+            _jumpBufferTimer = Stats.JumpBufferTime;
         }
         else
         {
@@ -148,7 +153,7 @@ public class PlayerController : CharacterBase<PlayerModel>
 
         if (IsGrounded)
         {
-            _coyoteTimer = coyoteTime;
+            _coyoteTimer = Stats.CoyoteTime;
         }
         else
         {

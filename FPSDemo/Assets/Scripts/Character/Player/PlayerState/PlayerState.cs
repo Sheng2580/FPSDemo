@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using PlayerData;
 
 //玩家状态基类
 public class PlayerState : StateBase
@@ -29,19 +30,36 @@ public class PlayerState : StateBase
 
    protected bool HasMoveInput()
    {
+      if (player == null || player.Stats == null)
+      {
+         float defaultDeadZone = PlayerBaseConfig.CreateDefault().moveInputDeadZone;
+         return GetMoveInput().sqrMagnitude > defaultDeadZone * defaultDeadZone;
+      }
+
       Vector2 moveInput = GetMoveInput();
-      float deadZone = player.MoveInputDeadZone;
+      float deadZone = player.Stats.MoveInputDeadZone;
       return moveInput.sqrMagnitude > deadZone * deadZone;
    }
 
    protected float GetCurrentMoveSpeed()
    {
-      if (GameInputManger.Instance != null && GameInputManger.Instance.Run)
+      if (player == null || player.Stats == null)
       {
-         return player.RunSpeed;
+         PlayerBaseConfig defaultConfig = PlayerBaseConfig.CreateDefault();
+         if (GameInputManger.Instance != null && GameInputManger.Instance.Run)
+         {
+            return defaultConfig.runSpeed;
+         }
+
+         return defaultConfig.walkSpeed;
       }
 
-      return player.WalkSpeed;
+      if (GameInputManger.Instance != null && GameInputManger.Instance.Run)
+      {
+         return player.Stats.RunSpeed;
+      }
+
+      return player.Stats.WalkSpeed;
    }
 
    protected bool ShouldStartJump()
@@ -56,10 +74,14 @@ public class PlayerState : StateBase
          return;
       }
 
+      float jumpHeight = player.Stats != null
+         ? player.Stats.JumpHeight
+         : PlayerBaseConfig.CreateDefault().jumpHeight;
+
       player.ConsumeJumpBuffer();
       player.ClearCoyoteTimer();
 
-      float jumpVelocity = Mathf.Sqrt(2f * player.Gravity * player.JumpHeight);
+      float jumpVelocity = Mathf.Sqrt(2f * player.Gravity * jumpHeight);
       player.Motor.Jump(jumpVelocity);
    }
 
