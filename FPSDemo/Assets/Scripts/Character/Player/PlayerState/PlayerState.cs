@@ -114,33 +114,6 @@ public class PlayerState : StateBase
                                      );
    }
 
-   //通过名字判断当前状态 并获得当前状态进行的值
-   protected virtual bool CurrAnimationStateName(string stateName , out float normalizedTime ,int layer = 0)
-   {
-      AnimatorStateInfo nextInfo = player.Model.animator.GetNextAnimatorStateInfo(layer);
-      if (nextInfo.IsName(stateName))
-      {
-         normalizedTime = nextInfo.normalizedTime;
-         return true;
-      }
-      AnimatorStateInfo info =player.Model.animator.GetCurrentAnimatorStateInfo(layer);
-      normalizedTime = info.normalizedTime;
-      return info.IsName(stateName);
-   }
-
-   protected virtual bool CurrAnimationStateTag(string tag, out float normalizedTime)
-   {
-      AnimatorStateInfo nextInfo = player.Model.animator.GetNextAnimatorStateInfo(0);
-      if (nextInfo.IsTag(tag))
-      {
-         normalizedTime = nextInfo.normalizedTime;
-         return true;
-      }
-      AnimatorStateInfo info = player.Model.animator.GetCurrentAnimatorStateInfo(0);
-      normalizedTime = info.normalizedTime;
-      return info.IsTag(tag);
-   }
-
    protected virtual void OnRootMotionAction(Vector3 dir, Quaternion rot)
    {
       player.characterController.Move(dir);
