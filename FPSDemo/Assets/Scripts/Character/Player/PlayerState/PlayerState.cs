@@ -16,7 +16,53 @@ public class PlayerState : StateBase
       player=(PlayerController)owner;
       _mainCamera= Camera.main.transform;
    }
-   
+
+   protected Vector2 GetMoveInput()
+   {
+      if (GameInputManger.Instance == null)
+      {
+         return Vector2.zero;
+      }
+
+      return GameInputManger.Instance.Movement;
+   }
+
+   protected bool HasMoveInput()
+   {
+      Vector2 moveInput = GetMoveInput();
+      float deadZone = player.MoveInputDeadZone;
+      return moveInput.sqrMagnitude > deadZone * deadZone;
+   }
+
+   protected float GetCurrentMoveSpeed()
+   {
+      if (GameInputManger.Instance != null && GameInputManger.Instance.Run)
+      {
+         return player.RunSpeed;
+      }
+
+      return player.WalkSpeed;
+   }
+
+   protected bool ShouldStartJump()
+   {
+      return player.HasBufferedJump && (player.IsGrounded || player.CanUseCoyoteJump);
+   }
+
+   protected void StartJump()
+   {
+      if (player.Motor == null)
+      {
+         return;
+      }
+
+      player.ConsumeJumpBuffer();
+      player.ClearCoyoteTimer();
+
+      float jumpVelocity = Mathf.Sqrt(2f * player.Gravity * player.JumpHeight);
+      player.Motor.Jump(jumpVelocity);
+   }
+
    protected void MoldRotate()
    {
       // _rotationAngle=Mathf.Atan2(GameInputManger.Instance.Movement.x,GameInputManger.Instance.Movement.y)*Mathf.Rad2Deg;//转为角度旋转量
@@ -45,7 +91,7 @@ public class PlayerState : StateBase
                                         Time.unscaledDeltaTime
                                      );
    }
-   
+
    //通过名字判断当前状态 并获得当前状态进行的值
    protected virtual bool CurrAnimationStateName(string stateName , out float normalizedTime ,int layer = 0)
    {
@@ -72,7 +118,7 @@ public class PlayerState : StateBase
       normalizedTime = info.normalizedTime;
       return info.IsTag(tag);
    }
-   
+
    protected virtual void OnRootMotionAction(Vector3 dir, Quaternion rot)
    {
       player.characterController.Move(dir);

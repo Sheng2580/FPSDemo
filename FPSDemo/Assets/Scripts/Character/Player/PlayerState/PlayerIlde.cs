@@ -4,8 +4,18 @@ using UnityEngine;
 
 public class PlayerIlde : PlayerState
 {
-   public override void Enter()
+   public override void Update()
    {
-      Debug.Log("Entered PlayerIlde");
+      if (ShouldStartJump())
+      {
+         StartJump();
+         player.ChangeState(PlayerStateType.Jump);
+         return;
+      }
+
+      if (HasMoveInput())
+      {
+         player.ChangeState(PlayerStateType.Move);
+      }
    }
 }

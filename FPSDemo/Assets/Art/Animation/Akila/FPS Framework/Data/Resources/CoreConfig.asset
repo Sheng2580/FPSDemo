@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   shortenMenus: 0
   automaticUpdatesChecking: 1
-  masterAudioVolume: 0.28
+  masterAudioVolume: 1
   globalAnimationWeight: 1
   globalAnimationSpeed: 1
   maxAnimationFramerate: 120
@@ -24,5 +24,5 @@ MonoBehaviour:
   wasSceneManagerSetup: 0
   wasRPSetup: 0
   debugLevel: 1
-  checkForUpdateThiSession: 1
+  checkForUpdateThiSession: 0
   renderPipelineType: 0
