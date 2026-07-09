@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ba8981e0d5546bf8c1b8ddb6d2cd858, type: 3}
+  m_Name: DefaultAssaultRifleWeaponConfig
+  m_EditorClassIdentifier: 
+  config:
+    weaponId: 2
+    weaponName: Default Assault Rifle
+    fireMode: 1
+    damage: 16
+    fireInterval: 0.09
+    magazineSize: 30
+    maxReserveAmmo: 120
+    reloadTime: 1.65
+    range: 160
+    recoilPitch: -0.55
+    recoilYaw: 0.35
+    viewRecoilPosition: {x: 0, y: -0.006, z: -0.04}
+    viewRecoilRotation: {x: -2.2, y: 0.7, z: 0}
+    viewRecoilReturnSpeed: 24
+    aimInSpeed: 9
+    aimOutSpeed: 12
+    aimCameraFov: 45
+    aimViewPositionOffset: {x: -0.018, y: 0.07, z: 0.025}
+    aimViewRotationOffset: {x: 0, y: 0, z: 0}
+    useAimLocalPose: 1
+    aimLocalPosition: {x: -0.151, y: -1.573, z: -0.099}
+    aimLocalEulerAngles: {x: 0, y: 0.64, z: 0}
+    aimLocalScale: {x: 0.06154, y: 0.06154, z: 0.06154}
+    idleStateName: Idle
+    equipStateName: Take
+    fireStateName: Fire
+    reloadStateName: Reload
+    fireTransition: 0.03
+    reloadTransition: 0.08
+    equipTransition: 0.1

@@ -11,9 +11,12 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    private Vector2 _touchMovement;
    private Vector2 _touchLookDelta;
    private bool _isMobileFireHeld;
+   private bool _isMobileSightHeld;
    private int _mobileFirePressedFrame = -1;
    private int _mobileFireReleasedFrame = -1;
    private int _mobileReloadPressedFrame = -1;
+   private int _mobileSightPressedFrame = -1;
+   private int _mobileSightReleasedFrame = -1;
    public bool IsPlayerInputEnabled { get; private set; } = true;
    public bool IsMobileMoveLocked { get; private set; }
 
@@ -33,7 +36,6 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    public bool FireUp => IsPlayerInputEnabled
                          && (DirectFireUp
                              || MobileFireReleased);
-   public bool RAttack => _gameInputActions.GameInput.RAttack.triggered;
    public bool MobileFirePressed => _mobileFirePressedFrame == Time.frameCount;
    public bool MobileFireReleased => _mobileFireReleasedFrame == Time.frameCount;
    public bool MobileFireHeld => _isMobileFireHeld;
@@ -41,6 +43,18 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
                              && (UnityEngine.Input.GetKeyDown(KeyCode.R)
                                  || MobileReloadPressed);
    public bool MobileReloadPressed => _mobileReloadPressedFrame == Time.frameCount;
+   public bool AimDown => IsPlayerInputEnabled
+                          && (DirectAimDown
+                              || MobileSightPressed);
+   public bool AimHeld => IsPlayerInputEnabled
+                          && (DirectAimHeld
+                              || MobileSightHeld);
+   public bool AimUp => IsPlayerInputEnabled
+                        && (DirectAimUp
+                            || MobileSightReleased);
+   public bool MobileSightPressed => _mobileSightPressedFrame == Time.frameCount;
+   public bool MobileSightReleased => _mobileSightReleasedFrame == Time.frameCount;
+   public bool MobileSightHeld => _isMobileSightHeld;
    private bool DirectFireDown => CanUseDirectFireInput()
                                   && (_gameInputActions.GameInput.Fire.WasPressedThisFrame()
                                       || UnityEngine.Input.GetMouseButtonDown(0));
@@ -50,6 +64,15 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    private bool DirectFireUp => CanUseDirectFireInput()
                                 && (_gameInputActions.GameInput.Fire.WasReleasedThisFrame()
                                     || UnityEngine.Input.GetMouseButtonUp(0));
+   private bool DirectAimDown => CanUseDirectAimInput()
+                                 && (_gameInputActions.GameInput.sight.WasPressedThisFrame()
+                                     || UnityEngine.Input.GetMouseButtonDown(1));
+   private bool DirectAimHeld => CanUseDirectAimInput()
+                                 && (_gameInputActions.GameInput.sight.IsPressed()
+                                     || UnityEngine.Input.GetMouseButton(1));
+   private bool DirectAimUp => CanUseDirectAimInput()
+                               && (_gameInputActions.GameInput.sight.WasReleasedThisFrame()
+                                   || UnityEngine.Input.GetMouseButtonUp(1));
 
    public bool F => _gameInputActions.GameInput.F.triggered;
    public bool Tab => _gameInputActions.GameInput.Tab.triggered;
@@ -77,6 +100,8 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       EventCenter.Instance.AddEventListener(GameEvent.MobileFireReleased, OnMobileFireReleased);
       EventCenter.Instance.AddEventListener(GameEvent.MobileFireHolding, OnMobileFireHolding);
       EventCenter.Instance.AddEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
+      EventCenter.Instance.AddEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
+      EventCenter.Instance.AddEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
    }
 
    private void Update()
@@ -96,6 +121,8 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireReleased, OnMobileFireReleased);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireHolding, OnMobileFireHolding);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
+      EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
+      EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
       _gameInputActions.Disable();
    }
 
@@ -160,6 +187,20 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       _mobileReloadPressedFrame = Time.frameCount;
    }
 
+   private void OnMobileSightPressed()
+   {
+      // 记录瞄准按下帧并保持瞄准状态
+      _isMobileSightHeld = true;
+      _mobileSightPressedFrame = Time.frameCount;
+   }
+
+   private void OnMobileSightReleased()
+   {
+      // 记录瞄准松开帧并退出瞄准状态
+      _isMobileSightHeld = false;
+      _mobileSightReleasedFrame = Time.frameCount;
+   }
+
    private bool IsPointerOverUI()
    {
       return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
@@ -183,6 +224,17 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       return false;
 #else
       // 编辑器和电脑端保留鼠标看向，点 UI 时不读取直连输入
+      return !IsPointerOverUI();
+#endif
+   }
+
+   private bool CanUseDirectAimInput()
+   {
+#if UNITY_ANDROID || UNITY_IOS
+      // 真机只允许 SightButton 通过事件触发瞄准
+      return false;
+#else
+      // 编辑器和电脑端保留右键瞄准测试，点 UI 时不读取直连输入
       return !IsPointerOverUI();
 #endif
    }

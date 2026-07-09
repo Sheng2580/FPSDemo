@@ -10,7 +10,11 @@ namespace Weapon
         [Header("武器引用")]
         [SerializeField] private WeaponView currentWeaponView;
         [SerializeField] private PlayerCameraController cameraController;
-        [SerializeField] private WeaponConfig config;
+        [SerializeField] private PlayerInventory playerInventory;
+
+        [Header("武器数据")]
+        [SerializeField] private WeaponConfigAsset configAsset;
+        [SerializeField] private WeaponConfig fallbackConfig = WeaponConfig.CreateDefaultPistol();
 
         private readonly Dictionary<WeaponStateType, WeaponState> _states = new Dictionary<WeaponStateType, WeaponState>();
         private WeaponState _currentState;
@@ -18,14 +22,21 @@ namespace Weapon
         private Camera _fireCamera;
         private bool _fireInput;
         private bool _reloadInput;
+        private bool _aimInput;
+        private float _adsAmount;
+        private WeaponConfig _config;
+        private CarriedWeaponSlot _currentWeaponSlot;
+        private bool _hasStarted;
 
         public WeaponView CurrentWeaponView => currentWeaponView;
+        public CarriedWeaponSlot CurrentWeaponSlot => _currentWeaponSlot;
         public PlayerCameraController CameraController => cameraController;
-        public WeaponConfig Config => config;
+        public WeaponConfig Config => _config;
         public WeaponRuntimeData RuntimeData { get; private set; }
         public WeaponStateType CurrentStateType => _currentStateType;
         public bool FireInput => _fireInput;
         public bool ReloadInput => _reloadInput;
+        public bool AimInput => _aimInput;
 
         private void Reset()
         {
@@ -35,21 +46,36 @@ namespace Weapon
         private void Awake()
         {
             CacheReferences();
-            InitDefaultConfig();
-            InitRuntimeData();
             InitStateMachine();
-            InitWeaponView();
+            InitCurrentWeapon();
+        }
+
+        private void OnEnable()
+        {
+            EventCenter.Instance.AddEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
         }
 
         private void Start()
         {
-            ChangeState(WeaponStateType.Equip, true);
+            _hasStarted = true;
+
+            if (currentWeaponView != null && _config != null && RuntimeData != null)
+            {
+                ChangeState(WeaponStateType.Equip, true);
+            }
         }
 
         private void Update()
         {
             UpdateInput();
             _currentState?.Update();
+            UpdateAim();
+        }
+
+        private void OnDisable()
+        {
+            EventCenter.Instance.RemoveEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
+            ResetAimVisuals();
         }
 
         public void ChangeState(WeaponStateType stateType, bool forceReEnter = false)
@@ -74,7 +100,7 @@ namespace Weapon
         public bool CanFire()
         {
             return currentWeaponView != null
-                   && config != null
+                   && _config != null
                    && RuntimeData != null
                    && RuntimeData.isEquipped
                    && !RuntimeData.isReloading
@@ -85,23 +111,23 @@ namespace Weapon
         public bool CanReload()
         {
             return currentWeaponView != null
-                   && config != null
+                   && _config != null
                    && RuntimeData != null
                    && RuntimeData.isEquipped
                    && !RuntimeData.isReloading
-                   && RuntimeData.currentAmmoInMagazine < config.magazineSize
+                   && RuntimeData.currentAmmoInMagazine < _config.magazineSize
                    && RuntimeData.currentReserveAmmo > 0;
         }
 
         public void ApplyRecoil()
         {
-            if (cameraController == null || config == null)
+            if (cameraController == null || _config == null)
             {
                 return;
             }
 
-            float yaw = Random.Range(-config.recoilYaw, config.recoilYaw);
-            cameraController.AddRecoil(config.recoilPitch, yaw);
+            float yaw = Random.Range(-_config.recoilYaw, _config.recoilYaw);
+            cameraController.AddRecoil(_config.recoilPitch, yaw);
         }
 
         public void FireRaycast()
@@ -113,7 +139,7 @@ namespace Weapon
             }
 
             Ray ray = new Ray(raycastCamera.transform.position, raycastCamera.transform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, config.range))
+            if (Physics.Raycast(ray, out RaycastHit hit, _config.range))
             {
                 Debug.Log($"Weapon Raycast Hit: {hit.collider.name}", hit.collider);
             }
@@ -122,6 +148,7 @@ namespace Weapon
         private void CacheReferences()
         {
             cameraController ??= GetComponent<PlayerCameraController>();
+            playerInventory ??= GetComponent<PlayerInventory>();
             currentWeaponView ??= GetComponentInChildren<WeaponView>(true);
 
             if (cameraController != null)
@@ -135,12 +162,44 @@ namespace Weapon
             }
         }
 
+        private void InitCurrentWeapon()
+        {
+            if (TryEquipInventoryCurrentWeapon(false))
+            {
+                return;
+            }
+
+            InitDefaultConfig();
+            InitRuntimeData();
+            InitWeaponView();
+        }
+
         private void InitDefaultConfig()
         {
-            if (IsConfigInvalid(config))
+            _config = CreateRuntimeConfig();
+        }
+
+        private WeaponConfig CreateRuntimeConfig()
+        {
+            // 优先读取武器数据资产 每把枪的开镜 FOV 都从这里来
+            if (configAsset != null)
             {
-                config = WeaponConfig.CreateDefaultPistol();
+                WeaponConfig assetConfig = configAsset.CreateRuntimeConfig();
+                if (!IsConfigInvalid(assetConfig))
+                {
+                    return assetConfig;
+                }
             }
+
+            // 没有配置资产时使用 Inspector 内联兜底数据
+            if (IsConfigInvalid(fallbackConfig))
+            {
+                fallbackConfig = WeaponConfig.CreateDefaultPistol();
+            }
+
+            WeaponConfig runtimeConfig = fallbackConfig.Clone();
+            runtimeConfig.ApplyMissingDefaults();
+            return runtimeConfig;
         }
 
         private static bool IsConfigInvalid(WeaponConfig weaponConfig)
@@ -158,8 +217,8 @@ namespace Weapon
         {
             RuntimeData = new WeaponRuntimeData
             {
-                currentAmmoInMagazine = config.magazineSize,
-                currentReserveAmmo = config.maxReserveAmmo,
+                currentAmmoInMagazine = _config.magazineSize,
+                currentReserveAmmo = _config.maxReserveAmmo,
                 nextFireTime = 0f,
                 isReloading = false,
                 isEquipped = false
@@ -179,21 +238,103 @@ namespace Weapon
         {
             if (currentWeaponView == null)
             {
-                Debug.LogWarning("WeaponController 缺少 CurrentWeaponView，请把 PistolView 上的 WeaponView 拖到这里。", this);
+                Debug.LogWarning("WeaponController 缺少当前武器视图，请检查背包里的武器槽位", this);
                 return;
             }
 
-            currentWeaponView.Init(config);
+            if (_config == null || RuntimeData == null)
+            {
+                Debug.LogWarning("WeaponController 缺少当前武器数据，请检查背包里的武器配置", this);
+                return;
+            }
+
+            currentWeaponView.gameObject.SetActive(true);
+            currentWeaponView.Init(_config);
             currentWeaponView.SetAmmo(RuntimeData.currentAmmoInMagazine);
             currentWeaponView.SetReloading(RuntimeData.isReloading);
-            currentWeaponView.SetADSAmount(0f);
+            _adsAmount = 0f;
+            currentWeaponView.SetADSAmount(_adsAmount);
             currentWeaponView.SetSprintAmount(0f);
+            TriggerAimCameraEvent();
+        }
+
+        private bool TryEquipInventoryCurrentWeapon(bool playEquip)
+        {
+            playerInventory ??= GetComponent<PlayerInventory>();
+            if (playerInventory == null)
+            {
+                return false;
+            }
+
+            playerInventory.InitForNewRun();
+            return EquipWeaponSlot(playerInventory.CurrentWeapon, playEquip);
+        }
+
+        private bool EquipWeaponSlot(CarriedWeaponSlot weaponSlot, bool playEquip)
+        {
+            if (weaponSlot == null || !weaponSlot.HasWeaponView)
+            {
+                return false;
+            }
+
+            weaponSlot.EnsureRuntimeReady();
+
+            WeaponView previousWeaponView = currentWeaponView;
+            if (previousWeaponView != null && previousWeaponView != weaponSlot.WeaponView)
+            {
+                previousWeaponView.SetReloading(false);
+                previousWeaponView.SetADSAmount(0f);
+                previousWeaponView.SetSprintAmount(0f);
+            }
+
+            _currentState?.Exit();
+            _currentState = null;
+            _currentWeaponSlot = weaponSlot;
+            currentWeaponView = weaponSlot.WeaponView;
+            _config = weaponSlot.RuntimeConfig;
+            RuntimeData = weaponSlot.RuntimeData;
+
+            if (RuntimeData != null)
+            {
+                RuntimeData.isReloading = false;
+                RuntimeData.isEquipped = false;
+            }
+
+            _fireInput = false;
+            _reloadInput = false;
+            _aimInput = false;
+            _adsAmount = 0f;
+
+            InitWeaponView();
+
+            if (playEquip && isActiveAndEnabled)
+            {
+                ChangeState(WeaponStateType.Equip, true);
+            }
+
+            return true;
+        }
+
+        private void OnPlayerWeaponChanged(PlayerWeaponChangedEventData eventData)
+        {
+            if (playerInventory == null)
+            {
+                CacheReferences();
+            }
+
+            if (playerInventory == null)
+            {
+                return;
+            }
+
+            EquipWeaponSlot(playerInventory.CurrentWeapon, _hasStarted);
         }
 
         private void UpdateInput()
         {
             _fireInput = false;
             _reloadInput = false;
+            _aimInput = false;
 
             GameInputManger inputManger = GameInputManger.Instance;
             if (inputManger == null)
@@ -203,16 +344,83 @@ namespace Weapon
 
             _reloadInput = inputManger.ReloadDown;
             _fireInput = ShouldRequestFire(inputManger);
+            _aimInput = inputManger.AimHeld;
+        }
+
+        private void UpdateAim()
+        {
+            float targetAmount = CanAim() ? 1f : 0f;
+            float speed = targetAmount > _adsAmount ? GetAimInSpeed() : GetAimOutSpeed();
+
+            _adsAmount = Mathf.MoveTowards(_adsAmount, targetAmount, speed * Time.deltaTime);
+
+            if (currentWeaponView != null)
+            {
+                currentWeaponView.SetADSAmount(_adsAmount);
+            }
+
+            TriggerAimCameraEvent();
+        }
+
+        private bool CanAim()
+        {
+            return _aimInput
+                   && _config != null
+                   && RuntimeData != null
+                   && RuntimeData.isEquipped
+                   && !RuntimeData.isReloading;
+        }
+
+        private float GetAimInSpeed()
+        {
+            return _config != null && _config.aimInSpeed > 0f
+                ? _config.aimInSpeed
+                : WeaponConfig.DefaultAimInSpeed;
+        }
+
+        private float GetAimOutSpeed()
+        {
+            return _config != null && _config.aimOutSpeed > 0f
+                ? _config.aimOutSpeed
+                : WeaponConfig.DefaultAimOutSpeed;
+        }
+
+        private float GetAimCameraFov()
+        {
+            return _config != null && _config.aimCameraFov > 1f
+                ? _config.aimCameraFov
+                : WeaponConfig.DefaultAimCameraFov;
+        }
+
+        private void ResetAimVisuals()
+        {
+            _aimInput = false;
+            _adsAmount = 0f;
+
+            if (currentWeaponView != null)
+            {
+                currentWeaponView.SetADSAmount(_adsAmount);
+            }
+
+            TriggerAimCameraEvent();
+        }
+
+        private void TriggerAimCameraEvent()
+        {
+            // 武器只把自己的开镜比例和目标 FOV 发出去
+            EventCenter.Instance.EventTrigger(
+                GameEvent.WeaponAimCameraChanged,
+                new WeaponAimCameraEventData(_adsAmount, GetAimCameraFov()));
         }
 
         private bool ShouldRequestFire(GameInputManger inputManger)
         {
-            if (config == null)
+            if (_config == null)
             {
                 return false;
             }
 
-            switch (config.fireMode)
+            switch (_config.fireMode)
             {
                 case WeaponFireMode.FullAuto:
                     return inputManger.FireHeld;

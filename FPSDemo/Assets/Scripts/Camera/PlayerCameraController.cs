@@ -23,12 +23,16 @@ public class PlayerCameraController : MonoBehaviour
     [SerializeField] private Vector2 recoilOffset;
     [SerializeField] private float recoilReturnSpeed = 8f;
 
-    // 水平旋转角度，作用在玩家根节点上。
+    // 水平旋转角度 作用在玩家根节点上
     private float _yaw;
-    // 垂直旋转角度，作用在 CameraRoot 上。
+    // 垂直旋转角度 作用在 CameraRoot 上
     private float _pitch;
-    // 避免在缺少引用时每帧重复输出错误日志。
+    // 避免在缺少引用时每帧重复输出错误日志
     private bool _hasLoggedMissingReferences;
+    private float _defaultFov;
+    private float _targetAimFov;
+    private float _aimFovAmount;
+    private bool _hasCachedDefaultFov;
 
     public Transform PlayerRoot => playerRoot;
     public Transform CameraRoot => cameraRoot;
@@ -39,7 +43,7 @@ public class PlayerCameraController : MonoBehaviour
 
     private void Reset()
     {
-        // 组件刚挂载时自动尝试补齐常用引用。
+        // 组件刚挂载时自动尝试补齐常用引用
         AutoBindReferences();
     }
 
@@ -47,11 +51,22 @@ public class PlayerCameraController : MonoBehaviour
     {
         AutoBindReferences();
         CacheInitialAngles();
+        CacheDefaultFov();
+    }
+
+    private void OnEnable()
+    {
+        EventCenter.Instance.AddEventListener<WeaponAimCameraEventData>(GameEvent.WeaponAimCameraChanged, OnWeaponAimCameraChanged);
+    }
+
+    private void OnDisable()
+    {
+        EventCenter.Instance.RemoveEventListener<WeaponAimCameraEventData>(GameEvent.WeaponAimCameraChanged, OnWeaponAimCameraChanged);
     }
 
     private void OnValidate()
     {
-        // 在 Inspector 修改参数时同步修正引用和数值范围。
+        // 在 Inspector 修改参数时同步修正引用和数值范围
         AutoBindReferences();
         minPitch = Mathf.Min(minPitch, maxPitch);
         maxPitch = Mathf.Max(maxPitch, minPitch);
@@ -62,6 +77,7 @@ public class PlayerCameraController : MonoBehaviour
     {
         AutoBindReferences();
         CacheInitialAngles();
+        CacheDefaultFov();
         SetCursorLock(lockCursorOnStart);
     }
 
@@ -78,23 +94,25 @@ public class PlayerCameraController : MonoBehaviour
             lookInput = GameInputManger.Instance.CameraLook;
         }
 
-        // 当前先统一按鼠标灵敏度处理输入，后续可再区分鼠标和手柄。
+        // 当前先统一按鼠标灵敏度处理输入 后续可再区分鼠标和手柄
         _yaw += lookInput.x * mouseSensitivity;
 
-        // 默认向上移动鼠标时抬头；若勾选反转 Y，则采用相反方向。
+        // 默认向上移动鼠标时抬头 若勾选反转 Y 则采用相反方向
         float pitchInput = invertY ? lookInput.y : -lookInput.y;
         _pitch = Mathf.Clamp(_pitch + pitchInput * mouseSensitivity, minPitch, maxPitch);
 
-        // 后坐力偏移会缓慢回正，为后续武器系统预留接口。
+        // 后坐力偏移会缓慢回正 为后续武器系统预留接口
         recoilOffset = Vector2.Lerp(recoilOffset, Vector2.zero, recoilReturnSpeed * Time.deltaTime);
 
         float finalYaw = _yaw + recoilOffset.y;
         float finalPitch = Mathf.Clamp(_pitch + recoilOffset.x, minPitch, maxPitch);
 
-        // 玩家根节点只处理 Y 轴旋转，避免影响角色直立和重力逻辑。
+        // 玩家根节点只处理 Y 轴旋转 避免影响角色直立和重力逻辑
         playerRoot.localRotation = Quaternion.Euler(0f, finalYaw, 0f);
-        // CameraRoot 只处理 X 轴俯仰，Main Camera 保持作为其子物体。
+        // CameraRoot 只处理 X 轴俯仰 Main Camera 保持作为其子物体
         cameraRoot.localRotation = Quaternion.Euler(finalPitch, 0f, 0f);
+
+        ApplyAimFov();
     }
 
     public void SetCursorLock(bool isLocked)
@@ -113,9 +131,16 @@ public class PlayerCameraController : MonoBehaviour
         recoilOffset = Vector2.zero;
     }
 
+    private void OnWeaponAimCameraChanged(WeaponAimCameraEventData eventData)
+    {
+        // 相机只消费武器传来的开镜参数
+        _aimFovAmount = eventData.aimAmount;
+        _targetAimFov = eventData.targetFov;
+    }
+
     private void AutoBindReferences()
     {
-        // 玩家根节点默认使用脚本所在物体。
+        // 玩家根节点默认使用脚本所在物体
         playerRoot ??= transform;
 
         if (cameraRoot == null)
@@ -184,10 +209,37 @@ public class PlayerCameraController : MonoBehaviour
 
         if (cameraRoot != null)
         {
-            // Unity 的 Euler 角可能落在 0~360，需要先转成 -180~180 再做俯仰限制。
+            // Unity 的 Euler 角可能落在 0 到 360 需要先转成 -180 到 180 再做俯仰限制
             _pitch = NormalizePitch(cameraRoot.localEulerAngles.x);
             _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
         }
+    }
+
+    private void CacheDefaultFov()
+    {
+        if (playerCamera == null || _hasCachedDefaultFov)
+        {
+            return;
+        }
+
+        // 默认 FOV 只能缓存一次 开镜后不能被当前 FOV 覆盖
+        _defaultFov = playerCamera.fieldOfView;
+        _hasCachedDefaultFov = true;
+        if (_targetAimFov <= 1f)
+        {
+            _targetAimFov = _defaultFov;
+        }
+    }
+
+    private void ApplyAimFov()
+    {
+        if (playerCamera == null)
+        {
+            return;
+        }
+
+        CacheDefaultFov();
+        playerCamera.fieldOfView = Mathf.Lerp(_defaultFov, _targetAimFov, _aimFovAmount);
     }
 
     private bool HasRequiredReferences()

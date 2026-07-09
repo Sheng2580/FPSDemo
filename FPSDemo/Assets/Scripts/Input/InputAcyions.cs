@@ -129,15 +129,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""RAttack"",
-                    ""type"": ""Button"",
-                    ""id"": ""f25732e7-46d1-460f-8e22-b0b8abae327a"",
-                    ""expectedControlType"": """",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
                     ""name"": ""Climb"",
                     ""type"": ""Button"",
                     ""id"": ""9304596e-3f45-4642-a83e-f67a7953565c"",
@@ -213,6 +204,15 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""name"": ""UseTheCombat"",
                     ""type"": ""Button"",
                     ""id"": ""7586fb0f-9e70-45a1-a7ed-ac7c668e4d21"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""sight"",
+                    ""type"": ""Button"",
+                    ""id"": ""6d828f66-7336-45c7-bfa0-d0df96d0a91a"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -305,17 +305,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Fire"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""ef52dfe5-f7a0-468b-9184-c2f1bfd5dc2a"",
-                    ""path"": ""<Mouse>/rightButton"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""RAttack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -417,6 +406,17 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""action"": ""UseTheCombat"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""cf20e9d4-8e86-4979-8b09-d54d4ed79830"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""sight"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -429,7 +429,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         m_GameInput_CameraLook = m_GameInput.FindAction("CameraLook", throwIfNotFound: true);
         m_GameInput_Run = m_GameInput.FindAction("Run", throwIfNotFound: true);
         m_GameInput_Fire = m_GameInput.FindAction("Fire", throwIfNotFound: true);
-        m_GameInput_RAttack = m_GameInput.FindAction("RAttack", throwIfNotFound: true);
         m_GameInput_Climb = m_GameInput.FindAction("Climb", throwIfNotFound: true);
         m_GameInput_Skill = m_GameInput.FindAction("Skill", throwIfNotFound: true);
         m_GameInput_F = m_GameInput.FindAction("F", throwIfNotFound: true);
@@ -439,6 +438,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         m_GameInput_ESC = m_GameInput.FindAction("ESC", throwIfNotFound: true);
         m_GameInput_lockCamera = m_GameInput.FindAction("lockCamera", throwIfNotFound: true);
         m_GameInput_UseTheCombat = m_GameInput.FindAction("UseTheCombat", throwIfNotFound: true);
+        m_GameInput_sight = m_GameInput.FindAction("sight", throwIfNotFound: true);
     }
 
     ~@InputAcyions()
@@ -523,7 +523,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
     private readonly InputAction m_GameInput_CameraLook;
     private readonly InputAction m_GameInput_Run;
     private readonly InputAction m_GameInput_Fire;
-    private readonly InputAction m_GameInput_RAttack;
     private readonly InputAction m_GameInput_Climb;
     private readonly InputAction m_GameInput_Skill;
     private readonly InputAction m_GameInput_F;
@@ -533,6 +532,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
     private readonly InputAction m_GameInput_ESC;
     private readonly InputAction m_GameInput_lockCamera;
     private readonly InputAction m_GameInput_UseTheCombat;
+    private readonly InputAction m_GameInput_sight;
     /// <summary>
     /// Provides access to input actions defined in input action map "GameInput".
     /// </summary>
@@ -560,10 +560,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "GameInput/Fire".
         /// </summary>
         public InputAction @Fire => m_Wrapper.m_GameInput_Fire;
-        /// <summary>
-        /// Provides access to the underlying input action "GameInput/RAttack".
-        /// </summary>
-        public InputAction @RAttack => m_Wrapper.m_GameInput_RAttack;
         /// <summary>
         /// Provides access to the underlying input action "GameInput/Climb".
         /// </summary>
@@ -600,6 +596,10 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "GameInput/UseTheCombat".
         /// </summary>
         public InputAction @UseTheCombat => m_Wrapper.m_GameInput_UseTheCombat;
+        /// <summary>
+        /// Provides access to the underlying input action "GameInput/sight".
+        /// </summary>
+        public InputAction @sight => m_Wrapper.m_GameInput_sight;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -638,9 +638,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @Fire.started += instance.OnFire;
             @Fire.performed += instance.OnFire;
             @Fire.canceled += instance.OnFire;
-            @RAttack.started += instance.OnRAttack;
-            @RAttack.performed += instance.OnRAttack;
-            @RAttack.canceled += instance.OnRAttack;
             @Climb.started += instance.OnClimb;
             @Climb.performed += instance.OnClimb;
             @Climb.canceled += instance.OnClimb;
@@ -668,6 +665,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @UseTheCombat.started += instance.OnUseTheCombat;
             @UseTheCombat.performed += instance.OnUseTheCombat;
             @UseTheCombat.canceled += instance.OnUseTheCombat;
+            @sight.started += instance.OnSight;
+            @sight.performed += instance.OnSight;
+            @sight.canceled += instance.OnSight;
         }
 
         /// <summary>
@@ -691,9 +691,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @Fire.started -= instance.OnFire;
             @Fire.performed -= instance.OnFire;
             @Fire.canceled -= instance.OnFire;
-            @RAttack.started -= instance.OnRAttack;
-            @RAttack.performed -= instance.OnRAttack;
-            @RAttack.canceled -= instance.OnRAttack;
             @Climb.started -= instance.OnClimb;
             @Climb.performed -= instance.OnClimb;
             @Climb.canceled -= instance.OnClimb;
@@ -721,6 +718,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @UseTheCombat.started -= instance.OnUseTheCombat;
             @UseTheCombat.performed -= instance.OnUseTheCombat;
             @UseTheCombat.canceled -= instance.OnUseTheCombat;
+            @sight.started -= instance.OnSight;
+            @sight.performed -= instance.OnSight;
+            @sight.canceled -= instance.OnSight;
         }
 
         /// <summary>
@@ -790,13 +790,6 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnFire(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "RAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
-        /// </summary>
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnRAttack(InputAction.CallbackContext context);
-        /// <summary>
         /// Method invoked when associated input action "Climb" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
@@ -859,5 +852,12 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnUseTheCombat(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "sight" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSight(InputAction.CallbackContext context);
     }
 }

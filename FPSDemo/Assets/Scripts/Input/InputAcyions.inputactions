@@ -43,15 +43,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "RAttack",
-                    "type": "Button",
-                    "id": "f25732e7-46d1-460f-8e22-b0b8abae327a",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "Climb",
                     "type": "Button",
                     "id": "9304596e-3f45-4642-a83e-f67a7953565c",
@@ -127,6 +118,15 @@
                     "name": "UseTheCombat",
                     "type": "Button",
                     "id": "7586fb0f-9e70-45a1-a7ed-ac7c668e4d21",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "sight",
+                    "type": "Button",
+                    "id": "6d828f66-7336-45c7-bfa0-d0df96d0a91a",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -219,17 +219,6 @@
                     "processors": "",
                     "groups": "",
                     "action": "Fire",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "ef52dfe5-f7a0-468b-9184-c2f1bfd5dc2a",
-                    "path": "<Mouse>/rightButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "RAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -329,6 +318,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "UseTheCombat",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "cf20e9d4-8e86-4979-8b09-d54d4ed79830",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "sight",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

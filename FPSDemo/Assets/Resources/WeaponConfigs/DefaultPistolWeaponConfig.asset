@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ba8981e0d5546bf8c1b8ddb6d2cd858, type: 3}
+  m_Name: DefaultPistolWeaponConfig
+  m_EditorClassIdentifier: 
+  config:
+    weaponId: 1
+    weaponName: Default Pistol
+    fireMode: 0
+    damage: 20
+    fireInterval: 0.2
+    magazineSize: 12
+    maxReserveAmmo: 48
+    reloadTime: 1.4
+    range: 100
+    recoilPitch: -1.5
+    recoilYaw: 0.5
+    viewRecoilPosition: {x: 0, y: -0.015, z: -0.08}
+    viewRecoilRotation: {x: -6, y: 1.5, z: 0}
+    viewRecoilReturnSpeed: 18
+    aimInSpeed: 10
+    aimOutSpeed: 12
+    aimCameraFov: 50
+    aimViewPositionOffset: {x: -0.06, y: 0.044, z: 0.02}
+    aimViewRotationOffset: {x: 0, y: 0, z: 0}
+    useAimLocalPose: 1
+    aimLocalPosition: {x: -0.06, y: -0.814, z: 0.411}
+    aimLocalEulerAngles: {x: 0, y: 0, z: 0}
+    aimLocalScale: {x: 0.04, y: 0.04, z: 0.04}
+    idleStateName: Idle
+    equipStateName: Take
+    fireStateName: Fire
+    reloadStateName: Reload
+    fireTransition: 0.05
+    reloadTransition: 0.1
+    equipTransition: 0.1

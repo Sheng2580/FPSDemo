@@ -4,6 +4,9 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// UI 面板层级
@@ -278,6 +281,26 @@ public class UIManager : UnitySingleTonMono<UIManager>
 
     private void LoadCanvasFromABAsync<T>(string canvasName, CanvasConfig config, int version) where T : BaseCanvas
     {
+#if UNITY_EDITOR
+        GameObject editorCanvasObj = LoadEditorCanvasObject(config);
+        if (editorCanvasObj != null)
+        {
+            T editorCanvas = editorCanvasObj.GetComponent<T>();
+            if (editorCanvas == null)
+            {
+                Debug.LogError($"[UIManager] Canvas prefab missing component {typeof(T).Name}: {GetLoadLog(config)}");
+                Destroy(editorCanvasObj);
+                InvokeLoadingCallbacks(canvasName, null);
+                return;
+            }
+
+            editorCanvas.name = canvasName;
+            OpenLoadedCanvas(canvasName, editorCanvas, config);
+            InvokeLoadingCallbacks(canvasName, editorCanvas);
+            return;
+        }
+#endif
+
         if (ABManager.Instance == null)
         {
             Debug.LogError("[UIManager] ABManager is null, cannot load canvas: " + canvasName);
@@ -330,6 +353,14 @@ public class UIManager : UnitySingleTonMono<UIManager>
     {
         if (config.LoadType == UILoadType.AssetBundle)
         {
+#if UNITY_EDITOR
+            GameObject editorCanvasObj = LoadEditorCanvasObject(config);
+            if (editorCanvasObj != null)
+            {
+                return editorCanvasObj;
+            }
+#endif
+
             if (ABManager.Instance == null)
             {
                 Debug.LogError("[UIManager] ABManager is null");
@@ -347,6 +378,21 @@ public class UIManager : UnitySingleTonMono<UIManager>
         GameObject prefab = Resources.Load<GameObject>(config.ResourcesPath);
         return prefab != null ? Instantiate(prefab) : null;
     }
+
+#if UNITY_EDITOR
+    private GameObject LoadEditorCanvasObject(CanvasConfig config)
+    {
+        if (config.LoadType != UILoadType.AssetBundle)
+        {
+            return null;
+        }
+
+        // 编辑器优先读取源 prefab 避免测试时吃旧 AssetBundle
+        string assetPath = $"Assets/Art/ABRes/UI/{config.AssetName}.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+        return prefab != null ? Instantiate(prefab) : null;
+    }
+#endif
 
     private BaseCanvas GetOrOpenCachedCanvas<T>(string canvasName, CanvasConfig config) where T : BaseCanvas
     {

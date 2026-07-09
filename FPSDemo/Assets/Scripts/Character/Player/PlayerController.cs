@@ -5,6 +5,7 @@ public class PlayerController : CharacterBase<PlayerModel>
 {
     [SerializeField] private PlayerModel playerModel;
     [SerializeField] private PlayerDefaultConfigAsset defaultConfigAsset;
+    [SerializeField] private PlayerInventory inventory;
 
     private PlayerStateType _currentStateType;
     private PlayerStateType _previousStateType;
@@ -16,6 +17,7 @@ public class PlayerController : CharacterBase<PlayerModel>
     public PlayerStateType PreviousStateType => _previousStateType;
     public PlayerCameraController CameraController { get; private set; }
     public PlayerMotor Motor { get; private set; }
+    public PlayerInventory Inventory { get; private set; }
     public PlayerStats Stats { get; private set; }
     public float Gravity => gravity;
     public Vector3 CurrentHorizontalVelocity { get; private set; }
@@ -28,6 +30,7 @@ public class PlayerController : CharacterBase<PlayerModel>
 
         CameraController = GetComponent<PlayerCameraController>();
         Motor = GetComponent<PlayerMotor>();
+        Inventory = inventory != null ? inventory : GetComponent<PlayerInventory>();
 
         if (Motor == null && !_hasLoggedMissingMotor)
         {
