@@ -17,7 +17,7 @@ public class ABManager : UnitySingleTonMono<ABManager>
     private bool isMainBundleLoading;
     private readonly List<UnityAction> mainBundleCallbacks = new List<UnityAction>();
 
-    private string Pathur => Application.streamingAssetsPath;
+    private string Pathur => JoinStreamingAssetsPath(Application.streamingAssetsPath, MainName);
 
     private bool ShouldUseWebRequestForStreamingAssets
     {
@@ -61,9 +61,24 @@ public class ABManager : UnitySingleTonMono<ABManager>
         return Path.GetFileName(abName.Replace("\\", "/"));
     }
 
+    private string JoinStreamingAssetsPath(string left, string right)
+    {
+        if (string.IsNullOrEmpty(left))
+        {
+            return right;
+        }
+
+        if (string.IsNullOrEmpty(right))
+        {
+            return left;
+        }
+
+        return left.TrimEnd('/', '\\') + "/" + right.TrimStart('/', '\\');
+    }
+
     private string GetBundlePath(string abName)
     {
-        return Path.Combine(Pathur, NormalizeABName(abName)).Replace("\\", "/");
+        return JoinStreamingAssetsPath(Pathur, NormalizeABName(abName));
     }
 
     public void LoadMainAndManifestOfAB(string abName)

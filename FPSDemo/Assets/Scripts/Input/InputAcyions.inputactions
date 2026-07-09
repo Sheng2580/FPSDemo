@@ -34,7 +34,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "LAttack",
+                    "name": "Fire",
                     "type": "Button",
                     "id": "05541f8f-3bca-4545-9390-3cb2cdb2e550",
                     "expectedControlType": "",
@@ -218,7 +218,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "LAttack",
+                    "action": "Fire",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

@@ -193,14 +193,33 @@ namespace Weapon
         private void UpdateInput()
         {
             _fireInput = false;
-            _reloadInput = Input.GetKeyDown(KeyCode.R);
+            _reloadInput = false;
 
-            if (GameInputManger.Instance == null)
+            GameInputManger inputManger = GameInputManger.Instance;
+            if (inputManger == null)
             {
                 return;
             }
 
-            _fireInput = GameInputManger.Instance.LAttack;
+            _reloadInput = inputManger.ReloadDown;
+            _fireInput = ShouldRequestFire(inputManger);
+        }
+
+        private bool ShouldRequestFire(GameInputManger inputManger)
+        {
+            if (config == null)
+            {
+                return false;
+            }
+
+            switch (config.fireMode)
+            {
+                case WeaponFireMode.FullAuto:
+                    return inputManger.FireHeld;
+                case WeaponFireMode.SemiAuto:
+                default:
+                    return inputManger.FireDown;
+            }
         }
     }
 }

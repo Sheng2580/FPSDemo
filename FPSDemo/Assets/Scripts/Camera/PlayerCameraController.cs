@@ -17,7 +17,7 @@ public class PlayerCameraController : MonoBehaviour
 
     [Header("基础选项")]
     [SerializeField] private bool invertY;
-    [SerializeField] private bool lockCursorOnStart = true;
+    [SerializeField] private bool lockCursorOnStart = false;
 
     [Header("后坐力参数")]
     [SerializeField] private Vector2 recoilOffset;

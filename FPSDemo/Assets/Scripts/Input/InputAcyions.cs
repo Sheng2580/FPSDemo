@@ -120,7 +120,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""LAttack"",
+                    ""name"": ""Fire"",
                     ""type"": ""Button"",
                     ""id"": ""05541f8f-3bca-4545-9390-3cb2cdb2e550"",
                     ""expectedControlType"": """",
@@ -304,7 +304,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""LAttack"",
+                    ""action"": ""Fire"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -428,7 +428,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         m_GameInput_Movement = m_GameInput.FindAction("Movement", throwIfNotFound: true);
         m_GameInput_CameraLook = m_GameInput.FindAction("CameraLook", throwIfNotFound: true);
         m_GameInput_Run = m_GameInput.FindAction("Run", throwIfNotFound: true);
-        m_GameInput_LAttack = m_GameInput.FindAction("LAttack", throwIfNotFound: true);
+        m_GameInput_Fire = m_GameInput.FindAction("Fire", throwIfNotFound: true);
         m_GameInput_RAttack = m_GameInput.FindAction("RAttack", throwIfNotFound: true);
         m_GameInput_Climb = m_GameInput.FindAction("Climb", throwIfNotFound: true);
         m_GameInput_Skill = m_GameInput.FindAction("Skill", throwIfNotFound: true);
@@ -522,7 +522,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
     private readonly InputAction m_GameInput_Movement;
     private readonly InputAction m_GameInput_CameraLook;
     private readonly InputAction m_GameInput_Run;
-    private readonly InputAction m_GameInput_LAttack;
+    private readonly InputAction m_GameInput_Fire;
     private readonly InputAction m_GameInput_RAttack;
     private readonly InputAction m_GameInput_Climb;
     private readonly InputAction m_GameInput_Skill;
@@ -557,9 +557,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Run => m_Wrapper.m_GameInput_Run;
         /// <summary>
-        /// Provides access to the underlying input action "GameInput/LAttack".
+        /// Provides access to the underlying input action "GameInput/Fire".
         /// </summary>
-        public InputAction @LAttack => m_Wrapper.m_GameInput_LAttack;
+        public InputAction @Fire => m_Wrapper.m_GameInput_Fire;
         /// <summary>
         /// Provides access to the underlying input action "GameInput/RAttack".
         /// </summary>
@@ -635,9 +635,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @Run.started += instance.OnRun;
             @Run.performed += instance.OnRun;
             @Run.canceled += instance.OnRun;
-            @LAttack.started += instance.OnLAttack;
-            @LAttack.performed += instance.OnLAttack;
-            @LAttack.canceled += instance.OnLAttack;
+            @Fire.started += instance.OnFire;
+            @Fire.performed += instance.OnFire;
+            @Fire.canceled += instance.OnFire;
             @RAttack.started += instance.OnRAttack;
             @RAttack.performed += instance.OnRAttack;
             @RAttack.canceled += instance.OnRAttack;
@@ -688,9 +688,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @Run.started -= instance.OnRun;
             @Run.performed -= instance.OnRun;
             @Run.canceled -= instance.OnRun;
-            @LAttack.started -= instance.OnLAttack;
-            @LAttack.performed -= instance.OnLAttack;
-            @LAttack.canceled -= instance.OnLAttack;
+            @Fire.started -= instance.OnFire;
+            @Fire.performed -= instance.OnFire;
+            @Fire.canceled -= instance.OnFire;
             @RAttack.started -= instance.OnRAttack;
             @RAttack.performed -= instance.OnRAttack;
             @RAttack.canceled -= instance.OnRAttack;
@@ -783,12 +783,12 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnRun(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "LAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "Fire" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnLAttack(InputAction.CallbackContext context);
+        void OnFire(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "RAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

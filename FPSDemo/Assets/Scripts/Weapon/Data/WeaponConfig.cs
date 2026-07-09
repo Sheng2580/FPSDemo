@@ -3,11 +3,18 @@ using UnityEngine;
 
 namespace Weapon.Data
 {
+    public enum WeaponFireMode
+    {
+        SemiAuto,
+        FullAuto
+    }
+
     [Serializable]
     public class WeaponConfig
     {
         public int weaponId;
         public string weaponName;
+        public WeaponFireMode fireMode;
         public float damage;
         public float fireInterval;
         public int magazineSize;
@@ -33,6 +40,7 @@ namespace Weapon.Data
             {
                 weaponId = 1,
                 weaponName = "Default Pistol",
+                fireMode = WeaponFireMode.SemiAuto,
                 damage = 20f,
                 fireInterval = 0.2f,
                 magazineSize = 12,

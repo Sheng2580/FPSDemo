@@ -223,7 +223,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3.7577, y: 3.7577, z: 3.7577}
+  m_LocalScale: {x: 18.272192, y: 18.272192, z: 18.272192}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1088,7 +1088,7 @@ MonoBehaviour:
   minPitch: -80
   maxPitch: 80
   invertY: 0
-  lockCursorOnStart: 1
+  lockCursorOnStart: 0
   recoilOffset: {x: 0, y: 0}
   recoilReturnSpeed: 8
 --- !u!114 &1684122156
@@ -1121,6 +1121,7 @@ MonoBehaviour:
   config:
     weaponId: 0
     weaponName: 
+    fireMode: 0
     damage: 0
     fireInterval: 0
     magazineSize: 0
