@@ -33,7 +33,7 @@ MonoBehaviour:
     aimViewPositionOffset: {x: -0.06, y: 0.044, z: 0.02}
     aimViewRotationOffset: {x: 0, y: 0, z: 0}
     useAimLocalPose: 1
-    aimLocalPosition: {x: -0.06, y: -0.814, z: 0.411}
+    aimLocalPosition: {x: -0.084, y: -0.799, z: 0.411}
     aimLocalEulerAngles: {x: 0, y: 0, z: 0}
     aimLocalScale: {x: 0.04, y: 0.04, z: 0.04}
     idleStateName: Idle

@@ -29,12 +29,12 @@ MonoBehaviour:
     viewRecoilReturnSpeed: 24
     aimInSpeed: 9
     aimOutSpeed: 12
-    aimCameraFov: 45
+    aimCameraFov: 30
     aimViewPositionOffset: {x: -0.018, y: 0.07, z: 0.025}
     aimViewRotationOffset: {x: 0, y: 0, z: 0}
     useAimLocalPose: 1
-    aimLocalPosition: {x: -0.151, y: -1.573, z: -0.099}
-    aimLocalEulerAngles: {x: 0, y: 0.64, z: 0}
+    aimLocalPosition: {x: -0.162, y: -1.517, z: -0.13}
+    aimLocalEulerAngles: {x: 0, y: 0, z: 0}
     aimLocalScale: {x: 0.06154, y: 0.06154, z: 0.06154}
     idleStateName: Idle
     equipStateName: Take
