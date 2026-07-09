@@ -7,13 +7,7 @@ public class test : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        ABManager.Instance.LoadResAsync("gameobj","Cube", (obj) =>
-        {
-            GameObject go = obj as GameObject;
-            go.transform.position = Vector3.zero;
-            go.transform.localScale = Vector3.one;
-            go.SetActive(true);
-        });
+        UIManager.Instance.OpenPanelAsy<TestCanvas>();
     }
 
   
