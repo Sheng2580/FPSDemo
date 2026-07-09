@@ -46,7 +46,6 @@ namespace Weapon
             _config = config;
             CacheReferences();
             CacheDefaultTransform();
-            PlayIdle();
         }
 
         public void PlayIdle()
@@ -68,6 +67,29 @@ namespace Weapon
         public void PlayReload()
         {
             CrossFade(_config?.reloadStateName, _config != null ? _config.reloadTransition : 0f);
+        }
+
+        public float GetAnimationLength(string stateName, float fallbackLength)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null || string.IsNullOrEmpty(stateName))
+            {
+                return fallbackLength;
+            }
+
+            foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
+            {
+                if (clip == null)
+                {
+                    continue;
+                }
+
+                if (clip.name == stateName || clip.name.Contains(stateName))
+                {
+                    return Mathf.Max(clip.length, fallbackLength);
+                }
+            }
+
+            return fallbackLength;
         }
 
         public void SetAmmo(int ammo)

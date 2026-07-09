@@ -12,7 +12,9 @@ namespace Weapon.State
 
         public override void Enter()
         {
-            _timer = controller.Config != null ? controller.Config.equipTransition : 0f;
+            _timer = controller.CurrentWeaponView != null && controller.Config != null
+                ? controller.CurrentWeaponView.GetAnimationLength(controller.Config.equipStateName, 0.6f)
+                : 0.6f;
             controller.RuntimeData.isEquipped = false;
             controller.CurrentWeaponView?.PlayEquip();
         }
