@@ -19,6 +19,11 @@
 AssetBundles/
 FPSDemo/AssetBundles/
 FPSDemo/.idea/
+
+# Codex local collaboration files
+CODEX_HANDOFF.md
+_codex_backups/
+
 FPSDemo/Assets/StreamingAssets/*
 !FPSDemo/Assets/StreamingAssets/.gitkeep
 

@@ -26,8 +26,14 @@ public class SightButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
         UpdateVisualState();
     }
 
+    private void OnEnable()
+    {
+        EventCenter.Instance.AddEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
+    }
+
     private void OnDisable()
     {
+        EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
         _isPointerDown = false;
 
         if (!_isSightActive)
@@ -89,6 +95,14 @@ public class SightButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
         {
             Debug.Log(isActive ? "移动端瞄准开启" : "移动端瞄准关闭", this);
         }
+    }
+
+    private void OnMobileSightCanceled()
+    {
+        // 外部切枪时只同步按钮表现 不再重复发送释放事件
+        _isPointerDown = false;
+        _isSightActive = false;
+        UpdateVisualState();
     }
 
     private void CacheVisuals()

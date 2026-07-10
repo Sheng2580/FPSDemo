@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Combat;
+using Enemy;
 using UnityEngine;
 using Weapon.Data;
 using Weapon.State;
@@ -16,6 +18,9 @@ namespace Weapon
         [SerializeField] private WeaponConfigAsset configAsset;
         [SerializeField] private WeaponConfig fallbackConfig = WeaponConfig.CreateDefaultPistol();
 
+        [Header("调试")]
+        [SerializeField] private bool debugWeaponHit = true;
+
         private readonly Dictionary<WeaponStateType, WeaponState> _states = new Dictionary<WeaponStateType, WeaponState>();
         private WeaponState _currentState;
         private WeaponStateType _currentStateType;
@@ -27,6 +32,7 @@ namespace Weapon
         private WeaponConfig _config;
         private CarriedWeaponSlot _currentWeaponSlot;
         private bool _hasStarted;
+        private bool _waitForAimReleaseAfterSwitch;
 
         public WeaponView CurrentWeaponView => currentWeaponView;
         public CarriedWeaponSlot CurrentWeaponSlot => _currentWeaponSlot;
@@ -133,16 +139,73 @@ namespace Weapon
         public void FireRaycast()
         {
             Camera raycastCamera = _fireCamera;
-            if (raycastCamera == null)
+            if (raycastCamera == null || _config == null)
             {
                 return;
             }
 
             Ray ray = new Ray(raycastCamera.transform.position, raycastCamera.transform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, _config.range))
+            if (Physics.Raycast(ray, out RaycastHit hit, _config.range, ~0, QueryTriggerInteraction.Collide))
             {
-                Debug.Log($"Weapon Raycast Hit: {hit.collider.name}", hit.collider);
+                DamageInfo damageInfo = new DamageInfo(
+                    _config.damage,
+                    _config.weaponId,
+                    _config.weaponName,
+                    gameObject,
+                    hit.collider,
+                    hit.point,
+                    hit.normal);
+
+                bool hitEnemy = TryApplyEnemyDamage(hit.collider, ref damageInfo);
+
+                EventCenter.Instance.EventTrigger(GameEvent.WeaponHit, new WeaponHitEventData(damageInfo, hitEnemy));
+
+                if (debugWeaponHit && !hitEnemy)
+                {
+                    Debug.Log($"[WeaponHit] 命中非敌人 Collider={hit.collider.name}", hit.collider);
+                }
             }
+        }
+
+        private bool TryApplyEnemyDamage(Collider hitCollider, ref DamageInfo damageInfo)
+        {
+            if (hitCollider == null)
+            {
+                return false;
+            }
+
+            EnemyHitBox hitBox = hitCollider.GetComponent<EnemyHitBox>();
+            if (hitBox != null)
+            {
+                bool applied = hitBox.TryApplyDamage(ref damageInfo);
+                if (debugWeaponHit)
+                {
+                    Debug.Log(
+                        $"[WeaponHit] 命中敌人部位 Collider={hitCollider.name} Part={damageInfo.hitPart} Damage={damageInfo.finalDamage:0.##} Critical={damageInfo.isCritical}",
+                        hitCollider);
+                }
+
+                return applied;
+            }
+
+            EnemyHealth enemyHealth = hitCollider.GetComponentInParent<EnemyHealth>();
+            enemyHealth ??= hitCollider.GetComponentInChildren<EnemyHealth>();
+            if (enemyHealth == null)
+            {
+                return false;
+            }
+
+            damageInfo.ApplyBodyPart(EnemyHitBodyPart.Body, 1f, false);
+            enemyHealth.TakeDamage(damageInfo);
+
+            if (debugWeaponHit)
+            {
+                Debug.Log(
+                    $"[WeaponHit] 命中敌人根物体 Collider={hitCollider.name} 按 Body 兜底伤害 Damage={damageInfo.finalDamage:0.##}",
+                    hitCollider);
+            }
+
+            return true;
         }
 
         private void CacheReferences()
@@ -280,11 +343,15 @@ namespace Weapon
             weaponSlot.EnsureRuntimeReady();
 
             WeaponView previousWeaponView = currentWeaponView;
+            bool isSwitchingWeapon = previousWeaponView != null && previousWeaponView != weaponSlot.WeaponView;
+            if (isSwitchingWeapon)
+            {
+                CancelAimForWeaponSwitch();
+            }
+
             if (previousWeaponView != null && previousWeaponView != weaponSlot.WeaponView)
             {
-                previousWeaponView.SetReloading(false);
-                previousWeaponView.SetADSAmount(0f);
-                previousWeaponView.SetSprintAmount(0f);
+                previousWeaponView.ResetPoseInstant();
             }
 
             _currentState?.Exit();
@@ -303,6 +370,7 @@ namespace Weapon
             _fireInput = false;
             _reloadInput = false;
             _aimInput = false;
+            _waitForAimReleaseAfterSwitch = isSwitchingWeapon;
             _adsAmount = 0f;
 
             InitWeaponView();
@@ -344,7 +412,7 @@ namespace Weapon
 
             _reloadInput = inputManger.ReloadDown;
             _fireInput = ShouldRequestFire(inputManger);
-            _aimInput = inputManger.AimHeld;
+            _aimInput = ShouldHoldAim(inputManger);
         }
 
         private void UpdateAim()
@@ -405,6 +473,13 @@ namespace Weapon
             TriggerAimCameraEvent();
         }
 
+        private void CancelAimForWeaponSwitch()
+        {
+            // 切枪时强制退出开镜 避免新枪模型贴到相机前
+            ResetAimVisuals();
+            EventCenter.Instance.EventTrigger(GameEvent.MobileSightCanceled);
+        }
+
         private void TriggerAimCameraEvent()
         {
             // 武器只把自己的开镜比例和目标 FOV 发出去
@@ -428,6 +503,23 @@ namespace Weapon
                 default:
                     return inputManger.FireDown;
             }
+        }
+
+        private bool ShouldHoldAim(GameInputManger inputManger)
+        {
+            bool aimHeld = inputManger.AimHeld;
+            if (!_waitForAimReleaseAfterSwitch)
+            {
+                return aimHeld;
+            }
+
+            if (aimHeld)
+            {
+                return false;
+            }
+
+            _waitForAimReleaseAfterSwitch = false;
+            return false;
         }
     }
 }

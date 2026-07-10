@@ -11,6 +11,18 @@ namespace Weapon.Data
         FullAuto
     }
 
+    public enum WeaponAttackType
+    {
+        // 普通枪械即时射线
+        Hitscan,
+        // 霰弹枪等多条射线
+        MultiHitscan,
+        // 榴弹 火箭弹 怪物远程弹等实体弹
+        Projectile,
+        // 爆炸 火焰 电击等范围伤害
+        Area
+    }
+
     [Serializable]
     public class WeaponConfig
     {
@@ -31,6 +43,21 @@ namespace Weapon.Data
         public int maxReserveAmmo;
         public float reloadTime;
         public float range;
+
+        // 攻击结算数据
+        public WeaponAttackType attackType;
+        public float spreadAngle;
+        public int pelletCount;
+        public int maxPenetrationCount;
+        public float penetrationDamageMultiplier;
+        public string projectilePrefabKey;
+        public float projectileSpeed;
+        public float projectileLifeTime;
+        public float explosionRadius;
+        public float explosionFalloff;
+        public LayerMask hitLayerMask;
+        public string tracerPrefabKey;
+        public string impactEffectKey;
 
         // 后坐力
         public float recoilPitch;
@@ -79,6 +106,19 @@ namespace Weapon.Data
                 maxReserveAmmo = 48,
                 reloadTime = 1.4f,
                 range = 100f,
+                attackType = WeaponAttackType.Hitscan,
+                spreadAngle = 0.6f,
+                pelletCount = 1,
+                maxPenetrationCount = 0,
+                penetrationDamageMultiplier = 0.5f,
+                projectilePrefabKey = string.Empty,
+                projectileSpeed = 0f,
+                projectileLifeTime = 0f,
+                explosionRadius = 0f,
+                explosionFalloff = 1f,
+                hitLayerMask = Physics.DefaultRaycastLayers,
+                tracerPrefabKey = string.Empty,
+                impactEffectKey = string.Empty,
                 recoilPitch = -1.5f,
                 recoilYaw = 0.5f,
                 viewRecoilPosition = new Vector3(0f, -0.015f, -0.08f),
@@ -120,6 +160,19 @@ namespace Weapon.Data
                 maxReserveAmmo = 120,
                 reloadTime = 1.65f,
                 range = 160f,
+                attackType = WeaponAttackType.Hitscan,
+                spreadAngle = 0.9f,
+                pelletCount = 1,
+                maxPenetrationCount = 0,
+                penetrationDamageMultiplier = 0.5f,
+                projectilePrefabKey = string.Empty,
+                projectileSpeed = 0f,
+                projectileLifeTime = 0f,
+                explosionRadius = 0f,
+                explosionFalloff = 1f,
+                hitLayerMask = Physics.DefaultRaycastLayers,
+                tracerPrefabKey = string.Empty,
+                impactEffectKey = string.Empty,
                 recoilPitch = -0.55f,
                 recoilYaw = 0.35f,
                 viewRecoilPosition = new Vector3(0f, -0.006f, -0.04f),
@@ -170,6 +223,26 @@ namespace Weapon.Data
             if (aimViewPositionOffset == Vector3.zero)
             {
                 aimViewPositionOffset = DefaultAimViewPositionOffset;
+            }
+
+            if (pelletCount <= 0)
+            {
+                pelletCount = 1;
+            }
+
+            if (penetrationDamageMultiplier <= 0f)
+            {
+                penetrationDamageMultiplier = 0.5f;
+            }
+
+            if (explosionFalloff <= 0f)
+            {
+                explosionFalloff = 1f;
+            }
+
+            if (hitLayerMask.value == 0)
+            {
+                hitLayerMask = Physics.DefaultRaycastLayers;
             }
         }
     }

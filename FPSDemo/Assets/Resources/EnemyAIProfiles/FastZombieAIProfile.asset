@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8da55ab819214b569a55d91995582088, type: 3}
+  m_Name: FastZombieAIProfile
+  m_EditorClassIdentifier: 
+  profile:
+    aiProfileKey: FastZombieAI
+    nearDistance: 10
+    midDistance: 22
+    farDistance: 40
+    nearThinkInterval: 0.08
+    midThinkInterval: 0.25
+    farThinkInterval: 0.8
+    sleepThinkInterval: 3
+    useRootMotionNear: 1
+    useRootMotionMid: 0
+    enableAgentNear: 1
+    enableAgentMid: 1
+    animatorLodDistance: 26
+    attackPriority: 2
+    surroundRadius: 1.5

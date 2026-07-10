@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c558d45c16db4838a9c4b1ed86fa9491, type: 3}
+  m_Name: Wave02EnemyWaveConfig
+  m_EditorClassIdentifier: 
+  config:
+    waveIndex: 2
+    startTime: 60
+    endTime: 180
+    spawnInterval: 2.5
+    spawnCountPerBatch: 1
+    spawnCountGrowthPerMinute: 0.5
+    maxSpawnCountPerBatch: 2
+    sceneMaxEnemyCount: 16
+    maxNearEnemyCount: 12
+    maxActiveAgentCount: 14
+    maxAttackersCount: 3
+    entries:
+    - enemyConfig: {fileID: 11400000, guid: d2fa9a896a5c46c99e18a9b0ecfdc2e2, type: 2}
+      weight: 80
+      maxAliveCount: 12
+      healthMultiplier: 1.2
+      damageMultiplier: 1.1
+      moveSpeedMultiplier: 1
+      goldMultiplier: 1.1
+    - enemyConfig: {fileID: 11400000, guid: ce16ab5c58114a31b68ac4d8691916ae, type: 2}
+      weight: 20
+      maxAliveCount: 4
+      healthMultiplier: 1
+      damageMultiplier: 1
+      moveSpeedMultiplier: 1
+      goldMultiplier: 1

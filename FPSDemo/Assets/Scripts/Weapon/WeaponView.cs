@@ -30,6 +30,7 @@ namespace Weapon
         private Vector3 _recoilRotationOffset;
         private float _adsAmount;
         private float _lastAdsAmount;
+        private bool _hasCachedDefaultTransform;
 
         public Animator Animator => animator;
         public Transform MuzzlePoint => muzzlePoint;
@@ -38,13 +39,13 @@ namespace Weapon
         private void Awake()
         {
             CacheReferences();
-            CacheDefaultTransform();
+            CacheDefaultTransform(true);
         }
 
         private void Reset()
         {
             CacheReferences();
-            CacheDefaultTransform();
+            CacheDefaultTransform(true);
         }
 
         private void LateUpdate()
@@ -56,7 +57,7 @@ namespace Weapon
         {
             _config = config;
             CacheReferences();
-            CacheDefaultTransform();
+            CacheDefaultTransform(false);
         }
 
         public void PlayIdle()
@@ -145,6 +146,35 @@ namespace Weapon
             animator.SetFloat(SprintAmountHash, value);
         }
 
+        public void ResetPoseInstant()
+        {
+            CacheReferences();
+            CacheDefaultTransform(false);
+
+            _adsAmount = 0f;
+            _lastAdsAmount = 0f;
+            _smoothPositionVelocity = Vector3.zero;
+            _smoothRotationVelocity = Vector3.zero;
+            _smoothScaleVelocity = Vector3.zero;
+            _recoilPositionOffset = Vector3.zero;
+            _recoilRotationOffset = Vector3.zero;
+            _smoothedViewLocalPosition = _defaultViewLocalPosition;
+            _smoothedViewLocalEulerAngles = _defaultViewLocalRotation.eulerAngles;
+            _smoothedViewLocalScale = _defaultViewLocalScale;
+
+            Transform root = GetViewRoot();
+            root.localPosition = _defaultViewLocalPosition;
+            root.localRotation = _defaultViewLocalRotation;
+            root.localScale = _defaultViewLocalScale;
+
+            if (animator != null)
+            {
+                animator.SetFloat(ADSAmountHash, 0f);
+                animator.SetFloat(SprintAmountHash, 0f);
+                animator.SetBool(IsReloadingHash, false);
+            }
+        }
+
         private void CacheReferences()
         {
             animator ??= GetComponent<Animator>();
@@ -154,8 +184,13 @@ namespace Weapon
             shellPoint ??= FindChildRecursive(transform, "ShellPoint");
         }
 
-        private void CacheDefaultTransform()
+        private void CacheDefaultTransform(bool force)
         {
+            if (_hasCachedDefaultTransform && !force)
+            {
+                return;
+            }
+
             Transform root = GetViewRoot();
             _defaultViewLocalPosition = root.localPosition;
             _defaultViewLocalRotation = root.localRotation;
@@ -166,6 +201,7 @@ namespace Weapon
             _smoothPositionVelocity = Vector3.zero;
             _smoothRotationVelocity = Vector3.zero;
             _smoothScaleVelocity = Vector3.zero;
+            _hasCachedDefaultTransform = true;
         }
 
         private void ApplyViewRecoil()

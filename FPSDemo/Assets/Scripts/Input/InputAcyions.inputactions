@@ -124,7 +124,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "sight",
+                    "name": "Sight",
                     "type": "Button",
                     "id": "6d828f66-7336-45c7-bfa0-d0df96d0a91a",
                     "expectedControlType": "",
@@ -328,7 +328,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "sight",
+                    "action": "Sight",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -119,6 +119,26 @@ public class PlayerController : CharacterBase<PlayerModel>
         CurrentHorizontalVelocity = Vector3.zero;
     }
 
+    public void TakeDamage(float damage)
+    {
+        if (Stats == null || Stats.RuntimeData == null)
+        {
+            return;
+        }
+
+        int damageAmount = Mathf.CeilToInt(Mathf.Max(0f, damage));
+        if (damageAmount <= 0 || Stats.RuntimeData.isInvincible)
+        {
+            return;
+        }
+
+        Stats.RuntimeData.currentHp = Mathf.Max(0, Stats.RuntimeData.currentHp - damageAmount);
+        EventCenter.Instance.EventTrigger(
+            GameEvent.PlayerDamaged,
+            new PlayerDamagedEventData(this, damageAmount, Stats.RuntimeData.currentHp, Stats.RuntimeData.maxHp));
+        Debug.Log($"玩家受到伤害 {damageAmount} 当前生命 {Stats.RuntimeData.currentHp}", this);
+    }
+
     public void SetVerticalVelocity(float velocity)
     {
         SetPlayerVelocityY(velocity);

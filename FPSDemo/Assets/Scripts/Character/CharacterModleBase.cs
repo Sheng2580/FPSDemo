@@ -50,7 +50,7 @@ public class CharacterModleBase : MonoBehaviour
     /// 只有 Animator 开启 Apply Root Motion 时，
     /// 这个函数才会正常参与根运动逻辑。
     /// </summary>
-    private void OnAnimatorMove()
+    protected virtual void OnAnimatorMove()
     {
         if (animator == null || RootMotionAction == null)
         {

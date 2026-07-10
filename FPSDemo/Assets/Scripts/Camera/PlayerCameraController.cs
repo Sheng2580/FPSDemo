@@ -19,9 +19,15 @@ public class PlayerCameraController : MonoBehaviour
     [SerializeField] private bool invertY;
     [SerializeField] private bool lockCursorOnStart = false;
 
+    [Header("开镜FOV参数")]
+    [SerializeField] private float aimFovSmoothTime = 0.06f;
+
     [Header("后坐力参数")]
     [SerializeField] private Vector2 recoilOffset;
-    [SerializeField] private float recoilReturnSpeed = 8f;
+    [SerializeField] private float recoilFollowSmoothTime = 0.045f;
+    [SerializeField] private float recoilTargetReturnSpeed = 2.5f;
+    [SerializeField] private float maxRecoilPitchOffset = 8f;
+    [SerializeField] private float maxRecoilYawOffset = 4f;
 
     // 水平旋转角度 作用在玩家根节点上
     private float _yaw;
@@ -32,7 +38,11 @@ public class PlayerCameraController : MonoBehaviour
     private float _defaultFov;
     private float _targetAimFov;
     private float _aimFovAmount;
+    private float _smoothedAimFovAmount;
+    private float _aimFovAmountVelocity;
     private bool _hasCachedDefaultFov;
+    private Vector2 _recoilTarget;
+    private Vector2 _recoilVelocity;
 
     public Transform PlayerRoot => playerRoot;
     public Transform CameraRoot => cameraRoot;
@@ -70,7 +80,11 @@ public class PlayerCameraController : MonoBehaviour
         AutoBindReferences();
         minPitch = Mathf.Min(minPitch, maxPitch);
         maxPitch = Mathf.Max(maxPitch, minPitch);
-        recoilReturnSpeed = Mathf.Max(0f, recoilReturnSpeed);
+        aimFovSmoothTime = Mathf.Max(0.001f, aimFovSmoothTime);
+        recoilFollowSmoothTime = Mathf.Max(0.001f, recoilFollowSmoothTime);
+        recoilTargetReturnSpeed = Mathf.Max(0f, recoilTargetReturnSpeed);
+        maxRecoilPitchOffset = Mathf.Max(0f, maxRecoilPitchOffset);
+        maxRecoilYawOffset = Mathf.Max(0f, maxRecoilYawOffset);
     }
 
     private void Start()
@@ -101,8 +115,7 @@ public class PlayerCameraController : MonoBehaviour
         float pitchInput = invertY ? lookInput.y : -lookInput.y;
         _pitch = Mathf.Clamp(_pitch + pitchInput * mouseSensitivity, minPitch, maxPitch);
 
-        // 后坐力偏移会缓慢回正 为后续武器系统预留接口
-        recoilOffset = Vector2.Lerp(recoilOffset, Vector2.zero, recoilReturnSpeed * Time.deltaTime);
+        UpdateRecoil();
 
         float finalYaw = _yaw + recoilOffset.y;
         float finalPitch = Mathf.Clamp(_pitch + recoilOffset.x, minPitch, maxPitch);
@@ -123,19 +136,70 @@ public class PlayerCameraController : MonoBehaviour
 
     public void AddRecoil(float pitchAmount, float yawAmount)
     {
-        recoilOffset += new Vector2(pitchAmount, yawAmount);
+        _recoilTarget += new Vector2(pitchAmount, yawAmount);
+        ClampRecoilTarget();
     }
 
     public void ClearRecoil()
     {
         recoilOffset = Vector2.zero;
+        _recoilTarget = Vector2.zero;
+        _recoilVelocity = Vector2.zero;
+    }
+
+    private void UpdateRecoil()
+    {
+        float deltaTime = Time.deltaTime;
+        if (deltaTime <= 0f)
+        {
+            return;
+        }
+
+        // 当前后坐力追随目标后坐力 连发时会慢慢向上飘
+        recoilOffset.x = Mathf.SmoothDamp(
+            recoilOffset.x,
+            _recoilTarget.x,
+            ref _recoilVelocity.x,
+            recoilFollowSmoothTime,
+            Mathf.Infinity,
+            deltaTime);
+
+        recoilOffset.y = Mathf.SmoothDamp(
+            recoilOffset.y,
+            _recoilTarget.y,
+            ref _recoilVelocity.y,
+            recoilFollowSmoothTime,
+            Mathf.Infinity,
+            deltaTime);
+
+        // 目标值缓慢恢复 停火后视角不会瞬间弹回
+        _recoilTarget = Vector2.MoveTowards(_recoilTarget, Vector2.zero, recoilTargetReturnSpeed * deltaTime);
+        ClampRecoilTarget();
+    }
+
+    private void ClampRecoilTarget()
+    {
+        if (maxRecoilPitchOffset > 0f)
+        {
+            _recoilTarget.x = Mathf.Clamp(_recoilTarget.x, -maxRecoilPitchOffset, maxRecoilPitchOffset);
+        }
+
+        if (maxRecoilYawOffset > 0f)
+        {
+            _recoilTarget.y = Mathf.Clamp(_recoilTarget.y, -maxRecoilYawOffset, maxRecoilYawOffset);
+        }
     }
 
     private void OnWeaponAimCameraChanged(WeaponAimCameraEventData eventData)
     {
         // 相机只消费武器传来的开镜参数
         _aimFovAmount = eventData.aimAmount;
-        _targetAimFov = eventData.targetFov;
+
+        // 退出开镜时保留旧目标 FOV 等当前 FOV 回到默认后再切换 避免切枪时硬跳
+        if (_aimFovAmount > 0.001f || _smoothedAimFovAmount <= 0.001f || _targetAimFov <= 1f)
+        {
+            _targetAimFov = eventData.targetFov;
+        }
     }
 
     private void AutoBindReferences()
@@ -239,7 +303,19 @@ public class PlayerCameraController : MonoBehaviour
         }
 
         CacheDefaultFov();
-        playerCamera.fieldOfView = Mathf.Lerp(_defaultFov, _targetAimFov, _aimFovAmount);
+        _smoothedAimFovAmount = Mathf.SmoothDamp(
+            _smoothedAimFovAmount,
+            _aimFovAmount,
+            ref _aimFovAmountVelocity,
+            aimFovSmoothTime);
+
+        if (Mathf.Abs(_smoothedAimFovAmount - _aimFovAmount) <= 0.001f)
+        {
+            _smoothedAimFovAmount = _aimFovAmount;
+            _aimFovAmountVelocity = 0f;
+        }
+
+        playerCamera.fieldOfView = Mathf.Lerp(_defaultFov, _targetAimFov, _smoothedAimFovAmount);
     }
 
     private bool HasRequiredReferences()

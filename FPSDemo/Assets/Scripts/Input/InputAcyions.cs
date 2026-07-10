@@ -210,7 +210,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""sight"",
+                    ""name"": ""Sight"",
                     ""type"": ""Button"",
                     ""id"": ""6d828f66-7336-45c7-bfa0-d0df96d0a91a"",
                     ""expectedControlType"": """",
@@ -414,7 +414,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""sight"",
+                    ""action"": ""Sight"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -438,7 +438,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         m_GameInput_ESC = m_GameInput.FindAction("ESC", throwIfNotFound: true);
         m_GameInput_lockCamera = m_GameInput.FindAction("lockCamera", throwIfNotFound: true);
         m_GameInput_UseTheCombat = m_GameInput.FindAction("UseTheCombat", throwIfNotFound: true);
-        m_GameInput_sight = m_GameInput.FindAction("sight", throwIfNotFound: true);
+        m_GameInput_Sight = m_GameInput.FindAction("Sight", throwIfNotFound: true);
     }
 
     ~@InputAcyions()
@@ -532,7 +532,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
     private readonly InputAction m_GameInput_ESC;
     private readonly InputAction m_GameInput_lockCamera;
     private readonly InputAction m_GameInput_UseTheCombat;
-    private readonly InputAction m_GameInput_sight;
+    private readonly InputAction m_GameInput_Sight;
     /// <summary>
     /// Provides access to input actions defined in input action map "GameInput".
     /// </summary>
@@ -597,9 +597,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @UseTheCombat => m_Wrapper.m_GameInput_UseTheCombat;
         /// <summary>
-        /// Provides access to the underlying input action "GameInput/sight".
+        /// Provides access to the underlying input action "GameInput/Sight".
         /// </summary>
-        public InputAction @sight => m_Wrapper.m_GameInput_sight;
+        public InputAction @Sight => m_Wrapper.m_GameInput_Sight;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -665,9 +665,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @UseTheCombat.started += instance.OnUseTheCombat;
             @UseTheCombat.performed += instance.OnUseTheCombat;
             @UseTheCombat.canceled += instance.OnUseTheCombat;
-            @sight.started += instance.OnSight;
-            @sight.performed += instance.OnSight;
-            @sight.canceled += instance.OnSight;
+            @Sight.started += instance.OnSight;
+            @Sight.performed += instance.OnSight;
+            @Sight.canceled += instance.OnSight;
         }
 
         /// <summary>
@@ -718,9 +718,9 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
             @UseTheCombat.started -= instance.OnUseTheCombat;
             @UseTheCombat.performed -= instance.OnUseTheCombat;
             @UseTheCombat.canceled -= instance.OnUseTheCombat;
-            @sight.started -= instance.OnSight;
-            @sight.performed -= instance.OnSight;
-            @sight.canceled -= instance.OnSight;
+            @Sight.started -= instance.OnSight;
+            @Sight.performed -= instance.OnSight;
+            @Sight.canceled -= instance.OnSight;
         }
 
         /// <summary>
@@ -853,7 +853,7 @@ public partial class @InputAcyions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnUseTheCombat(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "sight" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "Sight" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />

@@ -65,13 +65,13 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
                                 && (_gameInputActions.GameInput.Fire.WasReleasedThisFrame()
                                     || UnityEngine.Input.GetMouseButtonUp(0));
    private bool DirectAimDown => CanUseDirectAimInput()
-                                 && (_gameInputActions.GameInput.sight.WasPressedThisFrame()
+                                 && (_gameInputActions.GameInput.Sight.WasPressedThisFrame()
                                      || UnityEngine.Input.GetMouseButtonDown(1));
    private bool DirectAimHeld => CanUseDirectAimInput()
-                                 && (_gameInputActions.GameInput.sight.IsPressed()
+                                 && (_gameInputActions.GameInput.Sight.IsPressed()
                                      || UnityEngine.Input.GetMouseButton(1));
    private bool DirectAimUp => CanUseDirectAimInput()
-                               && (_gameInputActions.GameInput.sight.WasReleasedThisFrame()
+                               && (_gameInputActions.GameInput.Sight.WasReleasedThisFrame()
                                    || UnityEngine.Input.GetMouseButtonUp(1));
 
    public bool F => _gameInputActions.GameInput.F.triggered;
@@ -102,6 +102,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       EventCenter.Instance.AddEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
+      EventCenter.Instance.AddEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
    }
 
    private void Update()
@@ -123,6 +124,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
+      EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
       _gameInputActions.Disable();
    }
 
@@ -198,6 +200,14 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    {
       // 记录瞄准松开帧并退出瞄准状态
       _isMobileSightHeld = false;
+      _mobileSightReleasedFrame = Time.frameCount;
+   }
+
+   private void OnMobileSightCanceled()
+   {
+      // 切枪等外部流程会强制退出移动端开镜
+      _isMobileSightHeld = false;
+      _mobileSightPressedFrame = -1;
       _mobileSightReleasedFrame = Time.frameCount;
    }
 

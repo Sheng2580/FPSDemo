@@ -13,6 +13,7 @@ public class PlayerJump : PlayerState
         float jumpEndVerticalVelocity = player != null && player.Stats != null
             ? player.Stats.JumpEndVerticalVelocity
             : PlayerBaseConfig.CreateDefault().jumpEndVerticalVelocity;
+        
 
         if (HasMoveInput())
         {

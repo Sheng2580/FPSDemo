@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d71f7e0ff26f4262a8333ba1963f1abc, type: 3}
+  m_Name: NormalZombieEnemyConfig
+  m_EditorClassIdentifier: 
+  config:
+    enemyId: 1001
+    enemyName: Zombie Skeleton
+    prefabKey: ZombieSkeletonOneHanded
+    prefabResourceKey: Enemy_ZombieSkeleton_LOD2
+    behaviorTreeKey: ZombieMelee
+    aiProfileKey: NormalZombieAI
+    bodyPartTemplateKey: ZombieHumanoidDefault
+    dropPoolKey: ZombieBasicDrop
+    maxHealth: 100
+    moveSpeed: 2.2
+    angularSpeed: 360
+    acceleration: 12
+    attackDamage: 10
+    attackDistance: 1.4
+    attackInterval: 1.2
+    attackHitDelay: 0.35
+    detectionRange: 30
+    goldReward: 1
+    blessingEnergyReward: 1
+    experienceReward: 1
+    hitStunDuration: 0.09
+    hitReactionCooldown: 0.2
+    hitKnockbackDistance: 0.08
+    hitKnockbackDuration: 0.06
+    idleStateName: ZombieSkeleton_OneHanded_Idle
+    walkStateName: ZombieSkeleton_OneHanded_Walk
+    runStateName: ZombieSkeleton_OneHanded_Run
+    attackStateName: ZombieSkeleton_OneHanded_Attack_1
+    damageStateName: ZombieSkeleton_OneHanded_Damage
+    deathStateName: ZombieSkeleton_OneHanded_Death
+    locomotionTransition: 0.18
+    attackTransition: 0.1
+    hitTransition: 0.14
+    deathTransition: 0.18
+    recoverTransition: 0.18
+    headDamageMultiplier: 2
+    bodyDamageMultiplier: 1
+    armDamageMultiplier: 0.75
+    legDamageMultiplier: 0.6

@@ -22,6 +22,21 @@ MonoBehaviour:
     maxReserveAmmo: 48
     reloadTime: 1.4
     range: 100
+    attackType: 0
+    spreadAngle: 0.6
+    pelletCount: 1
+    maxPenetrationCount: 0
+    penetrationDamageMultiplier: 0.5
+    projectilePrefabKey: ""
+    projectileSpeed: 0
+    projectileLifeTime: 0
+    explosionRadius: 0
+    explosionFalloff: 1
+    hitLayerMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    tracerPrefabKey: ""
+    impactEffectKey: ""
     recoilPitch: -1.5
     recoilYaw: 0.5
     viewRecoilPosition: {x: 0, y: -0.015, z: -0.08}
