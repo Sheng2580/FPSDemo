@@ -17,6 +17,13 @@ public static class FPSDemoBuildTools
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
     private const string StreamingAssetsPath = "Assets/StreamingAssets";
     private const string AndroidBuildPath = "Builds/Android/FPSDemo.apk";
+    private const int InvalidActiveInputHandler = -1;
+    private const int InputSystemPackageOnly = 1;
+
+    private static readonly string[] ObsoleteAssetBundleAssetPaths =
+    {
+        "Assets/Art/ABRes/Cube.prefab"
+    };
 
     private static readonly string[] UIAssetPaths =
     {
@@ -33,9 +40,27 @@ public static class FPSDemoBuildTools
         "Assets/Art/ABRes/CombatFeedback/Effects/Stone Impact.prefab",
         "Assets/Art/ABRes/CombatFeedback/Effects/Metal Impact.prefab",
         "Assets/Art/ABRes/CombatFeedback/Effects/Wood Impact.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash1.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash2.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash3.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash4.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash5.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash6.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash7.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash8.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash9.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/MuzzleFlashes/MuzzleFlash10.prefab",
+        "Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/ConcreteImpact.prefab",
+        "Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/MetalImpact.prefab",
+        "Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/WoodImpact.prefab",
         "Assets/Art/ABRes/CombatFeedback/Audio/Pistol_1 Fire.wav",
         "Assets/Art/ABRes/CombatFeedback/Audio/Assault Rifle_1 Fire.wav",
-        "Assets/Art/ABRes/CombatFeedback/Audio/Hitmarker.wav"
+        "Assets/Art/ABRes/CombatFeedback/Audio/Hitmarker.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Concrete.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Metal.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Wood.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Destruction_Fruit.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Glass.wav"
     };
 
     private static readonly string[] EnemyPrefabAssetPaths =
@@ -92,7 +117,7 @@ public static class FPSDemoBuildTools
         CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
         FixMobileUIPrefabInternal(false);
         FixRuntimeAssetBundleResourcesInternal(false);
-        BuildAssetBundles(BuildTarget.Android);
+        BuildAssetBundles(BuildTarget.Android, true);
         ValidateStreamingBundle("Android", true);
     }
 
@@ -109,7 +134,7 @@ public static class FPSDemoBuildTools
             throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
 
-        BuildAssetBundles(BuildTarget.Android);
+        BuildAssetBundles(BuildTarget.Android, true);
         ValidateStreamingBundle("Android", true);
     }
 
@@ -137,50 +162,120 @@ public static class FPSDemoBuildTools
     [MenuItem("FPSDemo/Build/打Android APK", priority = 40)]
     public static void BuildAndroidApk()
     {
+        int previousActiveInputHandler = GetActiveInputHandler();
         FixAndroidCompatibilitySettingsInternal(false);
-        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
-        FixMobileUIPrefabInternal(false);
-        FixRuntimeAssetBundleResourcesInternal(false);
 
-        if (!ValidateMobileUI(true) || !ValidateRuntimeAssetBundleResources(true))
+        try
         {
-            throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
+            SetActiveInputHandler(InputSystemPackageOnly);
+            CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
+            FixMobileUIPrefabInternal(false);
+            FixRuntimeAssetBundleResourcesInternal(false);
+
+            if (!ValidateMobileUI(true) || !ValidateRuntimeAssetBundleResources(true))
+            {
+                throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
+            }
+
+            DeleteOldAndroidApk();
+            BuildAssetBundles(BuildTarget.Android, true);
+            ValidateStreamingBundle("Android", true);
+            ValidateOnlyTargetStreamingAssets(BuildTarget.Android, true);
+
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
+            {
+                EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+            }
+
+            string[] scenes = GetEnabledBuildScenes();
+            if (scenes.Length == 0)
+            {
+                throw new BuildFailedException("Build Settings 里没有启用场景");
+            }
+
+            string outputDirectory = Path.GetDirectoryName(AndroidBuildPath);
+            if (!string.IsNullOrEmpty(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
+            BuildPlayerOptions buildOptions = new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = AndroidBuildPath,
+                target = BuildTarget.Android,
+                options = BuildOptions.CleanBuildCache
+            };
+
+            BuildReport report = BuildPipeline.BuildPlayer(buildOptions);
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                throw new BuildFailedException($"Android APK 打包失败 {report.summary.result}");
+            }
+
+            Debug.Log($"[FPSDemoBuildTools] Android APK 打包完成: {AndroidBuildPath}");
+        }
+        finally
+        {
+            RestoreActiveInputHandler(previousActiveInputHandler);
+        }
+    }
+
+    private static void DeleteOldAndroidApk()
+    {
+        if (File.Exists(AndroidBuildPath))
+        {
+            File.Delete(AndroidBuildPath);
         }
 
-        BuildAssetBundles(BuildTarget.Android);
-
-        if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
+        string symbolsPath = Path.ChangeExtension(AndroidBuildPath, ".symbols.zip");
+        if (File.Exists(symbolsPath))
         {
-            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+            File.Delete(symbolsPath);
+        }
+    }
+
+    private static int GetActiveInputHandler()
+    {
+        SerializedObject serializedProjectSettings = GetSerializedProjectSettings();
+        SerializedProperty activeInputHandler = serializedProjectSettings?.FindProperty("activeInputHandler");
+        return activeInputHandler != null ? activeInputHandler.intValue : InvalidActiveInputHandler;
+    }
+
+    private static void SetActiveInputHandler(int activeInputHandlerValue)
+    {
+        SerializedObject serializedProjectSettings = GetSerializedProjectSettings();
+        SerializedProperty activeInputHandler = serializedProjectSettings?.FindProperty("activeInputHandler");
+        if (activeInputHandler == null || activeInputHandler.intValue == activeInputHandlerValue)
+        {
+            return;
         }
 
-        string[] scenes = GetEnabledBuildScenes();
-        if (scenes.Length == 0)
+        serializedProjectSettings.Update();
+        activeInputHandler.intValue = activeInputHandlerValue;
+        serializedProjectSettings.ApplyModifiedPropertiesWithoutUndo();
+        AssetDatabase.SaveAssets();
+    }
+
+    private static void RestoreActiveInputHandler(int previousActiveInputHandler)
+    {
+        if (previousActiveInputHandler == InvalidActiveInputHandler)
         {
-            throw new BuildFailedException("Build Settings 里没有启用场景");
+            return;
         }
 
-        string outputDirectory = Path.GetDirectoryName(AndroidBuildPath);
-        if (!string.IsNullOrEmpty(outputDirectory))
+        SetActiveInputHandler(previousActiveInputHandler);
+    }
+
+    private static SerializedObject GetSerializedProjectSettings()
+    {
+        UnityEngine.Object[] projectSettingsAssets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset");
+        if (projectSettingsAssets == null || projectSettingsAssets.Length == 0)
         {
-            Directory.CreateDirectory(outputDirectory);
+            return null;
         }
 
-        BuildPlayerOptions buildOptions = new BuildPlayerOptions
-        {
-            scenes = scenes,
-            locationPathName = AndroidBuildPath,
-            target = BuildTarget.Android,
-            options = BuildOptions.None
-        };
-
-        BuildReport report = BuildPipeline.BuildPlayer(buildOptions);
-        if (report.summary.result != BuildResult.Succeeded)
-        {
-            throw new BuildFailedException($"Android APK 打包失败 {report.summary.result}");
-        }
-
-        Debug.Log($"[FPSDemoBuildTools] Android APK 打包完成: {AndroidBuildPath}");
+        return new SerializedObject(projectSettingsAssets[0]);
     }
 
     private static void FixAndroidCompatibilitySettingsInternal(bool logResult)
@@ -309,6 +404,7 @@ public static class FPSDemoBuildTools
         success &= TrySetAssetBundleNames(UIAssetPaths, TouchCanvasBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
         success &= TrySetAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName, ref changed);
+        success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
 
         if (changed)
         {
@@ -332,6 +428,17 @@ public static class FPSDemoBuildTools
         foreach (string assetPath in assetPaths)
         {
             success &= TrySetAssetBundleName(assetPath, bundleName, ref changed);
+        }
+
+        return success;
+    }
+
+    private static bool TryClearAssetBundleNames(IEnumerable<string> assetPaths, ref bool changed)
+    {
+        bool success = true;
+        foreach (string assetPath in assetPaths)
+        {
+            success &= TrySetAssetBundleName(assetPath, string.Empty, ref changed);
         }
 
         return success;
@@ -476,13 +583,23 @@ public static class FPSDemoBuildTools
 
     private static void BuildAssetBundles(BuildTarget target)
     {
+        BuildAssetBundles(target, false);
+    }
+
+    private static void BuildAssetBundles(BuildTarget target, bool cleanStreamingAssetsForTarget)
+    {
+        if (cleanStreamingAssetsForTarget)
+        {
+            CleanStreamingAssetsBeforeSinglePlatformBuild(target);
+        }
+
         string outputPath = GetPlatformBundleOutputPath(target);
         RemoveLegacyPlatformBundleFile(outputPath);
         Directory.CreateDirectory(outputPath);
 
         AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(
             outputPath,
-            BuildAssetBundleOptions.None,
+            BuildAssetBundleOptions.ForceRebuildAssetBundle,
             target);
 
         if (manifest == null)
@@ -492,6 +609,20 @@ public static class FPSDemoBuildTools
 
         AssetDatabase.Refresh();
         Debug.Log($"[FPSDemoBuildTools] AssetBundle 打包完成: {target} -> {outputPath}");
+    }
+
+    private static void CleanStreamingAssetsBeforeSinglePlatformBuild(BuildTarget target)
+    {
+        Directory.CreateDirectory(StreamingAssetsPath);
+
+        string[] entries = Directory.GetFileSystemEntries(StreamingAssetsPath);
+        for (int i = 0; i < entries.Length; i++)
+        {
+            DeleteFileOrDirectory(entries[i]);
+        }
+
+        AssetDatabase.Refresh();
+        Debug.Log($"[FPSDemoBuildTools] 已清理 StreamingAssets 旧平台资源 准备打包 {target}");
     }
 
     private static void RemoveLegacyPlatformBundleFile(string outputPath)
@@ -508,9 +639,37 @@ public static class FPSDemoBuildTools
 
     private static void DeleteAssetIfExists(string assetPath)
     {
-        if (File.Exists(assetPath) || Directory.Exists(assetPath))
+        if (string.IsNullOrEmpty(assetPath))
         {
-            AssetDatabase.DeleteAsset(assetPath);
+            return;
+        }
+
+        if (AssetDatabase.DeleteAsset(assetPath))
+        {
+            return;
+        }
+
+        DeleteFileOrDirectory(assetPath);
+    }
+
+    private static void DeleteFileOrDirectory(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        if (File.Exists(path))
+        {
+            FileUtil.DeleteFileOrDirectory(path);
+            FileUtil.DeleteFileOrDirectory(path + ".meta");
+            return;
+        }
+
+        if (Directory.Exists(path))
+        {
+            FileUtil.DeleteFileOrDirectory(path);
+            FileUtil.DeleteFileOrDirectory(path + ".meta");
         }
     }
 
@@ -534,6 +693,42 @@ public static class FPSDemoBuildTools
         if (throwOnFail)
         {
             throw new BuildFailedException("StreamingAssets 资源检查失败");
+        }
+
+        return false;
+    }
+
+    private static bool ValidateOnlyTargetStreamingAssets(BuildTarget target, bool throwOnFail)
+    {
+        string targetMainBundleName = GetMainBundleName(target);
+        bool isValid = true;
+
+        if (Directory.Exists(StreamingAssetsPath))
+        {
+            string[] entries = Directory.GetFileSystemEntries(StreamingAssetsPath);
+            for (int i = 0; i < entries.Length; i++)
+            {
+                string entryName = Path.GetFileName(entries[i]);
+                if (string.Equals(entryName, targetMainBundleName, StringComparison.Ordinal)
+                    || string.Equals(entryName, targetMainBundleName + ".meta", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                isValid = false;
+                Debug.LogError($"[FPSDemoBuildTools] StreamingAssets 存在非目标平台残留: {entries[i]}");
+            }
+        }
+
+        if (isValid)
+        {
+            Debug.Log($"[FPSDemoBuildTools] StreamingAssets 只保留目标平台资源: {targetMainBundleName}");
+            return true;
+        }
+
+        if (throwOnFail)
+        {
+            throw new BuildFailedException("StreamingAssets 存在非目标平台残留");
         }
 
         return false;
