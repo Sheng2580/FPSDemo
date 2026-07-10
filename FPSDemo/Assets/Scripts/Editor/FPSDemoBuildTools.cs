@@ -18,7 +18,7 @@ public static class FPSDemoBuildTools
     private const string StreamingAssetsPath = "Assets/StreamingAssets";
     private const string AndroidBuildPath = "Builds/Android/FPSDemo.apk";
     private const int InvalidActiveInputHandler = -1;
-    private const int InputSystemPackageOnly = 1;
+    private const int BothInputHandlers = 2;
 
     private static readonly string[] ObsoleteAssetBundleAssetPaths =
     {
@@ -167,7 +167,7 @@ public static class FPSDemoBuildTools
 
         try
         {
-            SetActiveInputHandler(InputSystemPackageOnly);
+            SetActiveInputHandler(BothInputHandlers);
             CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
             FixMobileUIPrefabInternal(false);
             FixRuntimeAssetBundleResourcesInternal(false);
