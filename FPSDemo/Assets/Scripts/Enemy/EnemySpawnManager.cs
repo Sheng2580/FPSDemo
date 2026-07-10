@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using Enemy.Data;
 using UnityEngine;
 using UnityEngine.AI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Enemy
 {
@@ -12,6 +15,11 @@ namespace Enemy
     /// </summary>
     public class EnemySpawnManager : MonoBehaviour
     {
+        private const string DefaultEnemyPrefabBundleName = "enemy_prefabs";
+#if UNITY_EDITOR
+        private const string EditorEnemyPrefabFolder = "Assets/Art/ABRes/Enemies/Prefabs";
+#endif
+
         [Serializable]
         public class EnemySpawnDefinition
         {
@@ -68,8 +76,18 @@ namespace Enemy
         [SerializeField] private List<EnemyPrefabBinding> prefabBindings = new List<EnemyPrefabBinding>();
         [SerializeField] private List<EnemySpawnDefinition> spawnDefinitions = new List<EnemySpawnDefinition>();
 
+        [Header("AssetBundle")]
+        [SerializeField] private bool loadPrefabsFromAssetBundle = true;
+        [SerializeField] private string enemyPrefabAssetBundleName = DefaultEnemyPrefabBundleName;
+#if UNITY_EDITOR
+        [SerializeField] private bool preferEditorDirectPrefab = true;
+#endif
+
         private readonly List<EnemyController> _activeEnemies = new List<EnemyController>();
         private readonly Dictionary<int, int> _aliveCountByEnemyId = new Dictionary<int, int>();
+        private readonly Dictionary<string, GameObject> _loadedPrefabByResourceKey = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _loadingPrefabResourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _missingPrefabWarnings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private float _nextSpawnTime;
         private float _battleStartTime;
 
@@ -79,6 +97,7 @@ namespace Enemy
             EnsurePool();
             CachePlayerTarget();
             LoadWaveConfigsIfNeeded();
+            PreloadEnemyPrefabsFromAssetBundle();
         }
 
         private void Update()
@@ -149,7 +168,6 @@ namespace Enemy
             GameObject prefab = ResolvePrefab(runtimeStats);
             if (prefab == null)
             {
-                Debug.LogWarning($"[EnemySpawn] 找不到敌人 Prefab Key={runtimeStats.prefabKey} ResourceKey={runtimeStats.prefabResourceKey}", this);
                 return false;
             }
 
@@ -170,12 +188,18 @@ namespace Enemy
         private void SpawnOneLegacy()
         {
             EnemySpawnDefinition definition = PickDefinition();
-            if (definition == null || definition.prefab == null)
+            if (definition == null)
             {
                 return;
             }
 
-            EnemyController enemy = enemyPool.Get(definition.prefab);
+            GameObject prefab = ResolvePrefab(definition);
+            if (prefab == null)
+            {
+                return;
+            }
+
+            EnemyController enemy = enemyPool.Get(prefab);
             if (enemy == null)
             {
                 return;
@@ -183,7 +207,7 @@ namespace Enemy
 
             enemy.transform.SetPositionAndRotation(GetSpawnPosition(), Quaternion.identity);
             enemy.gameObject.SetActive(true);
-            enemy.InitFromSpawner(definition, playerTarget, this, enemyPool, definition.prefab);
+            enemy.InitFromSpawner(definition, playerTarget, this, enemyPool, prefab);
             _activeEnemies.Add(enemy);
             IncreaseAliveCount(definition.enemyId);
         }
@@ -199,7 +223,7 @@ namespace Enemy
             for (int i = 0; i < spawnDefinitions.Count; i++)
             {
                 EnemySpawnDefinition definition = spawnDefinitions[i];
-                if (definition != null && definition.prefab != null)
+                if (definition != null && CanResolveDefinitionPrefab(definition))
                 {
                     totalWeight += Mathf.Max(0f, definition.weight);
                 }
@@ -214,7 +238,7 @@ namespace Enemy
             for (int i = 0; i < spawnDefinitions.Count; i++)
             {
                 EnemySpawnDefinition definition = spawnDefinitions[i];
-                if (definition == null || definition.prefab == null)
+                if (definition == null || !CanResolveDefinitionPrefab(definition))
                 {
                     continue;
                 }
@@ -294,6 +318,43 @@ namespace Enemy
                 return null;
             }
 
+            if (TryGetAssetBundlePrefab(runtimeStats.prefabResourceKey, out GameObject prefab))
+            {
+                return prefab;
+            }
+
+            if (loadPrefabsFromAssetBundle && !string.IsNullOrEmpty(runtimeStats.prefabResourceKey))
+            {
+                BeginLoadEnemyPrefab(runtimeStats.prefabResourceKey);
+                return null;
+            }
+
+            return ResolveDirectPrefab(runtimeStats);
+        }
+
+        private GameObject ResolvePrefab(EnemySpawnDefinition definition)
+        {
+            if (definition == null)
+            {
+                return null;
+            }
+
+            if (TryGetAssetBundlePrefab(definition.prefabResourceKey, out GameObject prefab))
+            {
+                return prefab;
+            }
+
+            if (loadPrefabsFromAssetBundle && !string.IsNullOrEmpty(definition.prefabResourceKey))
+            {
+                BeginLoadEnemyPrefab(definition.prefabResourceKey);
+                return null;
+            }
+
+            return definition.prefab;
+        }
+
+        private GameObject ResolveDirectPrefab(EnemyRuntimeStats runtimeStats)
+        {
             if (prefabBindings != null)
             {
                 for (int i = 0; i < prefabBindings.Count; i++)
@@ -325,12 +386,6 @@ namespace Enemy
                 }
             }
 
-            GameObject resourcePrefab = Resources.Load<GameObject>(runtimeStats.prefabResourceKey);
-            if (resourcePrefab != null)
-            {
-                return resourcePrefab;
-            }
-
             if (spawnDefinitions != null && spawnDefinitions.Count > 0 && spawnDefinitions[0] != null)
             {
                 Debug.LogWarning(
@@ -340,6 +395,162 @@ namespace Enemy
             }
 
             return null;
+        }
+
+        private bool CanResolveDefinitionPrefab(EnemySpawnDefinition definition)
+        {
+            if (definition == null)
+            {
+                return false;
+            }
+
+            return definition.prefab != null || !string.IsNullOrEmpty(definition.prefabResourceKey);
+        }
+
+        private void PreloadEnemyPrefabsFromAssetBundle()
+        {
+            if (!loadPrefabsFromAssetBundle)
+            {
+                return;
+            }
+
+            HashSet<string> keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            CollectPrefabKeys(keys);
+
+            foreach (string key in keys)
+            {
+                BeginLoadEnemyPrefab(key);
+            }
+        }
+
+        private void CollectPrefabKeys(HashSet<string> keys)
+        {
+            if (keys == null)
+            {
+                return;
+            }
+
+            if (prefabBindings != null)
+            {
+                for (int i = 0; i < prefabBindings.Count; i++)
+                {
+                    EnemyPrefabBinding binding = prefabBindings[i];
+                    AddPrefabKey(keys, binding?.prefabResourceKey);
+                }
+            }
+
+            if (spawnDefinitions != null)
+            {
+                for (int i = 0; i < spawnDefinitions.Count; i++)
+                {
+                    EnemySpawnDefinition definition = spawnDefinitions[i];
+                    AddPrefabKey(keys, definition?.prefabResourceKey);
+                }
+            }
+
+            if (waveConfigs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < waveConfigs.Count; i++)
+            {
+                EnemyWaveConfigAsset waveAsset = waveConfigs[i];
+                EnemyWaveConfig wave = waveAsset != null ? waveAsset.Config : null;
+                if (wave?.entries == null)
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < wave.entries.Count; j++)
+                {
+                    EnemySpawnEntry entry = wave.entries[j];
+                    EnemyConfig config = entry?.enemyConfig != null ? entry.enemyConfig.CreateRuntimeConfig() : null;
+                    AddPrefabKey(keys, config?.prefabResourceKey);
+                }
+            }
+        }
+
+        private void AddPrefabKey(HashSet<string> keys, string key)
+        {
+            if (keys == null || string.IsNullOrEmpty(key))
+            {
+                return;
+            }
+
+            keys.Add(key);
+        }
+
+        private bool TryGetAssetBundlePrefab(string resourceKey, out GameObject prefab)
+        {
+            prefab = null;
+            if (string.IsNullOrEmpty(resourceKey))
+            {
+                return false;
+            }
+
+            return _loadedPrefabByResourceKey.TryGetValue(resourceKey, out prefab) && prefab != null;
+        }
+
+        private void BeginLoadEnemyPrefab(string resourceKey)
+        {
+            if (!loadPrefabsFromAssetBundle || string.IsNullOrEmpty(resourceKey))
+            {
+                return;
+            }
+
+            if (_loadedPrefabByResourceKey.ContainsKey(resourceKey) || !_loadingPrefabResourceKeys.Add(resourceKey))
+            {
+                return;
+            }
+
+#if UNITY_EDITOR
+            if (preferEditorDirectPrefab && TryLoadEditorEnemyPrefab(resourceKey, out GameObject editorPrefab))
+            {
+                _loadingPrefabResourceKeys.Remove(resourceKey);
+                _loadedPrefabByResourceKey[resourceKey] = editorPrefab;
+                return;
+            }
+#endif
+
+            ABManager.Instance.LoadAssetAsync<GameObject>(enemyPrefabAssetBundleName, resourceKey, loadedPrefab =>
+            {
+                _loadingPrefabResourceKeys.Remove(resourceKey);
+                if (loadedPrefab != null)
+                {
+                    _loadedPrefabByResourceKey[resourceKey] = loadedPrefab;
+                    return;
+                }
+
+                if (TryLoadEditorEnemyPrefab(resourceKey, out GameObject editorPrefab))
+                {
+                    _loadedPrefabByResourceKey[resourceKey] = editorPrefab;
+                    return;
+                }
+
+                WarnMissingEnemyPrefab(resourceKey);
+            });
+        }
+
+        private bool TryLoadEditorEnemyPrefab(string resourceKey, out GameObject prefab)
+        {
+#if UNITY_EDITOR
+            prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{EditorEnemyPrefabFolder}/{resourceKey}.prefab");
+            return prefab != null;
+#else
+            prefab = null;
+            return false;
+#endif
+        }
+
+        private void WarnMissingEnemyPrefab(string resourceKey)
+        {
+            if (string.IsNullOrEmpty(resourceKey) || !_missingPrefabWarnings.Add(resourceKey))
+            {
+                return;
+            }
+
+            Debug.LogWarning($"[EnemySpawn] 找不到敌人 AB Prefab ResourceKey={resourceKey}", this);
         }
 
         private float GetElapsedTime()

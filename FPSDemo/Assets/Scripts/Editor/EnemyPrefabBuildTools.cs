@@ -7,15 +7,17 @@ using UnityEngine.AI;
 public static class EnemyPrefabBuildTools
 {
     private const string SourcePrefabPath = "Assets/Knife/Zombie Collection/Zombie Skeleton/Prefabs/Zombie Skeleton OneHanded.prefab";
-    private const string OutputFolderPath = "Assets/Art/Enemies/Prefabs";
+    private const string OutputFolderPath = "Assets/Art/ABRes/Enemies/Prefabs";
     private const string OutputPrefabPath = OutputFolderPath + "/Enemy_ZombieSkeleton_LOD2.prefab";
+    private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
 
     [MenuItem("FPSDemo/Enemy/生成低模骷髅僵尸 Prefab")]
     public static void GenerateLowLodZombieSkeleton()
     {
-        EnsureFolder("Assets/Art", "Enemies");
-        EnsureFolder("Assets/Art/Enemies", "Prefabs");
+        EnsureFolder("Assets/Art", "ABRes");
+        EnsureFolder("Assets/Art/ABRes", "Enemies");
+        EnsureFolder("Assets/Art/ABRes/Enemies", "Prefabs");
 
         GameObject root = PrefabUtility.LoadPrefabContents(SourcePrefabPath);
         try
@@ -25,6 +27,7 @@ public static class EnemyPrefabBuildTools
             ConfigureRootComponents(root);
             EnsureHitBoxes(root);
             PrefabUtility.SaveAsPrefabAsset(root, OutputPrefabPath);
+            SetAssetBundleName(OutputPrefabPath, EnemyPrefabBundleName);
         }
         finally
         {
@@ -255,6 +258,8 @@ public static class EnemyPrefabBuildTools
         serializedObject.FindProperty("returnToPoolDelay").floatValue = 2.5f;
         serializedObject.FindProperty("playerTarget").objectReferenceValue = player;
         serializedObject.FindProperty("enemyPool").objectReferenceValue = pool;
+        serializedObject.FindProperty("loadPrefabsFromAssetBundle").boolValue = true;
+        serializedObject.FindProperty("enemyPrefabAssetBundleName").stringValue = EnemyPrefabBundleName;
 
         SerializedProperty definitions = serializedObject.FindProperty("spawnDefinitions");
         definitions.arraySize = 1;
@@ -289,6 +294,15 @@ public static class EnemyPrefabBuildTools
         if (!AssetDatabase.IsValidFolder(fullPath))
         {
             AssetDatabase.CreateFolder(parentFolder, newFolder);
+        }
+    }
+
+    private static void SetAssetBundleName(string assetPath, string bundleName)
+    {
+        AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+        if (importer != null)
+        {
+            importer.assetBundleName = bundleName;
         }
     }
 

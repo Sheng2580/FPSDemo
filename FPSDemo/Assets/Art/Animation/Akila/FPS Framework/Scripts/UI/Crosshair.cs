@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
 
@@ -19,33 +17,101 @@ namespace Akila.FPSFramework
 
         private float amount;
         private float sizeMatchingVel;
+        private bool useManualState;
+        private float manualAimProgress;
+        private float manualSprayAmount = 1f;
 
         private CanvasGroup canvasGroup;
+        private Image[] cachedImages;
 
         private void Awake()
         {
             canvasGroup = GetComponent<CanvasGroup>();
 
-            crosshairHolder.sizeDelta = Vector2.zero;
+            CacheImages();
+
+            if (crosshairHolder != null)
+            {
+                crosshairHolder.sizeDelta = Vector2.zero;
+            }
         }
 
         private void Update()
         {
-            if(firearm == null)
+            float aimProgress;
+            float sprayAmount;
+            if (firearm != null)
+            {
+                aimProgress = firearm.aimProgress;
+                sprayAmount = firearm.currentSprayAmount;
+            }
+            else if (useManualState)
+            {
+                aimProgress = manualAimProgress;
+                sprayAmount = manualSprayAmount;
+            }
+            else
             {
                 return;
             }
 
-            foreach(Image image in crosshairHolder.GetComponentsInChildren<Image>())
+            if (canvasGroup == null || crosshairHolder == null)
             {
-                image.color = color;
+                return;
             }
 
-            canvasGroup.alpha = Mathf.Lerp(1, 0, firearm.aimProgress * 1.3f);
+            ApplyColor();
 
-            amount = Mathf.SmoothDamp(amount, firearm.currentSprayAmount, ref sizeMatchingVel, sizeMatchingTime);   
+            float aimScale = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(aimProgress));
+            canvasGroup.alpha = Mathf.Clamp01(aimScale);
+            amount = Mathf.SmoothDamp(amount, sprayAmount, ref sizeMatchingVel, Mathf.Max(0.001f, sizeMatchingTime));
 
-            crosshairHolder.sizeDelta = Vector2.one * size * amount;
+            // 开镜时向中心缩小并消失 取消开镜时用同一条曲线反播恢复
+            crosshairHolder.sizeDelta = Vector2.one * size * amount * aimScale;
+        }
+
+        public void SetManualState(float aimProgress, float sprayAmount)
+        {
+            // 给非 Akila 武器系统使用 只驱动准星表现
+            useManualState = true;
+            manualAimProgress = Mathf.Clamp01(aimProgress);
+            manualSprayAmount = Mathf.Max(0f, sprayAmount);
+        }
+
+        public void StopManualState()
+        {
+            useManualState = false;
+        }
+
+        public void RefreshImages()
+        {
+            CacheImages();
+            ApplyColor();
+        }
+
+        private void CacheImages()
+        {
+            cachedImages = crosshairHolder != null
+                ? crosshairHolder.GetComponentsInChildren<Image>(true)
+                : GetComponentsInChildren<Image>(true);
+        }
+
+        private void ApplyColor()
+        {
+            if (cachedImages == null || cachedImages.Length == 0)
+            {
+                CacheImages();
+            }
+
+            foreach (Image image in cachedImages)
+            {
+                if (image == null)
+                {
+                    continue;
+                }
+
+                image.color = color;
+            }
         }
     }
 }

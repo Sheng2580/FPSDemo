@@ -34,9 +34,53 @@ MonoBehaviour:
     explosionFalloff: 1
     hitLayerMask:
       serializedVersion: 2
-      m_Bits: 4294967291
+      m_Bits: 115
     tracerPrefabKey: ""
-    impactEffectKey: ""
+    impactEffectKey: Stone Impact
+    muzzleFlashEffectKey: Muzzle Flash
+    muzzleSmokeEffectKey: Muzzle Smoke
+    fireAudioKey: Pistol_1 Fire
+    fireVolume: 1
+    firePitchRandom: 0.04
+    fireAudioCooldown: 0.03
+    fireFeedbackIntensity: 1
+    defaultImpactEffectKey: Stone Impact
+    hitSurfaceFeedbacks:
+    - surfaceType: 0
+      impactEffectKey: Stone Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 1
+      impactEffectKey: Stone Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 2
+      impactEffectKey: Metal Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 3
+      impactEffectKey: Wood Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 4
+      impactEffectKey: Blood Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    crosshairSize: 20
+    crosshairMinSprayAmount: 2
+    crosshairSpreadScale: 0.8
+    crosshairFireKickAmount: 1.2
+    crosshairFireKickDecaySpeed: 8
     recoilPitch: -1.5
     recoilYaw: 0.5
     viewRecoilPosition: {x: 0, y: -0.015, z: -0.08}
@@ -48,7 +92,7 @@ MonoBehaviour:
     aimViewPositionOffset: {x: -0.06, y: 0.044, z: 0.02}
     aimViewRotationOffset: {x: 0, y: 0, z: 0}
     useAimLocalPose: 1
-    aimLocalPosition: {x: -0.084, y: -0.799, z: 0.411}
+    aimLocalPosition: {x: -0.084, y: -0.817, z: 0.35677}
     aimLocalEulerAngles: {x: 0, y: 0, z: 0}
     aimLocalScale: {x: 0.04, y: 0.04, z: 0.04}
     idleStateName: Idle

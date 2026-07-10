@@ -251,6 +251,18 @@ public class ABManager : UnitySingleTonMono<ABManager>
         StartCoroutine(Really(abName, resName, callback));
     }
 
+    // 异步加载 AB 里的原始资源 给对象池缓存预制体模板使用
+    public void LoadAssetAsync<T>(string abName, string resName, UnityAction<T> callback) where T : Object
+    {
+        StartCoroutine(ReallyLoadAsset(abName, resName, callback));
+    }
+
+    // 异步加载 AB 里的原始资源 不会自动实例化 GameObject
+    public void LoadAssetAsync(string abName, string resName, Type type, UnityAction<Object> callback)
+    {
+        StartCoroutine(ReallyLoadAsset(abName, resName, type, callback));
+    }
+
     private void LoadABAsync(string abName, UnityAction onLoaded)
     {
         abName = NormalizeABName(abName);
@@ -481,6 +493,54 @@ public class ABManager : UnitySingleTonMono<ABManager>
         AssetBundleRequest request = ab.LoadAssetAsync(resName, type);
         yield return request;
         callback?.Invoke(InstantiateIfGameObject(request.asset, resName));
+    }
+
+    private IEnumerator ReallyLoadAsset<T>(string abName, string resName, UnityAction<T> callback) where T : Object
+    {
+        abName = NormalizeABName(abName);
+        bool abLoaded = false;
+        LoadABAsync(abName, () => abLoaded = true);
+        yield return new WaitUntil(() => abLoaded);
+
+        if (!assetBundlesDictionary.TryGetValue(abName, out AssetBundle ab))
+        {
+            Debug.LogError($"[ABManager] Async raw load failed, AB not loaded: {abName}");
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        AssetBundleRequest request = ab.LoadAssetAsync<T>(resName);
+        yield return request;
+        if (request.asset == null)
+        {
+            Debug.LogError($"[ABManager] Raw asset load failed: {abName}/{resName}");
+        }
+
+        callback?.Invoke(request.asset as T);
+    }
+
+    private IEnumerator ReallyLoadAsset(string abName, string resName, Type type, UnityAction<Object> callback)
+    {
+        abName = NormalizeABName(abName);
+        bool abLoaded = false;
+        LoadABAsync(abName, () => abLoaded = true);
+        yield return new WaitUntil(() => abLoaded);
+
+        if (!assetBundlesDictionary.TryGetValue(abName, out AssetBundle ab))
+        {
+            Debug.LogError($"[ABManager] Async raw load failed, AB not loaded: {abName}");
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        AssetBundleRequest request = ab.LoadAssetAsync(resName, type);
+        yield return request;
+        if (request.asset == null)
+        {
+            Debug.LogError($"[ABManager] Raw asset load failed: {abName}/{resName}");
+        }
+
+        callback?.Invoke(request.asset);
     }
 
     public void UnloadRes(string abName, bool unloadAllLoadedObjects = false)

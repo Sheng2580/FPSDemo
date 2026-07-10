@@ -23,12 +23,79 @@ namespace Weapon.Data
         Area
     }
 
+    public enum HitSurfaceType
+    {
+        Default,
+        Stone,
+        Metal,
+        Wood,
+        Flesh
+    }
+
+    [Serializable]
+    public class HitSurfaceFeedbackConfig
+    {
+        public HitSurfaceType surfaceType;
+        public string impactEffectKey;
+        public string impactAudioKey;
+        public string decalKey;
+        public float decalLifeTime;
+        public float decalScale;
+
+        public HitSurfaceFeedbackConfig Clone()
+        {
+            return (HitSurfaceFeedbackConfig)MemberwiseClone();
+        }
+
+        public void ApplyMissingDefaults()
+        {
+            if (string.IsNullOrEmpty(impactEffectKey))
+            {
+                impactEffectKey = WeaponConfig.GetDefaultImpactEffectKey(surfaceType);
+            }
+
+            if (decalLifeTime <= 0f)
+            {
+                decalLifeTime = WeaponConfig.DefaultDecalLifeTime;
+            }
+
+            if (decalScale <= 0f)
+            {
+                decalScale = WeaponConfig.DefaultDecalScale;
+            }
+        }
+    }
+
     [Serializable]
     public class WeaponConfig
     {
         public const float DefaultAimInSpeed = 10f;
         public const float DefaultAimOutSpeed = 12f;
         public const float DefaultAimCameraFov = 55f;
+        public const float DefaultCrosshairSize = 25f;
+        public const float DefaultCrosshairMinSprayAmount = 1f;
+        public const float DefaultCrosshairSpreadScale = 0.65f;
+        public const float DefaultCrosshairFireKickAmount = 1.15f;
+        public const float DefaultCrosshairFireKickDecaySpeed = 7.5f;
+        public const float DefaultPistolCrosshairSize = 26f;
+        public const float DefaultPistolCrosshairSpreadScale = 0.75f;
+        public const float DefaultPistolCrosshairFireKickAmount = 1.2f;
+        public const float DefaultPistolCrosshairFireKickDecaySpeed = 8f;
+        public const float DefaultAssaultRifleCrosshairSize = 20f;
+        public const float DefaultAssaultRifleCrosshairSpreadScale = 0.55f;
+        public const float DefaultAssaultRifleCrosshairFireKickAmount = 0.55f;
+        public const float DefaultAssaultRifleCrosshairFireKickDecaySpeed = 10.5f;
+        public const string DefaultMuzzleFlashEffectKey = "Muzzle Flash";
+        public const string DefaultMuzzleSmokeEffectKey = "Muzzle Smoke";
+        public const string DefaultImpactEffectKey = "Stone Impact";
+        public const string DefaultPistolFireAudioKey = "Pistol_1 Fire";
+        public const string DefaultAssaultRifleFireAudioKey = "Assault Rifle_1 Fire";
+        public const float DefaultFireVolume = 1f;
+        public const float DefaultFirePitchRandom = 0.04f;
+        public const float DefaultFireAudioCooldown = 0.03f;
+        public const float DefaultFireFeedbackIntensity = 1f;
+        public const float DefaultDecalLifeTime = 8f;
+        public const float DefaultDecalScale = 1f;
         public static readonly Vector3 DefaultAimViewPositionOffset = new Vector3(-0.06f, 0.044f, 0.02f);
 
         // 基础身份
@@ -58,6 +125,24 @@ namespace Weapon.Data
         public LayerMask hitLayerMask;
         public string tracerPrefabKey;
         public string impactEffectKey;
+
+        // 战斗表现数据 只提供资源 key 表现层负责播放
+        public string muzzleFlashEffectKey;
+        public string muzzleSmokeEffectKey;
+        public string fireAudioKey;
+        public float fireVolume;
+        public float firePitchRandom;
+        public float fireAudioCooldown;
+        public float fireFeedbackIntensity;
+        public string defaultImpactEffectKey;
+        public HitSurfaceFeedbackConfig[] hitSurfaceFeedbacks;
+
+        // 准星表现数据 每把枪可以单独配置
+        public float crosshairSize;
+        public float crosshairMinSprayAmount;
+        public float crosshairSpreadScale;
+        public float crosshairFireKickAmount;
+        public float crosshairFireKickDecaySpeed;
 
         // 后坐力
         public float recoilPitch;
@@ -118,7 +203,21 @@ namespace Weapon.Data
                 explosionFalloff = 1f,
                 hitLayerMask = Physics.DefaultRaycastLayers,
                 tracerPrefabKey = string.Empty,
-                impactEffectKey = string.Empty,
+                impactEffectKey = DefaultImpactEffectKey,
+                muzzleFlashEffectKey = DefaultMuzzleFlashEffectKey,
+                muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
+                fireAudioKey = DefaultPistolFireAudioKey,
+                fireVolume = DefaultFireVolume,
+                firePitchRandom = DefaultFirePitchRandom,
+                fireAudioCooldown = DefaultFireAudioCooldown,
+                fireFeedbackIntensity = DefaultFireFeedbackIntensity,
+                defaultImpactEffectKey = DefaultImpactEffectKey,
+                hitSurfaceFeedbacks = CreateDefaultHitSurfaceFeedbacks(),
+                crosshairSize = DefaultPistolCrosshairSize,
+                crosshairMinSprayAmount = DefaultCrosshairMinSprayAmount,
+                crosshairSpreadScale = DefaultPistolCrosshairSpreadScale,
+                crosshairFireKickAmount = DefaultPistolCrosshairFireKickAmount,
+                crosshairFireKickDecaySpeed = DefaultPistolCrosshairFireKickDecaySpeed,
                 recoilPitch = -1.5f,
                 recoilYaw = 0.5f,
                 viewRecoilPosition = new Vector3(0f, -0.015f, -0.08f),
@@ -130,7 +229,7 @@ namespace Weapon.Data
                 aimViewPositionOffset = DefaultAimViewPositionOffset,
                 aimViewRotationOffset = Vector3.zero,
                 useAimLocalPose = true,
-                aimLocalPosition = new Vector3(-0.084f, -0.799f, 0.411f),
+                aimLocalPosition = new Vector3(-0.084f, -0.817f, 0.35677f),
                 aimLocalEulerAngles = Vector3.zero,
                 aimLocalScale = new Vector3(0.04f, 0.04f, 0.04f),
                 idleStateName = "Idle",
@@ -172,12 +271,26 @@ namespace Weapon.Data
                 explosionFalloff = 1f,
                 hitLayerMask = Physics.DefaultRaycastLayers,
                 tracerPrefabKey = string.Empty,
-                impactEffectKey = string.Empty,
-                recoilPitch = -0.55f,
-                recoilYaw = 0.35f,
-                viewRecoilPosition = new Vector3(0f, -0.006f, -0.04f),
-                viewRecoilRotation = new Vector3(-2.2f, 0.7f, 0f),
-                viewRecoilReturnSpeed = 24f,
+                impactEffectKey = DefaultImpactEffectKey,
+                muzzleFlashEffectKey = DefaultMuzzleFlashEffectKey,
+                muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
+                fireAudioKey = DefaultAssaultRifleFireAudioKey,
+                fireVolume = DefaultFireVolume,
+                firePitchRandom = DefaultFirePitchRandom,
+                fireAudioCooldown = DefaultFireAudioCooldown,
+                fireFeedbackIntensity = DefaultFireFeedbackIntensity,
+                defaultImpactEffectKey = DefaultImpactEffectKey,
+                hitSurfaceFeedbacks = CreateDefaultHitSurfaceFeedbacks(),
+                crosshairSize = DefaultAssaultRifleCrosshairSize,
+                crosshairMinSprayAmount = DefaultCrosshairMinSprayAmount,
+                crosshairSpreadScale = DefaultAssaultRifleCrosshairSpreadScale,
+                crosshairFireKickAmount = DefaultAssaultRifleCrosshairFireKickAmount,
+                crosshairFireKickDecaySpeed = DefaultAssaultRifleCrosshairFireKickDecaySpeed,
+                recoilPitch = -0.32f,
+                recoilYaw = 0.16f,
+                viewRecoilPosition = new Vector3(0f, -0.004f, -0.025f),
+                viewRecoilRotation = new Vector3(-1.25f, 0.25f, 0f),
+                viewRecoilReturnSpeed = 16f,
                 aimInSpeed = 9f,
                 aimOutSpeed = 12f,
                 aimCameraFov = 30f,
@@ -199,7 +312,17 @@ namespace Weapon.Data
 
         public WeaponConfig Clone()
         {
-            return (WeaponConfig)MemberwiseClone();
+            WeaponConfig clone = (WeaponConfig)MemberwiseClone();
+            if (hitSurfaceFeedbacks != null)
+            {
+                clone.hitSurfaceFeedbacks = new HitSurfaceFeedbackConfig[hitSurfaceFeedbacks.Length];
+                for (int i = 0; i < hitSurfaceFeedbacks.Length; i++)
+                {
+                    clone.hitSurfaceFeedbacks[i] = hitSurfaceFeedbacks[i]?.Clone();
+                }
+            }
+
+            return clone;
         }
 
         public void ApplyMissingDefaults()
@@ -243,6 +366,190 @@ namespace Weapon.Data
             if (hitLayerMask.value == 0)
             {
                 hitLayerMask = Physics.DefaultRaycastLayers;
+            }
+
+            ApplyMissingCombatFeedbackDefaults();
+            ApplyMissingCrosshairDefaults();
+        }
+
+        private void ApplyMissingCombatFeedbackDefaults()
+        {
+            if (string.IsNullOrEmpty(muzzleFlashEffectKey))
+            {
+                muzzleFlashEffectKey = DefaultMuzzleFlashEffectKey;
+            }
+
+            if (string.IsNullOrEmpty(muzzleSmokeEffectKey))
+            {
+                muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey;
+            }
+
+            if (string.IsNullOrEmpty(fireAudioKey))
+            {
+                fireAudioKey = ResolveDefaultFireAudioKey();
+            }
+
+            if (fireVolume <= 0f)
+            {
+                fireVolume = DefaultFireVolume;
+            }
+
+            if (firePitchRandom < 0f)
+            {
+                firePitchRandom = DefaultFirePitchRandom;
+            }
+
+            if (fireAudioCooldown < 0f)
+            {
+                fireAudioCooldown = DefaultFireAudioCooldown;
+            }
+
+            if (fireFeedbackIntensity <= 0f)
+            {
+                fireFeedbackIntensity = DefaultFireFeedbackIntensity;
+            }
+
+            if (string.IsNullOrEmpty(defaultImpactEffectKey))
+            {
+                defaultImpactEffectKey = string.IsNullOrEmpty(impactEffectKey)
+                    ? DefaultImpactEffectKey
+                    : impactEffectKey;
+            }
+
+            if (string.IsNullOrEmpty(impactEffectKey))
+            {
+                impactEffectKey = defaultImpactEffectKey;
+            }
+
+            if (hitSurfaceFeedbacks == null || hitSurfaceFeedbacks.Length == 0)
+            {
+                hitSurfaceFeedbacks = CreateDefaultHitSurfaceFeedbacks();
+            }
+
+            for (int i = 0; i < hitSurfaceFeedbacks.Length; i++)
+            {
+                hitSurfaceFeedbacks[i] ??= CreateHitSurfaceFeedback(HitSurfaceType.Default);
+                hitSurfaceFeedbacks[i].ApplyMissingDefaults();
+            }
+        }
+
+        private string ResolveDefaultFireAudioKey()
+        {
+            if (weaponId == 2 || fireMode == WeaponFireMode.FullAuto)
+            {
+                return DefaultAssaultRifleFireAudioKey;
+            }
+
+            return DefaultPistolFireAudioKey;
+        }
+
+        private void ApplyMissingCrosshairDefaults()
+        {
+            ResolveCrosshairDefaults(
+                out float defaultSize,
+                out float defaultMinSprayAmount,
+                out float defaultSpreadScale,
+                out float defaultFireKickAmount,
+                out float defaultFireKickDecaySpeed);
+
+            if (crosshairSize <= 0f)
+            {
+                crosshairSize = defaultSize;
+            }
+
+            if (crosshairMinSprayAmount <= 0f)
+            {
+                crosshairMinSprayAmount = defaultMinSprayAmount;
+            }
+
+            if (crosshairSpreadScale <= 0f)
+            {
+                crosshairSpreadScale = defaultSpreadScale;
+            }
+
+            if (crosshairFireKickAmount <= 0f)
+            {
+                crosshairFireKickAmount = defaultFireKickAmount;
+            }
+
+            if (crosshairFireKickDecaySpeed <= 0f)
+            {
+                crosshairFireKickDecaySpeed = defaultFireKickDecaySpeed;
+            }
+        }
+
+        private void ResolveCrosshairDefaults(
+            out float size,
+            out float minSprayAmount,
+            out float spreadScale,
+            out float fireKickAmount,
+            out float fireKickDecaySpeed)
+        {
+            minSprayAmount = DefaultCrosshairMinSprayAmount;
+
+            if (weaponId == 2 || fireMode == WeaponFireMode.FullAuto)
+            {
+                size = DefaultAssaultRifleCrosshairSize;
+                spreadScale = DefaultAssaultRifleCrosshairSpreadScale;
+                fireKickAmount = DefaultAssaultRifleCrosshairFireKickAmount;
+                fireKickDecaySpeed = DefaultAssaultRifleCrosshairFireKickDecaySpeed;
+                return;
+            }
+
+            if (weaponId == 1 || fireMode == WeaponFireMode.SemiAuto)
+            {
+                size = DefaultPistolCrosshairSize;
+                spreadScale = DefaultPistolCrosshairSpreadScale;
+                fireKickAmount = DefaultPistolCrosshairFireKickAmount;
+                fireKickDecaySpeed = DefaultPistolCrosshairFireKickDecaySpeed;
+                return;
+            }
+
+            size = DefaultCrosshairSize;
+            spreadScale = DefaultCrosshairSpreadScale;
+            fireKickAmount = DefaultCrosshairFireKickAmount;
+            fireKickDecaySpeed = DefaultCrosshairFireKickDecaySpeed;
+        }
+
+        public static HitSurfaceFeedbackConfig[] CreateDefaultHitSurfaceFeedbacks()
+        {
+            return new[]
+            {
+                CreateHitSurfaceFeedback(HitSurfaceType.Default),
+                CreateHitSurfaceFeedback(HitSurfaceType.Stone),
+                CreateHitSurfaceFeedback(HitSurfaceType.Metal),
+                CreateHitSurfaceFeedback(HitSurfaceType.Wood),
+                CreateHitSurfaceFeedback(HitSurfaceType.Flesh)
+            };
+        }
+
+        public static HitSurfaceFeedbackConfig CreateHitSurfaceFeedback(HitSurfaceType surfaceType)
+        {
+            return new HitSurfaceFeedbackConfig
+            {
+                surfaceType = surfaceType,
+                impactEffectKey = GetDefaultImpactEffectKey(surfaceType),
+                impactAudioKey = string.Empty,
+                decalKey = string.Empty,
+                decalLifeTime = DefaultDecalLifeTime,
+                decalScale = DefaultDecalScale
+            };
+        }
+
+        public static string GetDefaultImpactEffectKey(HitSurfaceType surfaceType)
+        {
+            switch (surfaceType)
+            {
+                case HitSurfaceType.Metal:
+                    return "Metal Impact";
+                case HitSurfaceType.Wood:
+                    return "Wood Impact";
+                case HitSurfaceType.Flesh:
+                    return "Blood Impact";
+                case HitSurfaceType.Stone:
+                case HitSurfaceType.Default:
+                default:
+                    return DefaultImpactEffectKey;
             }
         }
     }

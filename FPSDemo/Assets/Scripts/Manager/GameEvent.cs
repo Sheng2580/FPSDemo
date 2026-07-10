@@ -1,6 +1,8 @@
 using Combat;
 using Enemy;
 using UnityEngine;
+using Weapon;
+using Weapon.Data;
 
 public enum GameEvent
 {
@@ -26,6 +28,7 @@ public enum GameEvent
     EnemyDamaged,
     EnemyDied,
     EnemyReturnedToPool,
+    WeaponFired,
     WeaponHit,
     DamageResolved
 }
@@ -170,11 +173,47 @@ public readonly struct WeaponHitEventData
 {
     public readonly DamageInfo damageInfo;
     public readonly bool hitEnemy;
+    public readonly WeaponConfig config;
 
     public WeaponHitEventData(DamageInfo damageInfo, bool hitEnemy)
     {
         this.damageInfo = damageInfo;
         this.hitEnemy = hitEnemy;
+        config = null;
+    }
+
+    public WeaponHitEventData(DamageInfo damageInfo, bool hitEnemy, WeaponConfig config)
+    {
+        this.damageInfo = damageInfo;
+        this.hitEnemy = hitEnemy;
+        this.config = config;
+    }
+}
+
+public readonly struct WeaponFiredEventData
+{
+    public readonly WeaponConfig config;
+    public readonly WeaponView weaponView;
+    public readonly Transform muzzleTransform;
+    public readonly Vector3 muzzlePosition;
+    public readonly Quaternion muzzleRotation;
+    public readonly int weaponId;
+    public readonly string weaponName;
+
+    public WeaponFiredEventData(
+        WeaponConfig config,
+        WeaponView weaponView,
+        Transform muzzleTransform,
+        Vector3 muzzlePosition,
+        Quaternion muzzleRotation)
+    {
+        this.config = config;
+        this.weaponView = weaponView;
+        this.muzzleTransform = muzzleTransform;
+        this.muzzlePosition = muzzlePosition;
+        this.muzzleRotation = muzzleRotation;
+        weaponId = config != null ? config.weaponId : 0;
+        weaponName = config != null ? config.weaponName : string.Empty;
     }
 }
 

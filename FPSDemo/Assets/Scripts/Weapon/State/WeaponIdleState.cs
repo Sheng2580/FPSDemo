@@ -19,9 +19,20 @@ namespace Weapon.State
                 return;
             }
 
-            if (controller.FireInput && controller.CanFire())
+            if (!controller.FireInput)
+            {
+                return;
+            }
+
+            if (controller.CanFire())
             {
                 controller.ChangeState(WeaponStateType.Fire);
+                return;
+            }
+
+            if (controller.CanAutoReloadOnFire())
+            {
+                controller.ChangeState(WeaponStateType.Reload);
             }
         }
     }

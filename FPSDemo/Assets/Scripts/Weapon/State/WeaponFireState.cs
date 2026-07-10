@@ -24,8 +24,10 @@ namespace Weapon.State
 
             controller.CurrentWeaponView?.PlayFire();
             controller.CurrentWeaponView?.SetAmmo(controller.RuntimeData.currentAmmoInMagazine);
-            controller.ApplyRecoil();
+            // 只在扣弹成功后通知表现系统
+            controller.TriggerWeaponFired();
             controller.FireRaycast();
+            controller.ApplyRecoil();
         }
 
         public override void Update()

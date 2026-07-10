@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
@@ -9,10 +10,45 @@ using UnityEngine.UI;
 public static class FPSDemoBuildTools
 {
     private const string TouchCanvasPath = "Assets/Art/ABRes/UI/TounchControllerCanvas.prefab";
+    private const string TestCanvasPath = "Assets/Art/ABRes/UI/TestCanvas.prefab";
     private const string TouchCanvasBundleName = "uipanel";
+    private const string CombatFeedbackBundleName = "combat_feedback";
+    private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
     private const string StreamingAssetsPath = "Assets/StreamingAssets";
     private const string AndroidBuildPath = "Builds/Android/FPSDemo.apk";
+
+    private static readonly string[] UIAssetPaths =
+    {
+        TouchCanvasPath,
+        TestCanvasPath
+    };
+
+    private static readonly string[] CombatFeedbackAssetPaths =
+    {
+        "Assets/Art/ABRes/CombatFeedback/CombatFeedbackResources.asset",
+        "Assets/Art/ABRes/CombatFeedback/Effects/Muzzle Flash.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/Muzzle Smoke.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/Blood Impact.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/Stone Impact.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/Metal Impact.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Effects/Wood Impact.prefab",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Pistol_1 Fire.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Assault Rifle_1 Fire.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Hitmarker.wav"
+    };
+
+    private static readonly string[] EnemyPrefabAssetPaths =
+    {
+        "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieSkeleton_LOD2.prefab"
+    };
+
+    private static readonly string[] RequiredRuntimeBundleNames =
+    {
+        TouchCanvasBundleName,
+        CombatFeedbackBundleName,
+        EnemyPrefabBundleName
+    };
 
     [MenuItem("FPSDemo/Build/检查移动端UI", priority = 0)]
     public static void CheckMobileUI()
@@ -33,10 +69,19 @@ public static class FPSDemoBuildTools
         FixAndroidCompatibilitySettingsInternal(true);
     }
 
+    [MenuItem("FPSDemo/Build/配置运行时AssetBundle资源", priority = 3)]
+    public static void FixRuntimeAssetBundleResources()
+    {
+        FixRuntimeAssetBundleResourcesInternal(true);
+        ValidateRuntimeAssetBundleResources(true);
+    }
+
     [MenuItem("FPSDemo/Build/打当前平台AssetBundle", priority = 20)]
     public static void BuildCurrentPlatformAssetBundles()
     {
+        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
         FixMobileUIPrefabInternal(false);
+        FixRuntimeAssetBundleResourcesInternal(false);
         BuildAssetBundles(EditorUserBuildSettings.activeBuildTarget);
     }
 
@@ -44,7 +89,9 @@ public static class FPSDemoBuildTools
     public static void BuildAndroidAssetBundles()
     {
         FixAndroidCompatibilitySettingsInternal(false);
+        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
         FixMobileUIPrefabInternal(false);
+        FixRuntimeAssetBundleResourcesInternal(false);
         BuildAssetBundles(BuildTarget.Android);
         ValidateStreamingBundle("Android", true);
     }
@@ -53,11 +100,13 @@ public static class FPSDemoBuildTools
     public static void CheckAndBuildAndroidAssetBundles()
     {
         FixAndroidCompatibilitySettingsInternal(false);
+        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
         FixMobileUIPrefabInternal(false);
+        FixRuntimeAssetBundleResourcesInternal(false);
 
-        if (!ValidateMobileUI(true))
+        if (!ValidateMobileUI(true) || !ValidateRuntimeAssetBundleResources(true))
         {
-            throw new BuildFailedException("移动端 UI 检查失败");
+            throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
 
         BuildAssetBundles(BuildTarget.Android);
@@ -68,11 +117,13 @@ public static class FPSDemoBuildTools
     public static void PrepareEditorAndAndroidAssetBundles()
     {
         FixAndroidCompatibilitySettingsInternal(false);
+        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
         FixMobileUIPrefabInternal(false);
+        FixRuntimeAssetBundleResourcesInternal(false);
 
-        if (!ValidateMobileUI(true))
+        if (!ValidateMobileUI(true) || !ValidateRuntimeAssetBundleResources(true))
         {
-            throw new BuildFailedException("移动端 UI 检查失败");
+            throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
 
         string editorMainBundleName = GetMainBundleName(EditorUserBuildSettings.activeBuildTarget);
@@ -87,11 +138,13 @@ public static class FPSDemoBuildTools
     public static void BuildAndroidApk()
     {
         FixAndroidCompatibilitySettingsInternal(false);
+        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
         FixMobileUIPrefabInternal(false);
+        FixRuntimeAssetBundleResourcesInternal(false);
 
-        if (!ValidateMobileUI(true))
+        if (!ValidateMobileUI(true) || !ValidateRuntimeAssetBundleResources(true))
         {
-            throw new BuildFailedException("移动端 UI 检查失败");
+            throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
 
         BuildAssetBundles(BuildTarget.Android);
@@ -248,6 +301,61 @@ public static class FPSDemoBuildTools
         return true;
     }
 
+    private static bool FixRuntimeAssetBundleResourcesInternal(bool logResult)
+    {
+        bool changed = false;
+        bool success = true;
+
+        success &= TrySetAssetBundleNames(UIAssetPaths, TouchCanvasBundleName, ref changed);
+        success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
+        success &= TrySetAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName, ref changed);
+
+        if (changed)
+        {
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        if (logResult)
+        {
+            Debug.Log(success
+                ? "[FPSDemoBuildTools] 运行时 AssetBundle 资源包名已配置"
+                : "[FPSDemoBuildTools] 运行时 AssetBundle 资源包名配置失败");
+        }
+
+        return success;
+    }
+
+    private static bool TrySetAssetBundleNames(IEnumerable<string> assetPaths, string bundleName, ref bool changed)
+    {
+        bool success = true;
+        foreach (string assetPath in assetPaths)
+        {
+            success &= TrySetAssetBundleName(assetPath, bundleName, ref changed);
+        }
+
+        return success;
+    }
+
+    private static bool TrySetAssetBundleName(string assetPath, string bundleName, ref bool changed)
+    {
+        AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+        if (importer == null)
+        {
+            Debug.LogError($"[FPSDemoBuildTools] 找不到 AB 资源: {assetPath}");
+            return false;
+        }
+
+        if (importer.assetBundleName == bundleName)
+        {
+            return true;
+        }
+
+        importer.assetBundleName = bundleName;
+        changed = true;
+        return true;
+    }
+
     private static bool ValidateMobileUI(bool logResult)
     {
         bool isValid = true;
@@ -279,6 +387,33 @@ public static class FPSDemoBuildTools
         if (logResult && isValid)
         {
             Debug.Log("[FPSDemoBuildTools] 移动端 UI 检查通过");
+        }
+
+        return isValid;
+    }
+
+    private static bool ValidateRuntimeAssetBundleResources(bool logResult)
+    {
+        bool isValid = true;
+        isValid &= ValidateAssetBundleNames(UIAssetPaths, TouchCanvasBundleName);
+        isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
+        isValid &= ValidateAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName);
+
+        if (logResult && isValid)
+        {
+            Debug.Log("[FPSDemoBuildTools] 运行时 AssetBundle 资源检查通过");
+        }
+
+        return isValid;
+    }
+
+    private static bool ValidateAssetBundleNames(IEnumerable<string> assetPaths, string bundleName)
+    {
+        bool isValid = true;
+        foreach (string assetPath in assetPaths)
+        {
+            AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+            isValid &= Check(importer != null && importer.assetBundleName == bundleName, $"{assetPath} 标记到 {bundleName}");
         }
 
         return isValid;
@@ -382,17 +517,19 @@ public static class FPSDemoBuildTools
     private static bool ValidateStreamingBundle(string mainBundleName, bool throwOnFail)
     {
         string platformPath = Path.Combine(StreamingAssetsPath, mainBundleName);
-        bool hasMainBundle = File.Exists(Path.Combine(platformPath, mainBundleName));
-        bool hasUIPanelBundle = File.Exists(Path.Combine(platformPath, TouchCanvasBundleName));
-        bool isValid = hasMainBundle && hasUIPanelBundle;
+        bool isValid = File.Exists(Path.Combine(platformPath, mainBundleName));
+        for (int i = 0; i < RequiredRuntimeBundleNames.Length; i++)
+        {
+            isValid &= File.Exists(Path.Combine(platformPath, RequiredRuntimeBundleNames[i]));
+        }
 
         if (isValid)
         {
-            Debug.Log($"[FPSDemoBuildTools] StreamingAssets 检查通过: {mainBundleName}, {TouchCanvasBundleName}");
+            Debug.Log($"[FPSDemoBuildTools] StreamingAssets 检查通过: {mainBundleName}");
             return true;
         }
 
-        Debug.LogError($"[FPSDemoBuildTools] StreamingAssets 平台目录缺少主包或 uipanel: {platformPath}");
+        Debug.LogError($"[FPSDemoBuildTools] StreamingAssets 平台目录缺少主包或运行时资源包: {platformPath}");
 
         if (throwOnFail)
         {

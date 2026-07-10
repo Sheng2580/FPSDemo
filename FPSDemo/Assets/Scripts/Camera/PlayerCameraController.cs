@@ -24,6 +24,7 @@ public class PlayerCameraController : MonoBehaviour
 
     [Header("后坐力参数")]
     [SerializeField] private Vector2 recoilOffset;
+    [SerializeField] private float recoilKickMultiplier = 0.2f;
     [SerializeField] private float recoilFollowSmoothTime = 0.045f;
     [SerializeField] private float recoilTargetReturnSpeed = 2.5f;
     [SerializeField] private float maxRecoilPitchOffset = 8f;
@@ -82,6 +83,7 @@ public class PlayerCameraController : MonoBehaviour
         maxPitch = Mathf.Max(maxPitch, minPitch);
         aimFovSmoothTime = Mathf.Max(0.001f, aimFovSmoothTime);
         recoilFollowSmoothTime = Mathf.Max(0.001f, recoilFollowSmoothTime);
+        recoilKickMultiplier = Mathf.Max(0f, recoilKickMultiplier);
         recoilTargetReturnSpeed = Mathf.Max(0f, recoilTargetReturnSpeed);
         maxRecoilPitchOffset = Mathf.Max(0f, maxRecoilPitchOffset);
         maxRecoilYawOffset = Mathf.Max(0f, maxRecoilYawOffset);
@@ -136,7 +138,12 @@ public class PlayerCameraController : MonoBehaviour
 
     public void AddRecoil(float pitchAmount, float yawAmount)
     {
-        _recoilTarget += new Vector2(pitchAmount, yawAmount);
+        // 参考 Akila 的 AddLookValue 思路 开火直接推真实视角让准星产生爬升
+        _pitch = Mathf.Clamp(_pitch + pitchAmount, minPitch, maxPitch);
+        _yaw += yawAmount;
+
+        // 额外保留一层短促 Kick 负责开火瞬间的冲击感
+        _recoilTarget += new Vector2(pitchAmount, yawAmount) * recoilKickMultiplier;
         ClampRecoilTarget();
     }
 

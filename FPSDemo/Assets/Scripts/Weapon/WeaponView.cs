@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 using Weapon.Data;
 
 namespace Weapon
@@ -15,6 +16,7 @@ namespace Weapon
         [SerializeField] private Transform viewRoot;
         [SerializeField] private Transform muzzlePoint;
         [SerializeField] private Transform shellPoint;
+        [SerializeField] private bool disableViewModelShadows = true;
 
         private WeaponConfig _config;
         private Vector3 _defaultViewLocalPosition;
@@ -28,6 +30,8 @@ namespace Weapon
         private Vector3 _smoothScaleVelocity;
         private Vector3 _recoilPositionOffset;
         private Vector3 _recoilRotationOffset;
+        private Vector3 _recoilPositionVelocity;
+        private Vector3 _recoilRotationVelocity;
         private float _adsAmount;
         private float _lastAdsAmount;
         private bool _hasCachedDefaultTransform;
@@ -40,6 +44,7 @@ namespace Weapon
         {
             CacheReferences();
             CacheDefaultTransform(true);
+            ApplyViewModelShadowSettings();
         }
 
         private void Reset()
@@ -58,6 +63,7 @@ namespace Weapon
             _config = config;
             CacheReferences();
             CacheDefaultTransform(false);
+            ApplyViewModelShadowSettings();
         }
 
         public void PlayIdle()
@@ -158,6 +164,8 @@ namespace Weapon
             _smoothScaleVelocity = Vector3.zero;
             _recoilPositionOffset = Vector3.zero;
             _recoilRotationOffset = Vector3.zero;
+            _recoilPositionVelocity = Vector3.zero;
+            _recoilRotationVelocity = Vector3.zero;
             _smoothedViewLocalPosition = _defaultViewLocalPosition;
             _smoothedViewLocalEulerAngles = _defaultViewLocalRotation.eulerAngles;
             _smoothedViewLocalScale = _defaultViewLocalScale;
@@ -182,6 +190,28 @@ namespace Weapon
             viewRoot ??= animator != null ? animator.transform : transform;
             muzzlePoint ??= FindChildRecursive(transform, "MuzzlePoint");
             shellPoint ??= FindChildRecursive(transform, "ShellPoint");
+        }
+
+        private void ApplyViewModelShadowSettings()
+        {
+            if (!disableViewModelShadows)
+            {
+                return;
+            }
+
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer viewRenderer = renderers[i];
+                if (viewRenderer == null)
+                {
+                    continue;
+                }
+
+                // 第一人称手臂和枪不接收也不投射场景阴影 避免手机端近距离阴影贴图块状放大
+                viewRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                viewRenderer.receiveShadows = false;
+            }
         }
 
         private void CacheDefaultTransform(bool force)
@@ -219,10 +249,22 @@ namespace Weapon
         {
             Transform root = GetViewRoot();
             float returnSpeed = _config != null ? _config.viewRecoilReturnSpeed : 18f;
-            float lerpSpeed = Mathf.Max(0f, returnSpeed) * Time.deltaTime;
+            float recoilSmoothTime = 1f / Mathf.Max(1f, returnSpeed);
+            float deltaTime = Time.deltaTime;
 
-            _recoilPositionOffset = Vector3.Lerp(_recoilPositionOffset, Vector3.zero, lerpSpeed);
-            _recoilRotationOffset = Vector3.Lerp(_recoilRotationOffset, Vector3.zero, lerpSpeed);
+            // 后坐力回位使用 SmoothDamp 避免枪模被硬拉回默认姿态
+            _recoilPositionOffset = Vector3.SmoothDamp(
+                _recoilPositionOffset,
+                Vector3.zero,
+                ref _recoilPositionVelocity,
+                recoilSmoothTime,
+                Mathf.Infinity,
+                deltaTime);
+
+            _recoilRotationOffset = new Vector3(
+                Mathf.SmoothDampAngle(_recoilRotationOffset.x, 0f, ref _recoilRotationVelocity.x, recoilSmoothTime, Mathf.Infinity, deltaTime),
+                Mathf.SmoothDampAngle(_recoilRotationOffset.y, 0f, ref _recoilRotationVelocity.y, recoilSmoothTime, Mathf.Infinity, deltaTime),
+                Mathf.SmoothDampAngle(_recoilRotationOffset.z, 0f, ref _recoilRotationVelocity.z, recoilSmoothTime, Mathf.Infinity, deltaTime));
 
             GetViewPose(out Vector3 viewPosition, out Quaternion viewRotation, out Vector3 viewScale);
             SmoothD(viewPosition, viewRotation.eulerAngles, viewScale);

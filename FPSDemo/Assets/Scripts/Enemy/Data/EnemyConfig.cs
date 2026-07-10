@@ -102,7 +102,7 @@ namespace Enemy.Data
             config.enemyId = 1002;
             config.enemyName = "Fast Zombie";
             config.prefabKey = "ZombieNerdOneHanded";
-            config.prefabResourceKey = "Enemy_ZombieNerd_LOD2";
+            config.prefabResourceKey = "Enemy_ZombieSkeleton_LOD2";
             config.aiProfileKey = "FastZombieAI";
             config.maxHealth = 70f;
             config.moveSpeed = 3.2f;
@@ -123,7 +123,7 @@ namespace Enemy.Data
             config.enemyId = 1003;
             config.enemyName = "Elite Zombie";
             config.prefabKey = "ZombieBruteOneHanded";
-            config.prefabResourceKey = "Enemy_ZombieBrute_LOD2";
+            config.prefabResourceKey = "Enemy_ZombieSkeleton_LOD2";
             config.aiProfileKey = "EliteZombieAI";
             config.dropPoolKey = "ZombieEliteDrop";
             config.maxHealth = 280f;

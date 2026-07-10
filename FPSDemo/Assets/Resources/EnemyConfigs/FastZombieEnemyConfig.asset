@@ -16,7 +16,7 @@ MonoBehaviour:
     enemyId: 1002
     enemyName: Fast Zombie
     prefabKey: ZombieNerdOneHanded
-    prefabResourceKey: Enemy_ZombieNerd_LOD2
+    prefabResourceKey: Enemy_ZombieSkeleton_LOD2
     behaviorTreeKey: ZombieMelee
     aiProfileKey: FastZombieAI
     bodyPartTemplateKey: ZombieHumanoidDefault

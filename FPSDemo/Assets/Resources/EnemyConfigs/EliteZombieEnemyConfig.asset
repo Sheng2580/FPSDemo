@@ -16,7 +16,7 @@ MonoBehaviour:
     enemyId: 1003
     enemyName: Elite Zombie
     prefabKey: ZombieBruteOneHanded
-    prefabResourceKey: Enemy_ZombieBrute_LOD2
+    prefabResourceKey: Enemy_ZombieSkeleton_LOD2
     behaviorTreeKey: ZombieMelee
     aiProfileKey: EliteZombieAI
     bodyPartTemplateKey: ZombieHumanoidDefault

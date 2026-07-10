@@ -34,14 +34,58 @@ MonoBehaviour:
     explosionFalloff: 1
     hitLayerMask:
       serializedVersion: 2
-      m_Bits: 4294967291
+      m_Bits: 115
     tracerPrefabKey: ""
-    impactEffectKey: ""
-    recoilPitch: -0.55
-    recoilYaw: 0.35
-    viewRecoilPosition: {x: 0, y: -0.006, z: -0.04}
-    viewRecoilRotation: {x: -2.2, y: 0.7, z: 0}
-    viewRecoilReturnSpeed: 24
+    impactEffectKey: Stone Impact
+    muzzleFlashEffectKey: Muzzle Flash
+    muzzleSmokeEffectKey: Muzzle Smoke
+    fireAudioKey: Assault Rifle_1 Fire
+    fireVolume: 1
+    firePitchRandom: 0.04
+    fireAudioCooldown: 0.03
+    fireFeedbackIntensity: 1
+    defaultImpactEffectKey: Stone Impact
+    hitSurfaceFeedbacks:
+    - surfaceType: 0
+      impactEffectKey: Stone Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 1
+      impactEffectKey: Stone Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 2
+      impactEffectKey: Metal Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 3
+      impactEffectKey: Wood Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 4
+      impactEffectKey: Blood Impact
+      impactAudioKey: ""
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    crosshairSize: 30
+    crosshairMinSprayAmount: 2
+    crosshairSpreadScale: 0.8
+    crosshairFireKickAmount: 2
+    crosshairFireKickDecaySpeed: 10.5
+    recoilPitch: -0.32
+    recoilYaw: 0.16
+    viewRecoilPosition: {x: 0, y: -0.004, z: -0.025}
+    viewRecoilRotation: {x: -1.25, y: 0.25, z: 0}
+    viewRecoilReturnSpeed: 16
     aimInSpeed: 9
     aimOutSpeed: 12
     aimCameraFov: 30

@@ -9,6 +9,11 @@ namespace Weapon
 {
     public class WeaponController : MonoBehaviour
     {
+        private const float RecoilPatternResetMinTime = 0.25f;
+        private const float RecoilVerticalRampPerShot = 0.018f;
+        private const float RecoilMaxVerticalRamp = 1.25f;
+        private const float RecoilAimMultiplier = 0.55f;
+
         [Header("武器引用")]
         [SerializeField] private WeaponView currentWeaponView;
         [SerializeField] private PlayerCameraController cameraController;
@@ -33,6 +38,8 @@ namespace Weapon
         private CarriedWeaponSlot _currentWeaponSlot;
         private bool _hasStarted;
         private bool _waitForAimReleaseAfterSwitch;
+        private int _recoilShotIndex;
+        private float _lastRecoilTime;
 
         public WeaponView CurrentWeaponView => currentWeaponView;
         public CarriedWeaponSlot CurrentWeaponSlot => _currentWeaponSlot;
@@ -43,6 +50,7 @@ namespace Weapon
         public bool FireInput => _fireInput;
         public bool ReloadInput => _reloadInput;
         public bool AimInput => _aimInput;
+        public float ADSAmount => _adsAmount;
 
         private void Reset()
         {
@@ -125,6 +133,14 @@ namespace Weapon
                    && RuntimeData.currentReserveAmmo > 0;
         }
 
+        public bool CanAutoReloadOnFire()
+        {
+            // 只有弹夹真正空了才允许开火键触发自动换弹 避免射速冷却中误换弹
+            return RuntimeData != null
+                   && RuntimeData.currentAmmoInMagazine <= 0
+                   && CanReload();
+        }
+
         public void ApplyRecoil()
         {
             if (cameraController == null || _config == null)
@@ -132,8 +148,63 @@ namespace Weapon
                 return;
             }
 
-            float yaw = Random.Range(-_config.recoilYaw, _config.recoilYaw);
-            cameraController.AddRecoil(_config.recoilPitch, yaw);
+            float resetTime = Mathf.Max(RecoilPatternResetMinTime, _config.fireInterval * 2.5f);
+            if (Time.time - _lastRecoilTime > resetTime)
+            {
+                _recoilShotIndex = 0;
+            }
+
+            float aimMultiplier = Mathf.Lerp(1f, RecoilAimMultiplier, _adsAmount);
+            float verticalRamp = Mathf.Min(RecoilMaxVerticalRamp, 1f + _recoilShotIndex * RecoilVerticalRampPerShot);
+            float pitch = _config.recoilPitch * verticalRamp * aimMultiplier;
+            float yawRange = Mathf.Abs(_config.recoilYaw) * aimMultiplier;
+
+            // 连发时使用稳定曲线加少量随机量 横向会有枪械节奏但不会完全乱跳
+            float patternYaw = Mathf.Sin((_recoilShotIndex + 1) * 0.85f) * yawRange * 0.35f;
+            float randomYaw = Random.Range(-yawRange * 0.08f, yawRange * 0.08f);
+            float yaw = patternYaw + randomYaw;
+
+            _lastRecoilTime = Time.time;
+            _recoilShotIndex++;
+            cameraController.AddRecoil(pitch, yaw);
+        }
+
+        public void TriggerWeaponFired()
+        {
+            // 枪口点缺失时逐级兜底 避免表现事件断掉
+            if (_config == null)
+            {
+                return;
+            }
+
+            Transform muzzleTransform = currentWeaponView != null ? currentWeaponView.MuzzlePoint : null;
+            Vector3 muzzlePosition;
+            Quaternion muzzleRotation;
+
+            if (muzzleTransform != null)
+            {
+                muzzlePosition = muzzleTransform.position;
+                muzzleRotation = muzzleTransform.rotation;
+            }
+            else if (currentWeaponView != null)
+            {
+                muzzlePosition = currentWeaponView.transform.position;
+                muzzleRotation = currentWeaponView.transform.rotation;
+            }
+            else if (_fireCamera != null)
+            {
+                muzzlePosition = _fireCamera.transform.position + _fireCamera.transform.forward * 0.4f;
+                muzzleRotation = _fireCamera.transform.rotation;
+            }
+            else
+            {
+                muzzlePosition = transform.position;
+                muzzleRotation = transform.rotation;
+            }
+
+            EventCenter.Instance.EventTrigger(
+                GameEvent.WeaponFired,
+                new WeaponFiredEventData(_config, currentWeaponView, muzzleTransform, muzzlePosition, muzzleRotation));
         }
 
         public void FireRaycast()
@@ -158,7 +229,7 @@ namespace Weapon
 
                 bool hitEnemy = TryApplyEnemyDamage(hit.collider, ref damageInfo);
 
-                EventCenter.Instance.EventTrigger(GameEvent.WeaponHit, new WeaponHitEventData(damageInfo, hitEnemy));
+                EventCenter.Instance.EventTrigger(GameEvent.WeaponHit, new WeaponHitEventData(damageInfo, hitEnemy, _config));
 
                 if (debugWeaponHit && !hitEnemy)
                 {
@@ -372,6 +443,8 @@ namespace Weapon
             _aimInput = false;
             _waitForAimReleaseAfterSwitch = isSwitchingWeapon;
             _adsAmount = 0f;
+            _recoilShotIndex = 0;
+            _lastRecoilTime = 0f;
 
             InitWeaponView();
 
