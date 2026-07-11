@@ -13,7 +13,6 @@ public class FireAimStick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
     [SerializeField] private float maxLookDeltaPerFrame = 60f;
     [SerializeField] private bool resetButtonOnRelease = true;
     [SerializeField] private bool sendHoldingEventEachFrame = true;
-    [SerializeField] private bool logInput;
 
     private const int NoPointer = int.MinValue;
     private int _activePointerId = NoPointer;
@@ -78,11 +77,6 @@ public class FireAimStick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
 
         UpdateButtonPosition(eventData);
         EventCenter.Instance.EventTrigger(GameEvent.MobileFirePressed);
-
-        if (logInput)
-        {
-            Debug.Log("移动端开火按下", this);
-        }
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -136,11 +130,6 @@ public class FireAimStick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
         if (resetButtonOnRelease)
         {
             ResetButtonPosition();
-        }
-
-        if (logInput)
-        {
-            Debug.Log("移动端开火松开", this);
         }
     }
 
@@ -201,4 +190,5 @@ public class FireAimStick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
             fireRange = fireButton.parent as RectTransform;
         }
     }
+
 }

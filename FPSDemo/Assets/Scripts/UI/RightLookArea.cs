@@ -7,7 +7,6 @@ public class RightLookArea : MonoBehaviour, IPointerDownHandler, IDragHandler, I
     [SerializeField] private float lookSensitivity = 1f;
     [SerializeField] private float dragStartDeadZone = 3f;
     [SerializeField] private float maxLookDeltaPerFrame = 60f;
-    [SerializeField] private bool logInput;
 
     private const int NoPointer = int.MinValue;
     private int _activePointerId = NoPointer;
@@ -66,11 +65,6 @@ public class RightLookArea : MonoBehaviour, IPointerDownHandler, IDragHandler, I
 
         // 右半屏滑动只负责视角转动
         EventCenter.Instance.EventTrigger(GameEvent.MobileLookDeltaChanged, lookDelta);
-
-        if (logInput)
-        {
-            Debug.Log($"右侧视角滑动 {lookDelta}", this);
-        }
     }
 
     public void OnPointerUp(PointerEventData eventData)
@@ -93,4 +87,5 @@ public class RightLookArea : MonoBehaviour, IPointerDownHandler, IDragHandler, I
         _hasIgnoredFirstDrag = false;
         _hasPassedDeadZone = false;
     }
+
 }

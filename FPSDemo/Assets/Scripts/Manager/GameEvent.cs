@@ -1,6 +1,7 @@
 using Combat;
 using Enemy;
 using Enemy.Data;
+using PlayerData;
 using UnityEngine;
 using Weapon;
 using Weapon.Data;
@@ -36,7 +37,17 @@ public enum GameEvent
     WeaponFired,
     WeaponHit,
     DamageResolved,
-    MobileJumpPressed
+    MobileJumpPressed,
+    MobileDodgePressed,
+    MobilePushPressed,
+    MobileGrenadePressed,
+    PlayerActionLockChanged,
+    SkillCastStarted,
+    SkillCastCompleted,
+    SkillHitEnemy,
+    SkillVisualStarted,
+    SkillCooldownChanged,
+    SkillChargeChanged
 }
 
 public readonly struct PlayerWeaponChangedEventData
@@ -259,5 +270,151 @@ public readonly struct DamageResolvedEventData
     public DamageResolvedEventData(DamageInfo damageInfo)
     {
         this.damageInfo = damageInfo;
+    }
+}
+
+public readonly struct PlayerActionLockEventData
+{
+    public readonly bool isLocked;
+    public readonly SkillType skillType;
+    public readonly string reason;
+
+    public PlayerActionLockEventData(bool isLocked, SkillType skillType, string reason)
+    {
+        this.isLocked = isLocked;
+        this.skillType = skillType;
+        this.reason = reason ?? string.Empty;
+    }
+}
+
+public readonly struct SkillCastEventData
+{
+    public readonly PlayerController player;
+    public readonly PlayerSkillConfig config;
+    public readonly int skillId;
+    public readonly string skillName;
+    public readonly SkillType skillType;
+    public readonly Vector3 origin;
+    public readonly Vector3 direction;
+    public readonly string animationKey;
+    public readonly string postProcessKey;
+    public readonly string fovEffectKey;
+    public readonly string cameraShakeKey;
+
+    public SkillCastEventData(PlayerController player, PlayerSkillConfig config, Vector3 origin, Vector3 direction)
+    {
+        this.player = player;
+        this.config = config;
+        skillId = config != null ? config.skillId : 0;
+        skillName = config != null ? config.skillName : string.Empty;
+        skillType = config != null ? config.skillType : SkillType.Dodge;
+        this.origin = origin;
+        this.direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
+        animationKey = config != null ? config.animationKey : string.Empty;
+        postProcessKey = config != null ? config.postProcessKey : string.Empty;
+        fovEffectKey = config != null ? config.fovEffectKey : string.Empty;
+        cameraShakeKey = config != null ? config.cameraShakeKey : string.Empty;
+    }
+}
+
+public readonly struct SkillHitEnemyEventData
+{
+    public readonly int skillId;
+    public readonly string skillName;
+    public readonly SkillType skillType;
+    public readonly EnemyController enemy;
+    public readonly int enemyId;
+    public readonly float damage;
+    public readonly Vector3 hitPoint;
+    public readonly Vector3 knockbackDirection;
+    public readonly float knockbackForce;
+
+    public SkillHitEnemyEventData(
+        PlayerSkillConfig config,
+        EnemyController enemy,
+        float damage,
+        Vector3 hitPoint,
+        Vector3 knockbackDirection)
+    {
+        skillId = config != null ? config.skillId : 0;
+        skillName = config != null ? config.skillName : string.Empty;
+        skillType = config != null ? config.skillType : SkillType.Dodge;
+        this.enemy = enemy;
+        enemyId = enemy != null ? enemy.EnemyId : 0;
+        this.damage = Mathf.Max(0f, damage);
+        this.hitPoint = hitPoint;
+        this.knockbackDirection = knockbackDirection.sqrMagnitude > 0.0001f ? knockbackDirection.normalized : Vector3.zero;
+        knockbackForce = config != null ? Mathf.Max(0f, config.knockbackForce) : 0f;
+    }
+}
+
+public readonly struct SkillVisualEventData
+{
+    public readonly int skillId;
+    public readonly string skillName;
+    public readonly SkillType skillType;
+    public readonly string effectKey;
+    public readonly string audioKey;
+    public readonly string postProcessKey;
+    public readonly string fovEffectKey;
+    public readonly string cameraShakeKey;
+    public readonly Vector3 position;
+    public readonly Vector3 direction;
+    public readonly float duration;
+    public readonly float intensity;
+
+    public SkillVisualEventData(
+        PlayerSkillConfig config,
+        string effectKey,
+        string audioKey,
+        Vector3 position,
+        Vector3 direction,
+        float duration,
+        float intensity)
+    {
+        skillId = config != null ? config.skillId : 0;
+        skillName = config != null ? config.skillName : string.Empty;
+        skillType = config != null ? config.skillType : SkillType.Dodge;
+        this.effectKey = effectKey ?? string.Empty;
+        this.audioKey = audioKey ?? string.Empty;
+        postProcessKey = config != null ? config.postProcessKey : string.Empty;
+        fovEffectKey = config != null ? config.fovEffectKey : string.Empty;
+        cameraShakeKey = config != null ? config.cameraShakeKey : string.Empty;
+        this.position = position;
+        this.direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
+        this.duration = Mathf.Max(0f, duration);
+        this.intensity = Mathf.Max(0f, intensity);
+    }
+}
+
+public readonly struct SkillCooldownEventData
+{
+    public readonly int skillId;
+    public readonly SkillType skillType;
+    public readonly float remaining;
+    public readonly float duration;
+
+    public SkillCooldownEventData(PlayerSkillConfig config, float remaining, float duration)
+    {
+        skillId = config != null ? config.skillId : 0;
+        skillType = config != null ? config.skillType : SkillType.Dodge;
+        this.remaining = Mathf.Max(0f, remaining);
+        this.duration = Mathf.Max(0f, duration);
+    }
+}
+
+public readonly struct SkillChargeEventData
+{
+    public readonly int skillId;
+    public readonly SkillType skillType;
+    public readonly int currentCount;
+    public readonly int maxCount;
+
+    public SkillChargeEventData(PlayerSkillConfig config, int currentCount, int maxCount)
+    {
+        skillId = config != null ? config.skillId : 0;
+        skillType = config != null ? config.skillType : SkillType.Dodge;
+        this.currentCount = Mathf.Max(0, currentCount);
+        this.maxCount = Mathf.Max(0, maxCount);
     }
 }

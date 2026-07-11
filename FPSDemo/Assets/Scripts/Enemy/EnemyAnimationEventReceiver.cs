@@ -2,6 +2,10 @@ using UnityEngine;
 
 namespace Enemy
 {
+    /// <summary>
+    /// 敌人动画事件转发器
+    /// 动画片段上的 AtkS / AtkE 事件会通过这里转给 EnemyAttack
+    /// </summary>
     public class EnemyAnimationEventReceiver : MonoBehaviour
     {
         [Header("攻击组件")]

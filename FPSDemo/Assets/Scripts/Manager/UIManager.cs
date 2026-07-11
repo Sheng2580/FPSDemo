@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem.UI;
+#endif
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -27,6 +31,7 @@ public enum UILayer
 public class UIManager : UnitySingleTonMono<UIManager>
 {
     private const string RootPrefabPath = "UI/UI_Root";
+    private static bool sceneEventSystemSubscribed;
 
     private readonly Dictionary<UILayer, int> layerBaseOrders = new Dictionary<UILayer, int>
     {
@@ -53,6 +58,31 @@ public class UIManager : UnitySingleTonMono<UIManager>
     private readonly Vector2 designResolution = new Vector2(1920, 1080);
     private bool isInitialized;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeUIState()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoadedEnsureEventSystem;
+        sceneEventSystemSubscribed = false;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void BootstrapEventSystemAfterSceneLoad()
+    {
+        EnsureEventSystemForCurrentScene();
+        if (sceneEventSystemSubscribed)
+        {
+            return;
+        }
+
+        SceneManager.sceneLoaded += OnSceneLoadedEnsureEventSystem;
+        sceneEventSystemSubscribed = true;
+    }
+
+    private static void OnSceneLoadedEnsureEventSystem(Scene scene, LoadSceneMode mode)
+    {
+        EnsureEventSystemForCurrentScene();
+    }
+
     private struct CanvasConfig
     {
         public UILayer Layer;
@@ -78,6 +108,7 @@ public class UIManager : UnitySingleTonMono<UIManager>
     {
         if (isInitialized && rootObj != null)
         {
+            EnsureEventSystemForCurrentScene();
             return;
         }
 
@@ -91,7 +122,7 @@ public class UIManager : UnitySingleTonMono<UIManager>
             SetupRoot(rootObj);
         }
 
-        EnsureEventSystem();
+        EnsureEventSystemForCurrentScene();
         isInitialized = rootObj != null;
     }
 
@@ -176,13 +207,157 @@ public class UIManager : UnitySingleTonMono<UIManager>
 
     private void EnsureEventSystem()
     {
-        if (FindObjectOfType<EventSystem>() != null)
+        EnsureEventSystemForCurrentScene();
+    }
+
+    private static void EnsureEventSystemForCurrentScene()
+    {
+        EventSystem[] eventSystems = FindObjectsOfType<EventSystem>(true);
+        if (eventSystems != null && eventSystems.Length > 0)
+        {
+            EventSystem primaryEventSystem = ResolvePrimaryEventSystem(eventSystems);
+            for (int i = 0; i < eventSystems.Length; i++)
+            {
+                EventSystem eventSystem = eventSystems[i];
+                if (eventSystem == null)
+                {
+                    continue;
+                }
+
+                if (eventSystem == primaryEventSystem)
+                {
+                    eventSystem.gameObject.SetActive(true);
+                    eventSystem.enabled = true;
+                    EnsureEventInputModule(eventSystem.gameObject);
+                    EventSystem.current = eventSystem;
+                    eventSystem.UpdateModules();
+                }
+                else
+                {
+                    DisableExtraEventSystem(eventSystem);
+                }
+            }
+
+            return;
+        }
+
+        GameObject eventSystemObj = new GameObject("EventSystem", typeof(EventSystem));
+        EnsureEventInputModule(eventSystemObj);
+        EventSystem eventSystemComponent = eventSystemObj.GetComponent<EventSystem>();
+        if (eventSystemComponent != null)
+        {
+            EventSystem.current = eventSystemComponent;
+            eventSystemComponent.UpdateModules();
+        }
+        DontDestroyOnLoad(eventSystemObj);
+    }
+
+    private static EventSystem ResolvePrimaryEventSystem(EventSystem[] eventSystems)
+    {
+        if (IsUsableEventSystem(EventSystem.current))
+        {
+            return EventSystem.current;
+        }
+
+        for (int i = 0; i < eventSystems.Length; i++)
+        {
+            if (IsUsableEventSystem(eventSystems[i]))
+            {
+                return eventSystems[i];
+            }
+        }
+
+        return eventSystems[0];
+    }
+
+    private static bool IsUsableEventSystem(EventSystem eventSystem)
+    {
+        return eventSystem != null &&
+               eventSystem.enabled &&
+               eventSystem.gameObject.activeInHierarchy;
+    }
+
+    private static void DisableExtraEventSystem(EventSystem eventSystem)
+    {
+        if (eventSystem == null)
         {
             return;
         }
 
-        GameObject eventSystemObj = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-        DontDestroyOnLoad(eventSystemObj);
+        eventSystem.enabled = false;
+        BaseInputModule[] inputModules = eventSystem.GetComponents<BaseInputModule>();
+        for (int i = 0; i < inputModules.Length; i++)
+        {
+            if (inputModules[i] != null)
+            {
+                inputModules[i].enabled = false;
+            }
+        }
+    }
+
+    private static void EnsureEventInputModule(GameObject eventSystemObj)
+    {
+        if (eventSystemObj == null)
+        {
+            return;
+        }
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        // 当前触控 UI 依赖旧 UI 事件链路 Both 模式下优先使用 StandaloneInputModule
+        BaseInputModule[] inputModules = eventSystemObj.GetComponents<BaseInputModule>();
+        for (int i = 0; i < inputModules.Length; i++)
+        {
+            BaseInputModule inputModule = inputModules[i];
+            if (inputModule == null || inputModule is StandaloneInputModule)
+            {
+                continue;
+            }
+
+            inputModule.enabled = false;
+            Destroy(inputModule);
+        }
+
+        StandaloneInputModule standaloneInputModule = eventSystemObj.GetComponent<StandaloneInputModule>();
+        if (standaloneInputModule == null)
+        {
+            standaloneInputModule = eventSystemObj.AddComponent<StandaloneInputModule>();
+        }
+
+        standaloneInputModule.enabled = true;
+
+#elif ENABLE_INPUT_SYSTEM
+        // 只有旧输入不可用时才使用新版 UI 输入模块
+        BaseInputModule[] inputModules = eventSystemObj.GetComponents<BaseInputModule>();
+        for (int i = 0; i < inputModules.Length; i++)
+        {
+            BaseInputModule inputModule = inputModules[i];
+            if (inputModule == null || inputModule is InputSystemUIInputModule)
+            {
+                continue;
+            }
+
+            inputModule.enabled = false;
+            Destroy(inputModule);
+        }
+
+        InputSystemUIInputModule uiInputModule = eventSystemObj.GetComponent<InputSystemUIInputModule>();
+        if (uiInputModule == null)
+        {
+            uiInputModule = eventSystemObj.AddComponent<InputSystemUIInputModule>();
+        }
+
+        uiInputModule.enabled = true;
+        uiInputModule.pointerBehavior = UIPointerBehavior.SingleMouseOrPenButMultiTouchAndTrack;
+
+        if (uiInputModule.actionsAsset == null ||
+            uiInputModule.point == null ||
+            uiInputModule.leftClick == null)
+        {
+            // 运行时修复旧 EventSystem 时强制补齐 UI 点击动作
+            uiInputModule.AssignDefaultActions();
+        }
+
+#endif
     }
 
     private void SetupCanvasScaler(CanvasScaler scaler)

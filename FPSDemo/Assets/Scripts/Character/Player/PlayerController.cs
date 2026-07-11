@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using PlayerData;
 
@@ -19,10 +20,12 @@ public class PlayerController : CharacterBase<PlayerModel>
     public PlayerMotor Motor { get; private set; }
     public PlayerInventory Inventory { get; private set; }
     public PlayerStats Stats { get; private set; }
+    public MonoBehaviour SkillController { get; private set; }
     public float Gravity => gravity;
     public Vector3 CurrentHorizontalVelocity { get; private set; }
     public bool HasBufferedJump => _jumpBufferTimer > 0f;
     public bool CanUseCoyoteJump => _coyoteTimer > 0f;
+    public bool IsSkillMovementLocked { get; private set; }
 
     private void Awake()
     {
@@ -31,6 +34,7 @@ public class PlayerController : CharacterBase<PlayerModel>
         CameraController = GetComponent<PlayerCameraController>();
         Motor = GetComponent<PlayerMotor>();
         Inventory = inventory != null ? inventory : GetComponent<PlayerInventory>();
+        SkillController = ResolveSkillController();
 
         if (Motor == null && !_hasLoggedMissingMotor)
         {
@@ -120,6 +124,47 @@ public class PlayerController : CharacterBase<PlayerModel>
         CurrentHorizontalVelocity = Vector3.zero;
     }
 
+    public void SetSkillMovementLocked(bool isLocked)
+    {
+        IsSkillMovementLocked = isLocked;
+        if (isLocked)
+        {
+            Motor?.Stop();
+        }
+    }
+
+    private MonoBehaviour ResolveSkillController()
+    {
+        MonoBehaviour existingController = GetComponent("PlayerSkillController") as MonoBehaviour;
+        if (existingController != null)
+        {
+            return existingController;
+        }
+
+        Type skillControllerType = FindRuntimeType("PlayerSkillController");
+        if (skillControllerType == null || !typeof(MonoBehaviour).IsAssignableFrom(skillControllerType))
+        {
+            Debug.LogWarning("没有找到 PlayerSkillController，技能系统会在脚本导入完成后再挂载", this);
+            return null;
+        }
+
+        return gameObject.AddComponent(skillControllerType) as MonoBehaviour;
+    }
+
+    private static Type FindRuntimeType(string typeName)
+    {
+        foreach (System.Reflection.Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            Type type = assembly.GetType(typeName);
+            if (type != null)
+            {
+                return type;
+            }
+        }
+
+        return null;
+    }
+
     public void TakeDamage(float damage)
     {
         if (Stats == null || Stats.RuntimeData == null)
@@ -157,6 +202,11 @@ public class PlayerController : CharacterBase<PlayerModel>
 
     public bool TryStartBufferedJump()
     {
+        if (IsSkillMovementLocked)
+        {
+            return false;
+        }
+
         if (!HasBufferedJump || (!IsGrounded && !CanUseCoyoteJump))
         {
             return false;
@@ -183,6 +233,12 @@ public class PlayerController : CharacterBase<PlayerModel>
 
     private void UpdateJumpTimers()
     {
+        if (IsSkillMovementLocked)
+        {
+            _jumpBufferTimer = 0f;
+            return;
+        }
+
         if (Stats == null)
         {
             InitPlayerStats();

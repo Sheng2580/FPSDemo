@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bad3a97f92e34bc7a86da0e7efa5a06f, type: 3}
+  m_Name: DefaultPushSkillConfig
+  m_EditorClassIdentifier: 
+  config:
+    skillId: 2
+    skillName: Push
+    skillType: 1
+    cooldown: 6
+    duration: 0.45
+    lockWeaponDuringCast: 1
+    canBufferInput: 1
+    inputBufferTime: 0.12
+    dodgeDistance: 0
+    invincibleDuration: 0
+    collisionDisableDuration: 0
+    detectDistance: 2.2
+    detectRadius: 0.85
+    detectAngle: 80
+    maxHitCount: 5
+    damage: 5
+    knockbackForce: 6.5
+    stunDuration: 0.45
+    initialCount: 0
+    maxCount: 0
+    explosionRadius: 0
+    explosionDelay: 0
+    throwForce: 0
+    throwUpForce: 0
+    projectileLifeTime: 0
+    iconKey: Skill_Push_Icon
+    animationKey: Melee Weapon_1|Attack 1
+    alternateAnimationKey: Melee Weapon_1|Attack 2
+    throwAnimationKey: 
+    projectileResourceKey: 
+    castEffectKey: Skill_Push_Cast
+    hitEffectKey: Skill_Push_Hit
+    explosionEffectKey: 
+    castAudioKey: Skill_Push_Swing
+    hitAudioKey: Skill_Push_Hit
+    explosionAudioKey: 
+    fovEffectKey: 
+    postProcessKey: Skill_Push_ImpactPulse
+    cameraShakeKey: Skill_Push_Shake

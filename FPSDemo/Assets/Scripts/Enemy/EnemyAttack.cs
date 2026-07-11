@@ -3,7 +3,9 @@ using UnityEngine;
 namespace Enemy
 {
     /// <summary>
-    /// 敌人攻击层，负责攻击冷却和动画命中窗口内的玩家伤害判定
+    /// 敌人攻击层
+    /// 只负责攻击冷却、动画命中窗口和玩家伤害判定
+    /// 动画播放由 EnemyStateMachine 负责
     /// </summary>
     public class EnemyAttack : MonoBehaviour
     {
@@ -17,9 +19,6 @@ namespace Enemy
         [SerializeField] private float hitDistancePadding = 0.35f;
         [SerializeField] private bool useAnimationHitWindow = true;
 
-        [Header("引用")]
-        [SerializeField] private EnemyView view;
-
         private Transform _target;
         private PlayerController _targetPlayer;
         private EnemyController _controller;
@@ -32,20 +31,12 @@ namespace Enemy
         private bool _waitingFallbackHit;
 
         public float AttackDistance => attackDistance;
+        public float AttackInterval => attackInterval;
         public float AttackStartTime => _attackStartTime;
+        public float AttackElapsedTime => _attackPlaying ? Time.time - _attackStartTime : 0f;
         public bool IsAttacking => _attackPlaying;
         public bool IsHitWindowActive => _hitWindowActive;
         public bool IsAttackReady => Time.time >= _nextAttackTime && !_attackPlaying;
-
-        private void Awake()
-        {
-            AutoBind();
-        }
-
-        private void Reset()
-        {
-            AutoBind();
-        }
 
         public void Init(
             Transform target,
@@ -55,7 +46,6 @@ namespace Enemy
             float interval,
             float hitDelay)
         {
-            AutoBind();
             _target = target;
             ResolveTargetPlayer();
             _controller = controller;
@@ -67,14 +57,9 @@ namespace Enemy
             StopAttack();
         }
 
-        public void Tick()
+        public bool TryStartAttack()
         {
-            TryAttack();
-            TickHitWindow();
-        }
-
-        public bool TryAttack(bool playAnimation = true)
-        {
+            // 状态机已经确认当前处于 Attack 状态，这里只判断冷却和距离
             if (_target == null || _controller == null || _controller.IsDead)
             {
                 return false;
@@ -97,14 +82,9 @@ namespace Enemy
             _hitAppliedThisWindow = false;
             _waitingFallbackHit = false;
 
-            // 当前主流程由 EnemyAttackState 播动画，旧接口保留给临时测试
-            if (playAnimation)
-            {
-                view?.PlayAttack();
-            }
-
             if (!useAnimationHitWindow)
             {
+                // 没有动画事件时走时间兜底，避免敌人完全打不出伤害
                 _fallbackHitTime = Time.time + attackHitDelay;
                 _waitingFallbackHit = true;
             }
@@ -114,6 +94,7 @@ namespace Enemy
 
         public void StopAttack()
         {
+            // 退出 Attack / Hit / Dead 时统一关闭判定窗口
             _attackPlaying = false;
             _hitWindowActive = false;
             _hitAppliedThisWindow = false;
@@ -127,6 +108,7 @@ namespace Enemy
 
         public void TickHitWindow()
         {
+            // 非动画事件模式下，到达延迟时间后自动打开一次判定
             if (_waitingFallbackHit && Time.time >= _fallbackHitTime)
             {
                 _waitingFallbackHit = false;
@@ -144,11 +126,13 @@ namespace Enemy
 
         public void AtkS()
         {
+            // 动画事件 AtkS，允许一次攻击存在多段判定
             BeginAttackHitWindow();
         }
 
         public void AtkE()
         {
+            // 动画事件 AtkE，关闭当前段判定
             EndAttackHitWindow();
         }
 
@@ -203,6 +187,7 @@ namespace Enemy
 
         private void ResolveTargetPlayer()
         {
+            // 目标来自刷怪器注入，找不到时才按 Player 标签兜底
             if (_targetPlayer != null && _target != null)
             {
                 return;
@@ -231,11 +216,6 @@ namespace Enemy
             {
                 _target = _targetPlayer.transform;
             }
-        }
-
-        private void AutoBind()
-        {
-            view ??= GetComponent<EnemyView>();
         }
     }
 }

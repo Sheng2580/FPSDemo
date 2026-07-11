@@ -94,7 +94,6 @@ MonoBehaviour:
   inactiveColor: {r: 0.25, g: 0.55, b: 0.95, a: 0.88}
   activeColor: {r: 0.95, g: 0.8, b: 0.25, a: 0.95}
   activeScale: 1.08
-  logInput: 0
 --- !u!1 &712345002001
 GameObject:
   m_ObjectHideFlags: 0
@@ -259,7 +258,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee0b6121f7ec4e72824a4ae47df322cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  logInput: 0
 --- !u!1 &812345002001
 GameObject:
   m_ObjectHideFlags: 0
@@ -424,7 +422,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fa111af8e844a5b9c3e0999c5c69564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  logInput: 0
 --- !u!1 &912345002001
 GameObject:
   m_ObjectHideFlags: 0
@@ -589,7 +586,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c370beb569444e6b5b35f6dbc2783d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  logInput: 0
 --- !u!1 &1669968357152801628
 GameObject:
   m_ObjectHideFlags: 0
@@ -1351,7 +1347,6 @@ MonoBehaviour:
   maxLookDeltaPerFrame: 60
   resetButtonOnRelease: 1
   sendHoldingEventEachFrame: 1
-  logInput: 0
 --- !u!1 &4155084368726759241
 GameObject:
   m_ObjectHideFlags: 0
@@ -1443,7 +1438,6 @@ MonoBehaviour:
   lookSensitivity: 1
   dragStartDeadZone: 3
   maxLookDeltaPerFrame: 60
-  logInput: 0
 --- !u!1 &4664391042844107906
 GameObject:
   m_ObjectHideFlags: 0
@@ -1511,7 +1505,6 @@ MonoBehaviour:
   moveBackgroundToPointerDown: 1
   keepMoveShowInputY: 0.65
   keepMoveTriggerRadius: 80
-  logInput: 0
 --- !u!1 &5934748163628184030
 GameObject:
   m_ObjectHideFlags: 0

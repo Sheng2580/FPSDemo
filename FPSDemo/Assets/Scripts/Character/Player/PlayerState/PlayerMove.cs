@@ -6,6 +6,12 @@ public class PlayerMove : PlayerState
 {
     public override void Update()
     {
+        if (player.IsSkillMovementLocked)
+        {
+            player.Motor.Stop();
+            return;
+        }
+
         if (ShouldStartJump())
         {
             StartJump();

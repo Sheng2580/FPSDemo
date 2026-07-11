@@ -25,6 +25,7 @@ namespace Weapon
 
         [Header("调试")]
         [SerializeField] private bool debugWeaponHit = true;
+        [SerializeField] private bool infiniteAmmoForTest = true;
 
         private readonly Dictionary<WeaponStateType, WeaponState> _states = new Dictionary<WeaponStateType, WeaponState>();
         private WeaponState _currentState;
@@ -38,6 +39,7 @@ namespace Weapon
         private CarriedWeaponSlot _currentWeaponSlot;
         private bool _hasStarted;
         private bool _waitForAimReleaseAfterSwitch;
+        private bool _isPlayerActionLocked;
         private int _recoilShotIndex;
         private float _lastRecoilTime;
 
@@ -52,6 +54,7 @@ namespace Weapon
         public bool ReloadInput => _reloadInput;
         public bool AimInput => _aimInput;
         public float ADSAmount => _adsAmount;
+        public bool InfiniteAmmoForTest => infiniteAmmoForTest;
 
         private void Reset()
         {
@@ -68,6 +71,7 @@ namespace Weapon
         private void OnEnable()
         {
             EventCenter.Instance.AddEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
+            EventCenter.Instance.AddEventListener<PlayerActionLockEventData>(GameEvent.PlayerActionLockChanged, OnPlayerActionLockChanged);
         }
 
         private void Start()
@@ -90,6 +94,7 @@ namespace Weapon
         private void OnDisable()
         {
             EventCenter.Instance.RemoveEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
+            EventCenter.Instance.RemoveEventListener<PlayerActionLockEventData>(GameEvent.PlayerActionLockChanged, OnPlayerActionLockChanged);
             ResetAimVisuals();
         }
 
@@ -118,17 +123,24 @@ namespace Weapon
             return currentWeaponView != null
                    && _config != null
                    && RuntimeData != null
+                   && !_isPlayerActionLocked
                    && RuntimeData.isEquipped
                    && !RuntimeData.isReloading
-                   && RuntimeData.currentAmmoInMagazine > 0
+                   && (infiniteAmmoForTest || RuntimeData.currentAmmoInMagazine > 0)
                    && Time.time >= RuntimeData.nextFireTime;
         }
 
         public bool CanReload()
         {
+            if (infiniteAmmoForTest)
+            {
+                return false;
+            }
+
             return currentWeaponView != null
                    && _config != null
                    && RuntimeData != null
+                   && !_isPlayerActionLocked
                    && RuntimeData.isEquipped
                    && !RuntimeData.isReloading
                    && RuntimeData.currentAmmoInMagazine < _config.magazineSize
@@ -138,7 +150,8 @@ namespace Weapon
         public bool CanAutoReloadOnFire()
         {
             // 只有弹夹真正空了才允许开火键触发自动换弹 避免射速冷却中误换弹
-            return RuntimeData != null
+            return !infiniteAmmoForTest
+                   && RuntimeData != null
                    && RuntimeData.currentAmmoInMagazine <= 0
                    && CanReload();
         }
@@ -518,11 +531,29 @@ namespace Weapon
             EquipWeaponSlot(playerInventory.CurrentWeapon, _hasStarted);
         }
 
+        private void OnPlayerActionLockChanged(PlayerActionLockEventData eventData)
+        {
+            _isPlayerActionLocked = eventData.isLocked;
+            if (!_isPlayerActionLocked)
+            {
+                return;
+            }
+
+            _fireInput = false;
+            _reloadInput = false;
+            _aimInput = false;
+        }
+
         private void UpdateInput()
         {
             _fireInput = false;
             _reloadInput = false;
             _aimInput = false;
+
+            if (_isPlayerActionLocked)
+            {
+                return;
+            }
 
             GameInputManger inputManger = GameInputManger.Instance;
             if (inputManger == null)
@@ -553,6 +584,7 @@ namespace Weapon
         private bool CanAim()
         {
             return _aimInput
+                   && !_isPlayerActionLocked
                    && _config != null
                    && RuntimeData != null
                    && RuntimeData.isEquipped

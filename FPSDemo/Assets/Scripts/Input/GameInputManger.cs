@@ -1,9 +1,8 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class GameInputManger : UnitySingleTon<GameInputManger>
 {
@@ -20,16 +19,22 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    private float _mobileJumpInputExpireTime = -1f;
    private int _mobileSightPressedFrame = -1;
    private int _mobileSightReleasedFrame = -1;
+   private int _mobileDodgePressedFrame = -1;
+   private int _mobilePushPressedFrame = -1;
+   private int _mobileGrenadePressedFrame = -1;
+   private bool _isListeningMobileEvents;
    public bool IsPlayerInputEnabled { get; private set; } = true;
    public bool IsMobileMoveLocked { get; private set; }
 
    //移动
    public Vector2 Movement => GetMovementInput();
    public Vector2 CameraLook => GetCameraLookInput();
-   
-   public bool Run => _gameInputActions.GameInput.Run.IsPressed();
-   public bool Climb => _gameInputActions.GameInput.Climb.triggered;
-   
+
+   public bool Run => IsPlayerInputEnabled
+                      && TryGetGameInput(out InputAcyions.GameInputActions input)
+                      && IsPressed(input.Run);
+   public bool Climb => TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.Climb);
+
    public bool FireDown => IsPlayerInputEnabled
                            && (DirectFireDown
                                || MobileFirePressed);
@@ -43,8 +48,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    public bool MobileFireReleased => _mobileFireReleasedFrame == Time.frameCount;
    public bool MobileFireHeld => _isMobileFireHeld;
    public bool ReloadDown => IsPlayerInputEnabled
-                             && (UnityEngine.Input.GetKeyDown(KeyCode.R)
-                                 || MobileReloadPressed);
+                             && MobileReloadPressed;
    public bool MobileReloadPressed => _mobileReloadPressedFrame == Time.frameCount;
    public bool MobileJumpPressed => HasBufferedMobileJumpInput();
    public bool AimDown => IsPlayerInputEnabled
@@ -60,45 +64,68 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    public bool MobileSightReleased => _mobileSightReleasedFrame == Time.frameCount;
    public bool MobileSightHeld => _isMobileSightHeld;
    private bool DirectFireDown => CanUseDirectFireInput()
-                                  && (_gameInputActions.GameInput.Fire.WasPressedThisFrame()
-                                      || UnityEngine.Input.GetMouseButtonDown(0));
+                                  && TryGetGameInput(out InputAcyions.GameInputActions input)
+                                  && WasPressedThisFrame(input.Fire);
    private bool DirectFireHeld => CanUseDirectFireInput()
-                                  && (_gameInputActions.GameInput.Fire.IsPressed()
-                                      || UnityEngine.Input.GetMouseButton(0));
+                                  && TryGetGameInput(out InputAcyions.GameInputActions input)
+                                  && IsPressed(input.Fire);
    private bool DirectFireUp => CanUseDirectFireInput()
-                                && (_gameInputActions.GameInput.Fire.WasReleasedThisFrame()
-                                    || UnityEngine.Input.GetMouseButtonUp(0));
+                                && TryGetGameInput(out InputAcyions.GameInputActions input)
+                                && WasReleasedThisFrame(input.Fire);
    private bool DirectAimDown => CanUseDirectAimInput()
-                                 && (_gameInputActions.GameInput.Sight.WasPressedThisFrame()
-                                     || UnityEngine.Input.GetMouseButtonDown(1));
+                                 && TryGetGameInput(out InputAcyions.GameInputActions input)
+                                 && WasPressedThisFrame(input.Sight);
    private bool DirectAimHeld => CanUseDirectAimInput()
-                                 && (_gameInputActions.GameInput.Sight.IsPressed()
-                                     || UnityEngine.Input.GetMouseButton(1));
+                                 && TryGetGameInput(out InputAcyions.GameInputActions input)
+                                 && IsPressed(input.Sight);
    private bool DirectAimUp => CanUseDirectAimInput()
-                               && (_gameInputActions.GameInput.Sight.WasReleasedThisFrame()
-                                   || UnityEngine.Input.GetMouseButtonUp(1));
+                               && TryGetGameInput(out InputAcyions.GameInputActions input)
+                               && WasReleasedThisFrame(input.Sight);
 
-   public bool F => _gameInputActions.GameInput.F.triggered;
-   public bool Tab => _gameInputActions.GameInput.Tab.triggered;
-   public bool Skill => _gameInputActions.GameInput.Skill.triggered;
+   public bool F => TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.F);
+   public bool Tab => TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.Tab);
+   public bool Skill => TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.Skill);
+   public bool DodgeDown => IsPlayerInputEnabled
+                            && ((TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.Skill))
+                                || MobileDodgePressed);
+   public bool PushDown => IsPlayerInputEnabled
+                           && MobilePushPressed;
+   public bool GrenadeDown => IsPlayerInputEnabled
+                              && MobileGrenadePressed;
+   public bool MobileDodgePressed => _mobileDodgePressedFrame == Time.frameCount;
+   public bool MobilePushPressed => _mobilePushPressedFrame == Time.frameCount;
+   public bool MobileGrenadePressed => _mobileGrenadePressedFrame == Time.frameCount;
    public bool Jump => IsPlayerInputEnabled
-                       && (_gameInputActions.GameInput.Jump.triggered
+                       && ((TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.Jump))
                            || MobileJumpPressed);
-   public bool Slide => _gameInputActions.GameInput.Slide.triggered;
-   public bool LockCamera => IsPlayerInputEnabled && _gameInputActions.GameInput.lockCamera.WasPressedThisFrame();
-   
-   public bool Esc => _gameInputActions.GameInput.ESC.triggered;
-   public bool UseTheCombat => IsPlayerInputEnabled && _gameInputActions.GameInput.UseTheCombat.triggered;
-   
+   public bool Slide => TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.Slide);
+   public bool LockCamera => IsPlayerInputEnabled
+                             && TryGetGameInput(out InputAcyions.GameInputActions input)
+                             && WasPressedThisFrame(input.lockCamera);
+
+   public bool Esc => TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.ESC);
+   public bool UseTheCombat => IsPlayerInputEnabled
+                               && TryGetGameInput(out InputAcyions.GameInputActions input)
+                               && IsTriggered(input.UseTheCombat);
+
    public override void Awake()
    {
       base.Awake();
-      _gameInputActions ??= new InputAcyions();
+      EnsureInputActions();
    }
-   
+
    private void OnEnable()
    {
-      _gameInputActions.Enable();
+      if (EnsureInputActions())
+      {
+         _gameInputActions.Enable();
+      }
+
+      if (_isListeningMobileEvents)
+      {
+         return;
+      }
+
       EventCenter.Instance.AddEventListener<Vector2>(GameEvent.MobileMoveInputChanged, OnMobileMoveInputChanged);
       EventCenter.Instance.AddEventListener<bool>(GameEvent.MobileMoveLockChanged, OnMobileMoveLockChanged);
       EventCenter.Instance.AddEventListener<Vector2>(GameEvent.MobileLookDeltaChanged, OnMobileLookDeltaChanged);
@@ -110,30 +137,34 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
-   }
-
-   private void Update()
-   {
-      if (LockCamera)
-      {
-         print("ssss");
-      }
+      EventCenter.Instance.AddEventListener(GameEvent.MobileDodgePressed, OnMobileDodgePressed);
+      EventCenter.Instance.AddEventListener(GameEvent.MobilePushPressed, OnMobilePushPressed);
+      EventCenter.Instance.AddEventListener(GameEvent.MobileGrenadePressed, OnMobileGrenadePressed);
+      _isListeningMobileEvents = true;
    }
 
    private void OnDisable()
    {
-      EventCenter.Instance.RemoveEventListener<Vector2>(GameEvent.MobileMoveInputChanged, OnMobileMoveInputChanged);
-      EventCenter.Instance.RemoveEventListener<bool>(GameEvent.MobileMoveLockChanged, OnMobileMoveLockChanged);
-      EventCenter.Instance.RemoveEventListener<Vector2>(GameEvent.MobileLookDeltaChanged, OnMobileLookDeltaChanged);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileFirePressed, OnMobileFirePressed);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireReleased, OnMobileFireReleased);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireHolding, OnMobileFireHolding);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileJumpPressed, OnMobileJumpPressed);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
-      EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
-      _gameInputActions.Disable();
+      if (_isListeningMobileEvents)
+      {
+         EventCenter.Instance.RemoveEventListener<Vector2>(GameEvent.MobileMoveInputChanged, OnMobileMoveInputChanged);
+         EventCenter.Instance.RemoveEventListener<bool>(GameEvent.MobileMoveLockChanged, OnMobileMoveLockChanged);
+         EventCenter.Instance.RemoveEventListener<Vector2>(GameEvent.MobileLookDeltaChanged, OnMobileLookDeltaChanged);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileFirePressed, OnMobileFirePressed);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireReleased, OnMobileFireReleased);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireHolding, OnMobileFireHolding);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileJumpPressed, OnMobileJumpPressed);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileDodgePressed, OnMobileDodgePressed);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobilePushPressed, OnMobilePushPressed);
+         EventCenter.Instance.RemoveEventListener(GameEvent.MobileGrenadePressed, OnMobileGrenadePressed);
+         _isListeningMobileEvents = false;
+      }
+
+      _gameInputActions?.Disable();
    }
 
    public void SetPlayerInputEnabled(bool isEnabled)
@@ -148,7 +179,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
          return false;
       }
 
-      if (_gameInputActions.GameInput.Jump.triggered)
+      if (TryGetGameInput(out InputAcyions.GameInputActions input) && IsTriggered(input.Jump))
       {
          return true;
       }
@@ -253,6 +284,24 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       _mobileSightReleasedFrame = Time.frameCount;
    }
 
+   private void OnMobileDodgePressed()
+   {
+      // 记录闪避按钮按下帧
+      _mobileDodgePressedFrame = Time.frameCount;
+   }
+
+   private void OnMobilePushPressed()
+   {
+      // 记录推敌按钮按下帧
+      _mobilePushPressedFrame = Time.frameCount;
+   }
+
+   private void OnMobileGrenadePressed()
+   {
+      // 记录手雷按钮按下帧
+      _mobileGrenadePressedFrame = Time.frameCount;
+   }
+
    private bool IsPointerOverUI()
    {
       return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
@@ -264,7 +313,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       // 真机只允许 FireButton 通过事件触发开火
       return false;
 #else
-      // 编辑器和电脑端允许鼠标空白处开火，点 UI 不开火
+      // 编辑器和电脑端允许 InputActions 开火，点 UI 不开火
       return !IsPointerOverUI();
 #endif
    }
@@ -275,7 +324,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       // 真机只允许右侧 UI 事件触发视角
       return false;
 #else
-      // 编辑器和电脑端保留鼠标看向，点 UI 时不读取直连输入
+      // 编辑器和电脑端保留 InputActions 视角，点 UI 时不读取
       return !IsPointerOverUI();
 #endif
    }
@@ -286,7 +335,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       // 真机只允许 SightButton 通过事件触发瞄准
       return false;
 #else
-      // 编辑器和电脑端保留右键瞄准测试，点 UI 时不读取直连输入
+      // 编辑器和电脑端保留 InputActions 瞄准，点 UI 时不读取
       return !IsPointerOverUI();
 #endif
    }
@@ -303,7 +352,15 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
          return _touchMovement;
       }
 
-      return _gameInputActions.GameInput.Movement.ReadValue<Vector2>();
+      Vector2 actionInput = TryGetGameInput(out InputAcyions.GameInputActions input)
+         ? ReadVector2(input.Movement)
+         : Vector2.zero;
+      if (actionInput.sqrMagnitude > 0.0001f)
+      {
+         return actionInput;
+      }
+
+      return Vector2.zero;
    }
 
    private Vector2 GetCameraLookInput()
@@ -325,14 +382,86 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
          return Vector2.zero;
       }
 
-      Vector2 lookInput = _gameInputActions.GameInput.CameraLook.ReadValue<Vector2>();
+      Vector2 lookInput = TryGetGameInput(out InputAcyions.GameInputActions input)
+         ? ReadVector2(input.CameraLook)
+         : Vector2.zero;
       if (lookInput != Vector2.zero)
       {
          return lookInput;
       }
 
-      // 编辑器兜底：Mac / Game 视图焦点异常时，新 Input System 的 Pointer.delta 可能读不到
-      // 旧输入只作为鼠标测试兜底，后续手机虚拟摇杆仍然走 Input System
-      return new Vector2(UnityEngine.Input.GetAxis("Mouse X"), UnityEngine.Input.GetAxis("Mouse Y")) * 10f;
+      return Vector2.zero;
    }
+
+   private bool EnsureInputActions()
+   {
+      // 场景切换或单例自动创建时可能先读输入再走完整 Awake，这里统一兜底
+      _gameInputActions ??= new InputAcyions();
+      return _gameInputActions != null;
+   }
+
+   private bool TryGetGameInput(out InputAcyions.GameInputActions input)
+   {
+      input = default;
+      if (!EnsureInputActions())
+      {
+         return false;
+      }
+
+      input = _gameInputActions.GameInput;
+      return true;
+   }
+
+#if ENABLE_INPUT_SYSTEM
+   private bool IsTriggered(InputAction action)
+   {
+      return action != null && action.triggered;
+   }
+
+   private bool IsPressed(InputAction action)
+   {
+      return action != null && action.IsPressed();
+   }
+
+   private bool WasPressedThisFrame(InputAction action)
+   {
+      return action != null && action.WasPressedThisFrame();
+   }
+
+   private bool WasReleasedThisFrame(InputAction action)
+   {
+      return action != null && action.WasReleasedThisFrame();
+   }
+
+   private Vector2 ReadVector2(InputAction action)
+   {
+      return action != null ? action.ReadValue<Vector2>() : Vector2.zero;
+   }
+#else
+   private bool IsTriggered(object action)
+   {
+      return false;
+   }
+
+   private bool IsPressed(object action)
+   {
+      return false;
+   }
+
+   private bool WasPressedThisFrame(object action)
+   {
+      return false;
+   }
+
+   private bool WasReleasedThisFrame(object action)
+   {
+      return false;
+   }
+
+   private Vector2 ReadVector2(object action)
+   {
+      return Vector2.zero;
+   }
+#endif
+
 }

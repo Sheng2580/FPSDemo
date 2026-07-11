@@ -100,6 +100,31 @@
 | Shotgun_1 Fire | combat_feedback | Shotgun_1 Fire | `Audio/Shotgun_1 Fire.wav` |
 | Hitmarker | combat_feedback | Hitmarker | `Audio/Hitmarker.wav` |
 
+## 玩家技能配置
+
+来源目录：`FPSDemo/Assets/Resources/PlayerSkillConfigs`
+
+| 技能 | 来源文件 | skillId | skillType | cooldown | duration | lockWeaponDuringCast | postProcessKey | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Dodge | `DefaultDodgeSkillConfig.asset` | 1 | Dodge | 3.5 | 0.22 | true | Skill_Dodge_SprintPulse | 闪避位移和短暂无敌 |
+| Push | `DefaultPushSkillConfig.asset` | 2 | Push | 6 | 0.45 | true | Skill_Push_ImpactPulse | 近战推敌解围 |
+| Grenade | `DefaultGrenadeSkillConfig.asset` | 3 | Grenade | 8 | 0.45 | true | Skill_Grenade_ExplosionPulse | 投掷炸弹范围伤害 |
+
+## 玩家技能数值
+
+| 技能 | distance / detect / radius / angle | damage | knockback | stun | count | resource / animation key | 备注 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Dodge | `dodgeDistance 4.2` | 0 | 0 | `invincibleDuration 0.18` | 无 | `fovEffectKey Skill_Dodge_FOV` | `collisionDisableDuration 0.12`，表现只读取 key |
+| Push | `detectDistance 2.2 / detectRadius 0.85 / detectAngle 80` | 5 | 6.5 | 0.45 | `maxHitCount 5` | `Melee Weapon_1|Attack 1` / `Melee Weapon_1|Attack 2` | 只保存动画 key，不硬引用动画资源 |
+| Grenade | `explosionRadius 4.5` | 80 | 8 | 0.35 | `initialCount 2 / maxCount 3` | `projectileResourceKey Gernade` / `throwAnimationKey Grenade_1 |Throw` | `explosionDelay 1.2`，`throwForce 13`，`throwUpForce 2.5` |
+
+技能数据边界：
+
+- `PlayerSkillConfig` 只保存数值和资源 key，不硬引用场景对象、Volume、材质、Shader 或 prefab 实例。
+- `PlayerSkillRuntimeData` 只保存单局临时状态，不写回配置资源。
+- 表现层后续消费 `animationKey / effectKey / audioKey / fovEffectKey / postProcessKey / cameraShakeKey`。
+- 武器系统只读取技能释放锁定状态，不直接持有技能配置。
+
 ## 敌人配置
 
 来源目录：`FPSDemo/Assets/Resources/EnemyConfigs`
@@ -204,6 +229,33 @@
 | Enemy_ZombieSkeleton_LOD2 | `Enemy_ZombieSkeleton_LOD2.prefab` | Zombie Skeleton OneHanded | 已在 `enemy_prefabs` 包 |
 | Enemy_ZombieNerd_LOD2 | `Enemy_ZombieNerd_LOD2.prefab` | Zombie Nerd OneHanded | 已在 `enemy_prefabs` 包，key 与文件名一致 |
 | Enemy_ZombieOldCrone_LOD2 | `Enemy_ZombieOldCrone_LOD2.prefab` | Zombie Old Crone OneHanded | 已在 `enemy_prefabs` 包，key 与文件名一致 |
+
+## ABRes 敌人与场景表现材质
+
+敌人材质来源：`FPSDemo/Assets/Art/ABRes/Enemies/Materials`，AssetBundle：`enemy_prefabs`
+
+| 用途 | ABRes 材质 | 当前引用 |
+| --- | --- | --- |
+| Skeleton 皮肤 / 衣服 / 头发 | `AB_ZombieSkeleton_Skin_Grounded.mat` / `AB_ZombieSkeleton_Clothes_Grounded.mat` / `AB_ZombieSkeleton_Hair_Grounded.mat` | `Enemy_ZombieSkeleton_LOD2.prefab` |
+| Nerd 身体 / 衣服 / 头发 | `AB_ZombieNerd_Body_Grounded.mat` / `AB_ZombieNerd_Clothes_Grounded.mat` / `AB_ZombieNerd_Hair_Grounded.mat` | `Enemy_ZombieNerd_LOD2.prefab` |
+| Old Crone 皮肤 / 衣服 / 头发 | `AB_ZombieOldCrone_Skin_Grounded.mat` / `AB_ZombieOldCrone_Clothes_Grounded.mat` / `AB_ZombieOldCrone_Hair_Grounded.mat` | `Enemy_ZombieOldCrone_LOD2.prefab` |
+| 敌人手持武器 | `AB_Enemy_Axe_Grimy.mat` / `AB_Enemy_Sickle1_Grimy.mat` / `AB_Enemy_Sickle2_Grimy.mat` | 当前 ABRes 敌人 prefab 按模型引用 |
+
+敌人可见性参数：当前敌人材质通过 `_MinVisibility / _AmbientLift / _ColdRimStrength / _RimDamp` 做角色分层。皮肤材质主负责眼睛和伤口识别点，当前 `_EyeGlowIntensity 2.05`、`_WoundGlowIntensity 1.25`；衣服材质主负责身体块面读图，当前 `_MinVisibility 0.64`、`_ColdRimStrength 0.60`；头发和敌人武器负责边缘高光，当前头发 `_MinVisibility 0.62`，武器 `_ColdRimStrength 0.74`。敌人 shader 只保留约 58%-62% 场景雾融合，避免敌人被 Combat 冷灰雾完全吞掉。皮肤和衣服 shader 额外使用 `_CharacterFillColor / _CharacterFillStrength / _FocusLift / _ContactShadowStrength`：皮肤柔补光 `0.20`、头胸聚焦 `0.20`、脚底接触阴影 `0.14`；衣服柔补光 `0.16`、头胸聚焦 `0.16`、脚底接触阴影 `0.12`。这组参数用于替代单纯加边缘光，让头胸块面先读出来，脚底保留软接触关系。
+
+场景材质来源：`FPSDemo/Assets/Art/ABRes/SceneMaterials`，AssetBundle：`scene_materials`
+
+| 用途 | ABRes 材质 | Shader |
+| --- | --- | --- |
+| 地面沙土 | `Materials/AB_M_Sand_Grounded.mat` | `Shaders/S_ABRes_ScenePBRHigh.shader` |
+| 石头 / 岩面 | `Materials/AB_M_Rock_Grounded.mat` | `Shaders/S_ABRes_ScenePBRHigh.shader` |
+| 柱子 / 石柱 | `Materials/AB_M_Pillar_a_Grounded.mat` | `Shaders/S_ABRes_ScenePBRHigh.shader` |
+| 墙体 Trim | `Materials/AB_M_Trim01_Grounded.mat` / `AB_M_Trim02_Grounded.mat` / `AB_M_Trim02_a_Grounded.mat` / `AB_M_Trim02_a_Tint_Grounded.mat` | `Shaders/S_ABRes_ScenePBRHigh.shader` |
+| 金属 / 木材 | `Materials/AB_M_Metals_Grounded.mat` / `AB_M_Wood_Grounded.mat` | `Shaders/S_ABRes_ScenePBRHigh.shader` |
+
+备注：场景表现材质是 ABRes 副本，不再直接改 Hivemind 原始材质。当前场景 shader 已从错误的假光照方案改为 URP PBR 真实受光方案，材质只负责 BaseColor / Normal / RMA（R=粗糙度、G=金属度、B=AO）/ 湿润脏污参数，阴影和高光交给 URP 灯光。Combat 场景和 GladitorArena 场景 prefab 的核心地面、柱子、墙体材质引用已切到 ABRes 副本；如果后续新增场景 prefab，也应优先引用 `Assets/Art/ABRes/SceneMaterials/Materials` 中的材质。
+
+暗部可见度参数：`S_ABRes_ScenePBRHigh.shader` 使用 `_ShadowLift / _ShadowFloor / _ShadowTint` 防止阴影区域死黑。当前 ABRes 场景材质统一为 `_AOIntensity 0.62`、`_Contrast 0.92`、`_DirtAmount 0.08`、`_ShadowLift 0.58`、`_ShadowFloor 0.13`、`_ShadowTint (0.42, 0.46, 0.40)`。Combat 场景配合环境光、SSAO 和 Volume 降低压黑，避免墙角、柱背、地面遮挡处丢失信息。
 
 ## 当前临时约束
 

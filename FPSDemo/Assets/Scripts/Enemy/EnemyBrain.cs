@@ -27,11 +27,16 @@ namespace Enemy
         [SerializeField] private float hitKnockbackDuration = 0.06f;
         [SerializeField] private float fullHitReactionCooldown = 0.2f;
 
+        [Header("调试")]
+        [SerializeField] private bool debugBrainState;
+        [SerializeField] private float debugBrainStateInterval = 1.5f;
+
         private readonly EnemyBlackboard _blackboard = new EnemyBlackboard();
         private static readonly Dictionary<string, EnemyAIProfile> AiProfileCache = new Dictionary<string, EnemyAIProfile>();
         private BehaviorTree _behaviorTree;
         private EnemyAIProfile _aiProfile;
         private bool _active;
+        private float _nextDebugBrainStateTime;
 
         public EnemyBlackboard Blackboard => _blackboard;
         public bool IsActive => _active;
@@ -101,7 +106,7 @@ namespace Enemy
                 return;
             }
 
-            // 行为树只写 requestedState，真正移动和动画由状态机执行
+            // 决策阶段只更新黑板和请求状态，不直接移动或播放动画
             _blackboard.RefreshPerception();
             _blackboard.BeginDecision();
             _behaviorTree.Tick();
@@ -119,11 +124,13 @@ namespace Enemy
             _blackboard.RefreshPerception();
             if (_blackboard.currentState == EnemyStateType.Hit && !_blackboard.isHitStunned)
             {
+                // 受击硬直结束后立刻补一次决策，避免站在 Hit 状态里等下一轮调度
                 TickDecision();
                 return;
             }
 
             stateMachine?.Tick();
+            TickDebugBrainState();
         }
 
         public void MarkDead()
@@ -142,7 +149,7 @@ namespace Enemy
             }
 
             _blackboard.lastDamageInfo = damageInfo;
-            if (Time.time < _blackboard.nextFullHitReactionTime)
+            if (!damageInfo.forceFullHitReaction && Time.time < _blackboard.nextFullHitReactionTime)
             {
                 // 轻受击只保留 Debug 和扣血，不强制重播受击动画
                 Debug.Log(
@@ -154,12 +161,27 @@ namespace Enemy
             // 连发枪每发都有命中反馈，但完整受击动作需要间隔，避免敌人被打成暂停状态
             _blackboard.nextFullHitReactionTime = Time.time + Mathf.Max(0f, fullHitReactionCooldown);
             Vector3 knockbackDirection = ResolveKnockbackDirection(damageInfo);
+            if (damageInfo.hasCustomHitReaction && damageInfo.customKnockbackDirection.sqrMagnitude > 0.0001f)
+            {
+                knockbackDirection = damageInfo.customKnockbackDirection;
+            }
+
+            float resolvedHitStunDuration = damageInfo.hasCustomHitReaction
+                ? damageInfo.customHitStunDuration
+                : hitStunDuration;
+            float resolvedKnockbackDistance = damageInfo.hasCustomHitReaction
+                ? damageInfo.customKnockbackDistance
+                : defaultHitKnockbackDistance;
+            float resolvedKnockbackDuration = damageInfo.hasCustomHitReaction
+                ? damageInfo.customKnockbackDuration
+                : hitKnockbackDuration;
+
             _blackboard.EnterHitStun(
                 damageInfo,
-                hitStunDuration,
+                resolvedHitStunDuration,
                 knockbackDirection,
-                defaultHitKnockbackDistance,
-                hitKnockbackDuration);
+                resolvedKnockbackDistance,
+                resolvedKnockbackDuration);
             stateMachine?.ForceState(EnemyStateType.Hit);
         }
 
@@ -248,6 +270,21 @@ namespace Enemy
                 ? _aiProfile.useRootMotionNear
                 : tier == EnemyPerformanceTier.Mid && _aiProfile.useRootMotionMid;
             motor.SetRootMotionEnabled(useRootMotion);
+        }
+
+        private void TickDebugBrainState()
+        {
+            if (!debugBrainState || Time.time < _nextDebugBrainStateTime)
+            {
+                return;
+            }
+
+            _nextDebugBrainStateTime = Time.time + Mathf.Max(0.25f, debugBrainStateInterval);
+            float distance = Mathf.Sqrt(Mathf.Max(0f, _blackboard.sqrDistanceToTarget));
+            EnemyStateType stateType = stateMachine != null ? stateMachine.CurrentStateType : _blackboard.currentState;
+            Debug.Log(
+                $"[EnemyBrainState] {name} State={stateType} Target={(_blackboard.target != null ? _blackboard.target.name : "None")} Distance={distance:0.00} See={_blackboard.canSeeTarget} AttackRange={_blackboard.isTargetInAttackRange} ChaseSlot={_blackboard.hasChaseSlot}:{_blackboard.chaseSlotRank} AttackSlot={_blackboard.hasAttackSlot}:{_blackboard.attackSlotRank} Tier={_blackboard.performanceTier} NextThink={Mathf.Max(0f, _blackboard.nextThinkTime - Time.time):0.00}s",
+                this);
         }
 
         private static EnemyAIProfile ResolveAIProfile(string aiProfileKey)

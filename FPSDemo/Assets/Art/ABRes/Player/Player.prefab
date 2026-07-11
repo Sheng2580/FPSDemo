@@ -86,7 +86,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   groundDetectionRadius: 0.1
-  groundDetectionOffset: 0.1
+  groundDetectionOffset: -0.02
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 64
@@ -169,6 +169,12 @@ MonoBehaviour:
     maxReserveAmmo: 120
     reloadTime: 1.65
     range: 160
+    reloadMode: 0
+    reloadAmmoPerStep: 12
+    reloadStartTime: 0
+    reloadSingleRoundTime: 1.4
+    reloadEndTime: 0
+    canInterruptReloadByFire: 0
     attackType: 0
     spreadAngle: 0.9
     pelletCount: 1
@@ -277,6 +283,12 @@ MonoBehaviour:
       maxReserveAmmo: 120
       reloadTime: 1.65
       range: 160
+      reloadMode: 0
+      reloadAmmoPerStep: 12
+      reloadStartTime: 0
+      reloadSingleRoundTime: 1.4
+      reloadEndTime: 0
+      canInterruptReloadByFire: 0
       attackType: 0
       spreadAngle: 0.9
       pelletCount: 1
@@ -370,6 +382,12 @@ MonoBehaviour:
       maxReserveAmmo: 48
       reloadTime: 1.4
       range: 100
+      reloadMode: 0
+      reloadAmmoPerStep: 12
+      reloadStartTime: 0
+      reloadSingleRoundTime: 1.4
+      reloadEndTime: 0
+      canInterruptReloadByFire: 0
       attackType: 0
       spreadAngle: 0.6
       pelletCount: 1

@@ -57,6 +57,7 @@ namespace Enemy
                 return;
             }
 
+            // 执行 Tick 每帧跑，决策 Tick 由 EnemyAIScheduler 分帧调度
             brain?.TickExecution();
         }
 
@@ -184,6 +185,7 @@ namespace Enemy
 
         private void AutoBind()
         {
+            // 生成工具会预挂组件，这里只做兜底，避免对象池复用时缺引用
             health ??= GetComponent<EnemyHealth>();
             motor ??= GetComponent<EnemyMotor>();
             attack ??= GetComponent<EnemyAttack>();

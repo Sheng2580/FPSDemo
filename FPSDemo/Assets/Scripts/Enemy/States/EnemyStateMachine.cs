@@ -113,6 +113,7 @@ namespace Enemy
 
             if (_currentState != null && !_currentState.CanExitTo(stateType))
             {
+                // 当前状态负责判断是否允许退出，例如攻击动画未结束时不能回 Chase
                 return;
             }
 
@@ -209,7 +210,6 @@ namespace Enemy
 
             if (animator.HasState(layer, fullPathHash))
             {
-                Debug.Log($"[EnemyAnim] {blackboard.controller.name} Play {fullPath}", blackboard.controller);
                 animator.CrossFadeInFixedTime(fullPathHash, fixedTransitionTime, layer);
                 return;
             }
@@ -217,7 +217,6 @@ namespace Enemy
             int shortNameHash = Animator.StringToHash(stateName);
             if (animator.HasState(layer, shortNameHash))
             {
-                Debug.Log($"[EnemyAnim] {blackboard.controller.name} Play {stateName}", blackboard.controller);
                 animator.CrossFadeInFixedTime(shortNameHash, fixedTransitionTime, layer);
                 return;
             }
@@ -374,6 +373,7 @@ namespace Enemy
                 }
                 else
                 {
+                    // 有追击名额的敌人跑向玩家，没有名额的敌人走路绕玩家等待
                     PlayAnimation(hasChaseSlot ? model.RunStateName : model.WalkStateName, model.LocomotionTransition);
                 }
             }
@@ -421,7 +421,7 @@ namespace Enemy
                 return;
             }
 
-            if (!attack.IsAttacking && attack.TryAttack(false))
+            if (!attack.IsAttacking && attack.TryStartAttack())
             {
                 if (model != null)
                 {
@@ -462,6 +462,16 @@ namespace Enemy
 
             if (!CurrAnimationStateTag(AttackAnimationTag, out float normalizedTime))
             {
+                // 测试期如果动画 Tag 或事件丢了，攻击也要自动结束，避免敌人永久卡在 Attack
+                float fallbackDuration = Mathf.Max(0.45f, attack.AttackInterval);
+                if (attack.AttackElapsedTime >= fallbackDuration)
+                {
+                    Debug.LogWarning(
+                        $"[EnemyAttackState] {blackboard.controller.name} 攻击动画没有 Attack 标签，已按时间兜底结束",
+                        blackboard.controller);
+                    attack.CompleteAttackAnimation();
+                }
+
                 return;
             }
 

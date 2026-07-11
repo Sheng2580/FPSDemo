@@ -19,7 +19,6 @@ public class MoveJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
     [SerializeField] private bool moveBackgroundToPointerDown = true;
     [SerializeField] private float keepMoveShowInputY = 0.65f;
     [SerializeField] private float keepMoveTriggerRadius = 80f;
-    [SerializeField] private bool logInput;
 
     private RectTransform _rectTransform;
     private RectTransform keepMove;
@@ -98,11 +97,6 @@ public class MoveJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
 
         // 按下时立刻计算一次方向
         UpdateInput(eventData);
-
-        if (logInput)
-        {
-            Debug.Log($"摇杆按下 {InputValue}", this);
-        }
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -114,11 +108,6 @@ public class MoveJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
 
         // 拖动时持续更新摇杆方向
         UpdateInput(eventData);
-
-        if (logInput)
-        {
-            Debug.Log($"摇杆拖动 {InputValue}", this);
-        }
     }
 
     public void OnPointerUp(PointerEventData eventData)
@@ -146,11 +135,6 @@ public class MoveJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
         {
             // 松开时让摇杆回到默认左下位置
             ClearInput();
-        }
-
-        if (logInput)
-        {
-            Debug.Log("摇杆松开", this);
         }
     }
 
@@ -283,10 +267,6 @@ public class MoveJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
         SendMoveLockEvent(true);
         SendInputEvent();
 
-        if (logInput)
-        {
-            Debug.Log("移动锁定开启", this);
-        }
     }
 
     private void CancelKeepMoveLock()
@@ -299,10 +279,6 @@ public class MoveJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
         SendMoveLockEvent(false);
         SendInputEvent();
 
-        if (logInput)
-        {
-            Debug.Log("移动锁定取消", this);
-        }
     }
 
     private void SetKeepMoveTargetVisible(bool isVisible)
@@ -512,4 +488,5 @@ public class MoveJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IP
 
         return null;
     }
+
 }

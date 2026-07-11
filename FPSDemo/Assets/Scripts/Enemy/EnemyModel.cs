@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace Enemy
 {
+    /// <summary>
+    /// 敌人模型数据层
+    /// 保存 Animator、动画状态名、过渡时间和根运动开关
+    /// </summary>
     public class EnemyModel : CharacterModleBase
     {
         [Header("根运动")]
@@ -62,6 +66,7 @@ namespace Enemy
                 return;
             }
 
+            // 不同敌人共用同一套执行代码，只替换动画状态名和过渡参数
             idleStateName = string.IsNullOrEmpty(runtimeStats.idleStateName) ? idleStateName : runtimeStats.idleStateName;
             walkStateName = string.IsNullOrEmpty(runtimeStats.walkStateName) ? walkStateName : runtimeStats.walkStateName;
             runStateName = string.IsNullOrEmpty(runtimeStats.runStateName) ? runStateName : runtimeStats.runStateName;

@@ -16,14 +16,32 @@ public static class FPSDemoBuildTools
     private const string CombatFeedbackBundleName = "combat_feedback";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
+    private const string CombatScenePath = "Assets/Scenes/Combat.unity";
     private const string StreamingAssetsPath = "Assets/StreamingAssets";
     private const string AndroidBuildPath = "Builds/Android/FPSDemo.apk";
+    private const string AndroidCombatBuildPath = "Builds/Android/FPSDemo_Combat.apk";
+    private const string AndroidDevelopmentBuildPath = "Builds/Android/FPSDemo_Development.apk";
+    private const string AndroidCombatDevelopmentBuildPath = "Builds/Android/FPSDemo_Combat_Development.apk";
     private const int InvalidActiveInputHandler = -1;
-    private const int BothInputHandlers = 2;
+    private const int BothInputHandler = 2;
 
     private static readonly string[] ObsoleteAssetBundleAssetPaths =
     {
         "Assets/Art/ABRes/Cube.prefab"
+    };
+
+    private static readonly string[] SceneMaterialAssetPaths =
+    {
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Metals_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Pillar_a_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Rock_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Sand_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Trim01_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Trim02_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Trim02_a_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Trim02_a_Tint_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Materials/AB_M_Wood_Grounded.mat",
+        "Assets/Art/ABRes/SceneMaterials/Shaders/S_ABRes_ScenePBRHigh.shader"
     };
 
     private static readonly string[] UIAssetPaths =
@@ -173,73 +191,125 @@ public static class FPSDemoBuildTools
     [MenuItem("FPSDemo/Build/打Android APK", priority = 40)]
     public static void BuildAndroidApk()
     {
-        int previousActiveInputHandler = GetActiveInputHandler();
+        BuildAndroidApkInternal(AndroidBuildPath, GetEnabledBuildScenes());
+    }
+
+    [MenuItem("FPSDemo/Build/打Android APK Combat场景", priority = 41)]
+    public static void BuildAndroidCombatApk()
+    {
+        BuildAndroidApkInternal(AndroidCombatBuildPath, new[] { CombatScenePath });
+    }
+
+    [MenuItem("FPSDemo/Build/打Android开发APK", priority = 42)]
+    public static void BuildAndroidDevelopmentApk()
+    {
+        BuildAndroidApkInternal(
+            AndroidDevelopmentBuildPath,
+            GetEnabledBuildScenes(),
+            GetAndroidDevelopmentBuildOptions(),
+            "Android 开发 APK");
+    }
+
+    [MenuItem("FPSDemo/Build/打Android开发APK Combat场景", priority = 43)]
+    public static void BuildAndroidCombatDevelopmentApk()
+    {
+        BuildAndroidApkInternal(
+            AndroidCombatDevelopmentBuildPath,
+            new[] { CombatScenePath },
+            GetAndroidDevelopmentBuildOptions(),
+            "Android Combat 开发 APK");
+    }
+
+    private static void BuildAndroidApkInternal(string outputPath, string[] scenes)
+    {
+        BuildAndroidApkInternal(outputPath, scenes, BuildOptions.None, "Android APK");
+    }
+
+    private static void BuildAndroidApkInternal(
+        string outputPath,
+        string[] scenes,
+        BuildOptions extraBuildOptions,
+        string buildLabel)
+    {
         FixAndroidCompatibilitySettingsInternal(false);
 
-        try
+        // 当前 UI 触控链路需要旧 UI 输入模块兜底 打包时不再强制关闭旧输入
+        SetActiveInputHandler(BothInputHandler);
+        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
+        FixMobileUIPrefabInternal(false);
+        FixRuntimeAssetBundleResourcesInternal(false);
+
+        if (!ValidateMobileUI(true) || !ValidateRuntimeAssetBundleResources(true))
         {
-            SetActiveInputHandler(BothInputHandlers);
-            CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
-            FixMobileUIPrefabInternal(false);
-            FixRuntimeAssetBundleResourcesInternal(false);
-
-            if (!ValidateMobileUI(true) || !ValidateRuntimeAssetBundleResources(true))
-            {
-                throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
-            }
-
-            DeleteOldAndroidApk();
-            BuildAssetBundles(BuildTarget.Android, true);
-            ValidateStreamingBundle("Android", true);
-            ValidateOnlyTargetStreamingAssets(BuildTarget.Android, true);
-
-            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
-            {
-                EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
-            }
-
-            string[] scenes = GetEnabledBuildScenes();
-            if (scenes.Length == 0)
-            {
-                throw new BuildFailedException("Build Settings 里没有启用场景");
-            }
-
-            string outputDirectory = Path.GetDirectoryName(AndroidBuildPath);
-            if (!string.IsNullOrEmpty(outputDirectory))
-            {
-                Directory.CreateDirectory(outputDirectory);
-            }
-
-            BuildPlayerOptions buildOptions = new BuildPlayerOptions
-            {
-                scenes = scenes,
-                locationPathName = AndroidBuildPath,
-                target = BuildTarget.Android,
-                options = BuildOptions.CleanBuildCache
-            };
-
-            BuildReport report = BuildPipeline.BuildPlayer(buildOptions);
-            if (report.summary.result != BuildResult.Succeeded)
-            {
-                throw new BuildFailedException($"Android APK 打包失败 {report.summary.result}");
-            }
-
-            Debug.Log($"[FPSDemoBuildTools] Android APK 打包完成: {AndroidBuildPath}");
+            throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
-        finally
+
+        ValidateBuildScenes(scenes);
+        DeleteOldAndroidApk(outputPath);
+        BuildAssetBundles(BuildTarget.Android, true);
+        ValidateStreamingBundle("Android", true);
+        ValidateOnlyTargetStreamingAssets(BuildTarget.Android, true);
+
+        if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
         {
-            RestoreActiveInputHandler(previousActiveInputHandler);
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+        }
+
+        string outputDirectory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        BuildPlayerOptions buildOptions = new BuildPlayerOptions
+        {
+            scenes = scenes,
+            locationPathName = outputPath,
+            target = BuildTarget.Android,
+            options = BuildOptions.CleanBuildCache | extraBuildOptions
+        };
+
+        BuildReport report = BuildPipeline.BuildPlayer(buildOptions);
+        if (report.summary.result != BuildResult.Succeeded)
+        {
+            throw new BuildFailedException($"Android APK 打包失败 {report.summary.result}");
+        }
+
+        Debug.Log($"[FPSDemoBuildTools] {buildLabel} 打包完成: {outputPath}");
+    }
+
+    private static BuildOptions GetAndroidDevelopmentBuildOptions()
+    {
+        // 开发包用于真机 Profiler 连接 保留脚本调试 但不默认开启深度分析
+        return BuildOptions.Development |
+               BuildOptions.ConnectWithProfiler |
+               BuildOptions.AllowDebugging;
+    }
+
+    private static void ValidateBuildScenes(string[] scenes)
+    {
+        if (scenes == null || scenes.Length == 0)
+        {
+            throw new BuildFailedException("没有指定打包场景");
+        }
+
+        for (int i = 0; i < scenes.Length; i++)
+        {
+            if (string.IsNullOrEmpty(scenes[i]) || !File.Exists(scenes[i]))
+            {
+                throw new BuildFailedException($"打包场景不存在: {scenes[i]}");
+            }
         }
     }
 
-    private static void DeleteOldAndroidApk()
+    private static void DeleteOldAndroidApk(string outputPath)
     {
-        if (File.Exists(AndroidBuildPath))
+        if (File.Exists(outputPath))
         {
-            File.Delete(AndroidBuildPath);
+            File.Delete(outputPath);
         }
 
-        string symbolsPath = Path.ChangeExtension(AndroidBuildPath, ".symbols.zip");
+        string symbolsPath = Path.ChangeExtension(outputPath, ".symbols.zip");
         if (File.Exists(symbolsPath))
         {
             File.Delete(symbolsPath);
@@ -262,9 +332,8 @@ public static class FPSDemoBuildTools
             return;
         }
 
-        serializedProjectSettings.Update();
         activeInputHandler.intValue = activeInputHandlerValue;
-        serializedProjectSettings.ApplyModifiedPropertiesWithoutUndo();
+        serializedProjectSettings.ApplyModifiedProperties();
         AssetDatabase.SaveAssets();
     }
 
@@ -280,13 +349,13 @@ public static class FPSDemoBuildTools
 
     private static SerializedObject GetSerializedProjectSettings()
     {
-        UnityEngine.Object[] projectSettingsAssets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset");
-        if (projectSettingsAssets == null || projectSettingsAssets.Length == 0)
+        PlayerSettings[] playerSettingsAssets = UnityEngine.Resources.FindObjectsOfTypeAll<PlayerSettings>();
+        if (playerSettingsAssets == null || playerSettingsAssets.Length == 0 || playerSettingsAssets[0] == null)
         {
             return null;
         }
 
-        return new SerializedObject(projectSettingsAssets[0]);
+        return new SerializedObject(playerSettingsAssets[0]);
     }
 
     private static void FixAndroidCompatibilitySettingsInternal(bool logResult)
@@ -417,6 +486,7 @@ public static class FPSDemoBuildTools
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
         success &= TrySetAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName, ref changed);
         success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
+        success &= TryClearAssetBundleNames(SceneMaterialAssetPaths, ref changed);
 
         if (changed)
         {
@@ -501,7 +571,6 @@ public static class FPSDemoBuildTools
 
         AssetImporter importer = AssetImporter.GetAtPath(TouchCanvasPath);
         isValid &= Check(importer != null && importer.assetBundleName == TouchCanvasBundleName, "Prefab 标记到 uipanel AssetBundle");
-        isValid &= Check(IsSceneInBuildSettings(SampleScenePath), "SampleScene 已加入 Build Settings");
 
         if (logResult && isValid)
         {

@@ -9,7 +9,6 @@ public class SightButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     [SerializeField] private Color inactiveColor = new Color(0.25f, 0.55f, 0.95f, 0.88f);
     [SerializeField] private Color activeColor = new Color(0.95f, 0.8f, 0.25f, 0.95f);
     [SerializeField] private float activeScale = 1.08f;
-    [SerializeField] private bool logInput;
 
     private bool _isPointerDown;
     private bool _isSightActive;
@@ -90,11 +89,6 @@ public class SightButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
         _isSightActive = isActive;
         UpdateVisualState();
         EventCenter.Instance.EventTrigger(isActive ? GameEvent.MobileSightPressed : GameEvent.MobileSightReleased);
-
-        if (logInput)
-        {
-            Debug.Log(isActive ? "移动端瞄准开启" : "移动端瞄准关闭", this);
-        }
     }
 
     private void OnMobileSightCanceled()
@@ -120,4 +114,5 @@ public class SightButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 
         transform.localScale = _isSightActive ? _defaultScale * activeScale : _defaultScale;
     }
+
 }

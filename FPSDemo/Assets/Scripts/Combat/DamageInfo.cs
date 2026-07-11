@@ -16,6 +16,12 @@ namespace Combat
         public EnemyHitBodyPart hitPart;
         public float partMultiplier;
         public bool isCritical;
+        public bool hasCustomHitReaction;
+        public bool forceFullHitReaction;
+        public Vector3 customKnockbackDirection;
+        public float customKnockbackDistance;
+        public float customKnockbackDuration;
+        public float customHitStunDuration;
 
         public DamageInfo(
             float baseDamage,
@@ -37,6 +43,12 @@ namespace Combat
             hitPart = EnemyHitBodyPart.Body;
             partMultiplier = 1f;
             isCritical = false;
+            hasCustomHitReaction = false;
+            forceFullHitReaction = false;
+            customKnockbackDirection = Vector3.zero;
+            customKnockbackDistance = 0f;
+            customKnockbackDuration = 0f;
+            customHitStunDuration = 0f;
         }
 
         public void ApplyBodyPart(EnemyHitBodyPart bodyPart, float multiplier, bool critical)
@@ -45,6 +57,26 @@ namespace Combat
             partMultiplier = Mathf.Max(0f, multiplier);
             finalDamage = baseDamage * partMultiplier;
             isCritical = critical;
+        }
+
+        public void ApplyCustomHitReaction(
+            Vector3 knockbackDirection,
+            float knockbackDistance,
+            float knockbackDuration,
+            float hitStunDuration,
+            bool forceReaction)
+        {
+            Vector3 horizontalDirection = knockbackDirection;
+            horizontalDirection.y = 0f;
+
+            hasCustomHitReaction = true;
+            forceFullHitReaction = forceReaction;
+            customKnockbackDirection = horizontalDirection.sqrMagnitude > 0.0001f
+                ? horizontalDirection.normalized
+                : Vector3.zero;
+            customKnockbackDistance = Mathf.Max(0f, knockbackDistance);
+            customKnockbackDuration = Mathf.Max(0.01f, knockbackDuration);
+            customHitStunDuration = Mathf.Max(0.01f, hitStunDuration);
         }
     }
 }

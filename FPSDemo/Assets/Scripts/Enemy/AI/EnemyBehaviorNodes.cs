@@ -1,5 +1,9 @@
 namespace Enemy
 {
+    /// <summary>
+    /// 敌人行为树条件节点基类
+    /// 条件节点只读取黑板，不直接操作组件
+    /// </summary>
     public abstract class EnemyConditionNode : Behavior
     {
         protected readonly EnemyBlackboard blackboard;
@@ -120,6 +124,7 @@ namespace Enemy
                 return EStatus.Failure;
             }
 
+            // 行为树只写请求，真正能不能切状态由 EnemyStateMachine 决定
             blackboard.RequestState(stateType);
             return EStatus.Success;
         }

@@ -19,7 +19,16 @@ namespace Weapon.State
             }
 
             _timer = controller.Config.fireInterval;
-            controller.RuntimeData.currentAmmoInMagazine--;
+            if (controller.InfiniteAmmoForTest)
+            {
+                // 临时无限弹药测试 保持弹匣满方便持续测试武器和技能
+                controller.RuntimeData.currentAmmoInMagazine = controller.Config.magazineSize;
+            }
+            else
+            {
+                controller.RuntimeData.currentAmmoInMagazine--;
+            }
+
             controller.RuntimeData.nextFireTime = Time.time + controller.Config.fireInterval;
 
             controller.CurrentWeaponView?.PlayFire();

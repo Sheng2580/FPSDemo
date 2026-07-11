@@ -14,7 +14,6 @@ namespace Enemy
 
         [Header("引用")]
         [SerializeField] private EnemyController controller;
-        [SerializeField] private EnemyView view;
 
         private bool _dead;
 
@@ -91,7 +90,6 @@ namespace Enemy
         private void AutoBind()
         {
             controller ??= GetComponent<EnemyController>();
-            view ??= GetComponent<EnemyView>();
         }
     }
 }

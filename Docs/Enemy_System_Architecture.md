@@ -75,10 +75,10 @@ flowchart TB
 | `EnemyBlackboard` | 保存行为树需要的运行时上下文 | 不访问场景查找对象 |
 | `EnemyStateMachine` | 切状态、播动画、推进状态 Tick、绑定根运动 | 不读取配置表，不管理对象池 |
 | `EnemyMotor` | 用 NavMeshAgent 求方向，用 CharacterController 位移 | 不决定攻击，不结算伤害 |
-| `EnemyAttack` | 攻击冷却、AtkS/AtkE 命中窗口、玩家伤害 | 不决定追击状态 |
+| `EnemyAttack` | 攻击冷却、AtkS/AtkE 命中窗口、玩家伤害 | 不决定追击状态，不播放主动画 |
 | `EnemyHealth` | 扣血、死亡判断、伤害事件、Debug | 不做红闪等画面表现 |
 | `EnemyHitBox` | 部位倍率、暴击部位、转交伤害 | 不决定敌人死亡 |
-| `EnemyModel / EnemyView` | Animator、状态名、过渡时间、根运动回调 | 不读敌人数值数据 |
+| `EnemyModel / EnemyView` | Animator、状态名、过渡时间、根运动回调、模型复位 | 不读敌人数值数据，不直接播放状态动画 |
 
 ## 4. 生成与回池数据流
 
@@ -214,11 +214,18 @@ sequenceDiagram
 - `EnemyHitFeedback`
 - `PlayerDamageFeedback`
 - `EnemyModel.actionTransition`
-
-暂时不清理：
-
 - `EnemyView.PlayIdle / PlayMove / PlayAttack / PlayDamage / PlayDeath`
-- 原因是它们仍可作为兼容接口，之后如果状态机完全稳定，可以再删
+- `EnemyAttack.TryAttack(playAnimation)` 旧接口
+- `EnemyAttack.Tick()` 旧测试入口
+- `EnemyAttack` 内部 `EnemyView` 引用
+- `EnemyHealth` 内部未使用的 `EnemyView` 引用
+- 普通动画播放 `[EnemyAnim] Play ...` 日志
+
+保留 Debug：
+
+- 动画状态缺失警告仍保留
+- 攻击动画没有 `Attack` Tag 的兜底警告仍保留
+- `EnemyBrain.debugBrainState` 默认关闭，需要排查发呆敌人时手动打开
 
 ## 9. 后续完善顺序
 

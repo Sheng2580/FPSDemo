@@ -7,6 +7,12 @@ public class PlayerJump : PlayerState
 {
     public override void Update()
     {
+        if (player.IsSkillMovementLocked)
+        {
+            player.Motor.Stop();
+            return;
+        }
+
         float airMoveControl = player != null && player.Stats != null
             ? player.Stats.AirMoveControl
             : PlayerBaseConfig.CreateDefault().airMoveControl;

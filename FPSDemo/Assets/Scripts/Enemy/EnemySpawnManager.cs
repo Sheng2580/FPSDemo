@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Enemy.Data;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -18,9 +19,7 @@ namespace Enemy
         private const string DefaultEnemyPrefabBundleName = "enemy_prefabs";
         private const int FallbackSceneMaxEnemyCount = 12;
         private const int FallbackSpawnCountPerBatch = 1;
-        private const int BurstSpawnCountForTest = 10;
         private const int BurstSpawnMaxAttemptsMultiplier = 4;
-        private const int BurstSpawnHardMaxEnemyCount = 60;
         private const float FallbackSpawnInterval = 3f;
         private const float FallbackSpawnDistance = 12f;
         private const float ReturnToPoolDelay = 2.5f;
@@ -29,10 +28,10 @@ namespace Enemy
         private const float BurstSpawnClearRadius = 0.6f;
         private const float BurstSpawnScatterRadius = 6f;
         private const float SpawnPointSampleRadius = 4f;
+        private const float SpawnPointSceneScanInterval = 1f;
+        private const int MinRemainCountForBurstSpawn = 5;
         private const string SingleSpawnPointNameKeyword = "BirthplaceS";
         private const string BurstSpawnPointNameKeyword = "BirthplaceB";
-        private const KeyCode SingleSpawnKey = KeyCode.S;
-        private const KeyCode BurstSpawnKey = KeyCode.B;
 #if UNITY_EDITOR
         private const string EditorEnemyPrefabFolder = "Assets/Art/ABRes/Enemies/Prefabs";
 #endif
@@ -95,6 +94,10 @@ namespace Enemy
         [SerializeField] private bool preferEditorDirectPrefab = true;
 #endif
 
+        [Header("调试")]
+        [SerializeField] private bool debugSpawnState = true;
+        [SerializeField] private float debugSpawnStateInterval = 2f;
+
         private readonly List<EnemyController> _activeEnemies = new List<EnemyController>();
         private readonly Dictionary<int, int> _aliveCountByEnemyId = new Dictionary<int, int>();
         private readonly Dictionary<string, GameObject> _loadedPrefabByResourceKey = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
@@ -110,6 +113,11 @@ namespace Enemy
         private bool _isWaveRunning;
         private bool _isWaitingNextWave;
         private EnemyWaveConfig _currentWave;
+        private float _nextDebugSpawnStateTime;
+        private int _lastDebugSpawnPointCount = -1;
+        private float _nextSpawnPointSceneScanTime;
+        private int _nextSingleSpawnPointIndex;
+        private int _nextBurstSpawnPointIndex;
 
         private void Awake()
         {
@@ -120,6 +128,7 @@ namespace Enemy
             CacheSpawnPointsIfNeeded();
             LoadWaveConfigsIfNeeded();
             PreloadEnemyPrefabsFromAssetBundle();
+            LogSpawnPointSummaryIfNeeded(true);
         }
 
         private void Update()
@@ -127,7 +136,7 @@ namespace Enemy
             CachePlayerTarget();
             CacheSpawnPointsIfNeeded();
             RemoveInvalidActiveEnemies();
-            TickKeyboardSpawnTest();
+            TickDebugSpawnState();
 
             if (!autoSpawn || playerTarget == null)
             {
@@ -150,7 +159,7 @@ namespace Enemy
             _nextSpawnTime = Time.time + ResolveSpawnInterval(wave);
             int batchCount = ResolveSpawnCount(wave, elapsedTime);
             int maxCount = ResolveSceneMaxEnemyCount(wave);
-            TickAutoSpawn(wave, elapsedTime, batchCount, maxCount);
+            TickAutoSpawn(wave, elapsedTime, batchCount, maxCount, batchCount);
         }
 
         public void NotifyEnemyDied(EnemyController enemy)
@@ -218,9 +227,12 @@ namespace Enemy
             }
 
             _nextSpawnTime = Time.time + ResolveSpawnInterval(_currentWave);
-            int spawnedCount = TickAutoSpawn(_currentWave, waveElapsedTime, targetCount, maxCount);
+            int spawnedCount = TickAutoSpawn(_currentWave, waveElapsedTime, targetCount, maxCount, remainWaveCount);
             if (spawnedCount <= 0)
             {
+                DebugSpawn(
+                    $"[EnemySpawnDebug] 本次波次刷新没有成功 Wave={_currentWaveIndex} Target={targetCount} Active={_activeEnemies.Count}/{maxCount} S={CountSpawnPoints(SingleSpawnPointNameKeyword)} B={CountSpawnPoints(BurstSpawnPointNameKeyword)}",
+                    false);
                 return;
             }
 
@@ -248,8 +260,9 @@ namespace Enemy
             _nextSpawnTime = Time.time;
 
             Debug.Log(
-                $"[EnemyWave] 第 {_currentWaveIndex} 波开始 Tier={ResolveDifficultyTier(_currentWave, _currentWaveIndex)} Total={_currentWaveTargetCount}",
+                $"[EnemyWave] 第 {_currentWaveIndex} 波开始 Tier={ResolveDifficultyTier(_currentWave, _currentWaveIndex)} Total={_currentWaveTargetCount} Batch={ResolveSpawnCountForWaveElapsed(_currentWave, 0f)} Max={ResolveSceneMaxEnemyCount(_currentWave)} Entries={BuildWaveCandidateSummary(_currentWave, _currentWaveIndex)}",
                 this);
+            LogSpawnPointSummaryIfNeeded(true);
 
             EventCenter.Instance.EventTrigger(
                 GameEvent.EnemyWaveStarted,
@@ -276,44 +289,62 @@ namespace Enemy
                 CreateWaveEventData(delay, _currentWaveIndex + 1));
         }
 
-        private int TickAutoSpawn(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount)
+        private int TickAutoSpawn(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount, int remainWaveCount)
         {
             if (_activeEnemies.Count >= maxCount)
             {
+                DebugSpawn($"[EnemySpawnDebug] 场上敌人达到上限 Active={_activeEnemies.Count}/{maxCount}", false);
                 return 0;
             }
 
-            int burstSpawnedCount = TryAutoSpawnFromBurstPoint(wave, elapsedTime, batchCount, maxCount);
+            int safeBatchCount = Mathf.Max(1, batchCount);
+            bool canUseBurstPoint = remainWaveCount >= MinRemainCountForBurstSpawn;
+            if (!canUseBurstPoint)
+            {
+                int singleSpawnedCount = TryAutoSpawnFromSinglePoints(wave, elapsedTime, safeBatchCount, maxCount);
+                if (singleSpawnedCount > 0)
+                {
+                    return singleSpawnedCount;
+                }
+
+                DebugSpawn(
+                    $"[EnemySpawnDebug] 本批使用 S 点收尾 Batch={safeBatchCount} Remain={remainWaveCount} MinBRemain={MinRemainCountForBurstSpawn}",
+                    false);
+
+                return 0;
+            }
+
+            int burstBatchCount = Mathf.Min(Mathf.Max(safeBatchCount, MinRemainCountForBurstSpawn), remainWaveCount);
+            int burstSpawnedCount = TryAutoSpawnFromBurstPoints(wave, elapsedTime, burstBatchCount, maxCount);
             if (burstSpawnedCount > 0)
             {
                 return burstSpawnedCount;
             }
 
-            return TryAutoSpawnFromSinglePoints(wave, elapsedTime, batchCount, maxCount);
+            DebugSpawn("[EnemySpawnDebug] B 点本批没有成功，回退到 S 点分散刷新", false);
+            return TryAutoSpawnFromSinglePoints(wave, elapsedTime, safeBatchCount, maxCount);
         }
 
-        private int TryAutoSpawnFromBurstPoint(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount)
+        private int TryAutoSpawnFromBurstPoints(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount)
         {
-            Transform spawnPoint = PickSpawnPoint(BurstSpawnPointNameKeyword, BurstSpawnClearRadius, BurstSpawnScatterRadius, false);
-            if (spawnPoint == null)
-            {
-                return 0;
-            }
-
             int remainCapacity = Mathf.Max(0, maxCount - _activeEnemies.Count);
             int targetCount = Mathf.Min(Mathf.Max(1, batchCount), remainCapacity);
-            int spawnedCount = SpawnBatchAtPoint(
+            int spawnedCount = SpawnDistributedFromPoints(
                 wave,
                 elapsedTime,
-                spawnPoint,
                 targetCount,
+                maxCount,
+                BurstSpawnPointNameKeyword,
                 BurstSpawnClearRadius,
-                BurstSpawnScatterRadius);
+                BurstSpawnScatterRadius,
+                false,
+                ref _nextBurstSpawnPointIndex,
+                "B");
 
             if (spawnedCount > 0)
             {
                 Debug.Log(
-                    $"[EnemySpawn] 自动 B 点批量生成 Point={spawnPoint.name} Spawned={spawnedCount}/{targetCount}",
+                    $"[EnemySpawn] 自动 B 点分散批量生成 Spawned={spawnedCount}/{targetCount}",
                     this);
                 return spawnedCount;
             }
@@ -323,49 +354,63 @@ namespace Enemy
 
         private int TryAutoSpawnFromSinglePoints(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount)
         {
-            int spawnedCount = 0;
             int targetCount = Mathf.Max(1, batchCount);
-            for (int i = 0; i < targetCount; i++)
+            return SpawnDistributedFromPoints(
+                wave,
+                elapsedTime,
+                targetCount,
+                maxCount,
+                SingleSpawnPointNameKeyword,
+                SingleSpawnClearRadius,
+                0f,
+                true,
+                ref _nextSingleSpawnPointIndex,
+                "S");
+        }
+
+        private int SpawnDistributedFromPoints(
+            EnemyWaveConfig wave,
+            float elapsedTime,
+            int targetCount,
+            int maxCount,
+            string spawnPointKeyword,
+            float clearRadius,
+            float scatterRadius,
+            bool requireClear,
+            ref int spawnPointCursor,
+            string pointLabel)
+        {
+            int spawnedCount = 0;
+            int maxAttempts = Mathf.Max(targetCount, targetCount * Mathf.Max(1, BurstSpawnMaxAttemptsMultiplier));
+            for (int i = 0; i < maxAttempts && spawnedCount < targetCount; i++)
             {
                 if (_activeEnemies.Count >= maxCount)
                 {
                     break;
                 }
 
-                Transform spawnPoint = PickSpawnPoint(SingleSpawnPointNameKeyword, SingleSpawnClearRadius, 0f, true);
-                if (spawnPoint == null && HasSceneSpawnPoints())
+                Transform spawnPoint = PickSpawnPointRoundRobin(
+                    spawnPointKeyword,
+                    clearRadius,
+                    scatterRadius,
+                    requireClear,
+                    ref spawnPointCursor);
+                if (spawnPoint == null)
                 {
+                    DebugSpawn($"[EnemySpawnDebug] 没有可用 Birthplace{pointLabel}，本批 {pointLabel} 点刷新停止", false);
                     break;
                 }
 
-                if (TrySpawnOneByCurrentMode(wave, elapsedTime, spawnPoint, SingleSpawnClearRadius, 0f))
-                {
-                    spawnedCount++;
-                    continue;
-                }
-
-                break;
-            }
-
-            return spawnedCount;
-        }
-
-        private int SpawnBatchAtPoint(
-            EnemyWaveConfig wave,
-            float elapsedTime,
-            Transform spawnPoint,
-            int targetCount,
-            float clearRadius,
-            float scatterRadius)
-        {
-            int spawnedCount = 0;
-            int maxAttempts = Mathf.Max(targetCount, targetCount * Mathf.Max(1, BurstSpawnMaxAttemptsMultiplier));
-            for (int i = 0; i < maxAttempts && spawnedCount < targetCount; i++)
-            {
                 if (TrySpawnOneByCurrentMode(wave, elapsedTime, spawnPoint, clearRadius, scatterRadius))
                 {
                     spawnedCount++;
+                    DebugSpawn($"[EnemySpawn] 自动 {pointLabel} 点分散生成 Point={spawnPoint.name} Spawned={spawnedCount}/{targetCount}", true);
+                    continue;
                 }
+
+                DebugSpawn(
+                    $"[EnemySpawnDebug] {pointLabel} 点生成失败 Point={spawnPoint.name}，可能资源未加载、位置不可达或出生点被占用",
+                    false);
             }
 
             return spawnedCount;
@@ -411,29 +456,34 @@ namespace Enemy
             {
                 if (!EnemyRuntimeStats.TryCreateFromWave(wave, absoluteWaveIndex, waveElapsedTime, out EnemyRuntimeStats runtimeStats))
                 {
+                    DebugSpawn($"[EnemySpawnDebug] 波次没有可用敌人候选 Wave={absoluteWaveIndex}", false);
                     return false;
                 }
 
                 if (!CanSpawnRuntimeStats(runtimeStats))
                 {
+                    DebugSpawn($"[EnemySpawnDebug] 敌人类型达到单种上限 Enemy={runtimeStats.enemyName} Id={runtimeStats.enemyId}", false);
                     continue;
                 }
 
                 GameObject prefab = ResolvePrefab(runtimeStats);
                 if (prefab == null)
                 {
+                    DebugSpawn($"[EnemySpawnDebug] 敌人 Prefab 未就绪 ResourceKey={runtimeStats.prefabResourceKey}", false);
                     continue;
                 }
 
                 EnemyController enemy = enemyPool.Get(prefab);
                 if (enemy == null)
                 {
+                    DebugSpawn($"[EnemySpawnDebug] 敌人对象池取出失败 Prefab={prefab.name}", false);
                     continue;
                 }
 
                 if (!TryResolveSpawnPositionForSpawn(spawnPoint, clearRadius, scatterRadius, out Vector3 spawnPosition))
                 {
                     enemyPool.Return(prefab, enemy);
+                    DebugSpawn($"[EnemySpawnDebug] 出生点不可用 Point={(spawnPoint != null ? spawnPoint.name : "None")} Enemy={runtimeStats.enemyName}", false);
                     return false;
                 }
 
@@ -442,6 +492,9 @@ namespace Enemy
                 enemy.InitFromSpawner(runtimeStats, playerTarget, this, enemyPool, prefab);
                 _activeEnemies.Add(enemy);
                 IncreaseAliveCount(runtimeStats.enemyId);
+                DebugSpawn(
+                    $"[EnemySpawn] 生成敌人 Wave={absoluteWaveIndex} Enemy={runtimeStats.enemyName} Id={runtimeStats.enemyId} Point={(spawnPoint != null ? spawnPoint.name : "Fallback")} Active={_activeEnemies.Count}",
+                    true);
                 return true;
             }
 
@@ -473,12 +526,14 @@ namespace Enemy
             GameObject prefab = ResolvePrefab(definition);
             if (prefab == null)
             {
+                DebugSpawn($"[EnemySpawnDebug] 旧模式 Prefab 未就绪 Enemy={definition.enemyName} ResourceKey={definition.prefabResourceKey}", false);
                 return false;
             }
 
             EnemyController enemy = enemyPool.Get(prefab);
             if (enemy == null)
             {
+                DebugSpawn($"[EnemySpawnDebug] 旧模式对象池取出失败 Prefab={prefab.name}", false);
                 return false;
             }
 
@@ -490,6 +545,7 @@ namespace Enemy
                     out Vector3 spawnPosition))
             {
                 enemyPool.Return(prefab, enemy);
+                DebugSpawn($"[EnemySpawnDebug] 旧模式出生点不可用 Point={(spawnPoint != null ? spawnPoint.name : "None")} Enemy={definition.enemyName}", false);
                 return false;
             }
 
@@ -498,6 +554,9 @@ namespace Enemy
             enemy.InitFromSpawner(definition, playerTarget, this, enemyPool, prefab);
             _activeEnemies.Add(enemy);
             IncreaseAliveCount(definition.enemyId);
+            DebugSpawn(
+                $"[EnemySpawn] 旧模式生成敌人 Enemy={definition.enemyName} Id={definition.enemyId} Point={(spawnPoint != null ? spawnPoint.name : "Fallback")} Active={_activeEnemies.Count}",
+                true);
             return true;
         }
 
@@ -1034,129 +1093,6 @@ namespace Enemy
             }
         }
 
-        private void TickKeyboardSpawnTest()
-        {
-#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
-            return;
-#endif
-
-            if (IsSingleSpawnKeyDown())
-            {
-                TrySpawnSingleForTest();
-            }
-
-            if (Input.GetKeyDown(BurstSpawnKey))
-            {
-                TrySpawnBurstForTest();
-            }
-        }
-
-        private bool IsSingleSpawnKeyDown()
-        {
-            if (!Input.GetKeyDown(SingleSpawnKey))
-            {
-                return false;
-            }
-
-            return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-        }
-
-        private void TrySpawnSingleForTest()
-        {
-            if (_activeEnemies.Count >= ResolveCurrentSceneMaxEnemyCount())
-            {
-                Debug.Log("[EnemySpawn] 场景敌人已到上限，S 测试生成跳过", this);
-                return;
-            }
-
-            Transform spawnPoint = PickSpawnPoint(SingleSpawnPointNameKeyword, SingleSpawnClearRadius, 0f, true);
-            if (spawnPoint == null)
-            {
-                Debug.LogWarning("[EnemySpawn] 没有找到可用的 BirthplaceS，可能是出生点附近有敌人或玩家太近", this);
-                return;
-            }
-
-            bool spawned = TrySpawnOneAtPoint(spawnPoint, SingleSpawnClearRadius, 0f);
-            Debug.Log(spawned
-                ? $"[EnemySpawn] S 测试生成成功 Point={spawnPoint.name}"
-                : "[EnemySpawn] S 测试生成失败，资源可能还在异步加载或出生点不可达",
-                this);
-        }
-
-        private void TrySpawnBurstForTest()
-        {
-            int maxCount = Mathf.Max(1, BurstSpawnHardMaxEnemyCount);
-            int remainCapacity = Mathf.Max(0, maxCount - _activeEnemies.Count);
-            int targetCount = Mathf.Min(Mathf.Max(1, BurstSpawnCountForTest), remainCapacity);
-            if (targetCount <= 0)
-            {
-                Debug.Log("[EnemySpawn] 场景敌人已到上限，B 批量生成跳过", this);
-                return;
-            }
-
-            Transform spawnPoint = PickSpawnPoint(BurstSpawnPointNameKeyword, BurstSpawnClearRadius, BurstSpawnScatterRadius, false);
-            if (spawnPoint == null)
-            {
-                Debug.LogWarning("[EnemySpawn] 没有找到可用的 BirthplaceB，B 批量生成失败", this);
-                return;
-            }
-
-            Debug.LogWarning(
-                $"[EnemySpawn] B 批量生成触发 Point={spawnPoint.name} Target={targetCount} Active={_activeEnemies.Count} Max={maxCount}",
-                this);
-
-            int spawnedCount = 0;
-            int maxAttempts = Mathf.Max(targetCount, targetCount * Mathf.Max(1, BurstSpawnMaxAttemptsMultiplier));
-            for (int i = 0; i < maxAttempts && spawnedCount < targetCount; i++)
-            {
-                if (_activeEnemies.Count >= maxCount)
-                {
-                    break;
-                }
-
-                bool spawned = TrySpawnOneLegacyForTest(spawnPoint, BurstSpawnClearRadius, BurstSpawnScatterRadius);
-                if (spawned)
-                {
-                    spawnedCount++;
-                }
-            }
-
-            Debug.LogWarning(
-                $"[EnemySpawn] B 批量生成完成 Point={spawnPoint.name} Spawned={spawnedCount}/{targetCount}",
-                this);
-        }
-
-        private bool TrySpawnOneLegacyForTest(Transform spawnPoint, float clearRadius, float scatterRadius)
-        {
-            CachePlayerTarget();
-            if (playerTarget == null)
-            {
-                Debug.LogWarning("[EnemySpawn] 找不到玩家目标，跳过本次 B 测试生成", this);
-                return false;
-            }
-
-            return SpawnOneLegacy(spawnPoint, clearRadius, scatterRadius, true);
-        }
-
-        private bool TrySpawnOneAtPoint(Transform spawnPoint, float clearRadius, float scatterRadius)
-        {
-            CachePlayerTarget();
-            if (playerTarget == null)
-            {
-                Debug.LogWarning("[EnemySpawn] 找不到玩家目标，跳过本次生成", this);
-                return false;
-            }
-
-            float elapsedTime = GetElapsedTime();
-            EnemyWaveConfig wave = ResolveActiveWave(elapsedTime);
-            if (useWaveConfigs && wave != null && SpawnOneFromWave(wave, elapsedTime, spawnPoint, clearRadius, scatterRadius))
-            {
-                return true;
-            }
-
-            return SpawnOneLegacy(spawnPoint, clearRadius, scatterRadius);
-        }
-
         private void LoadWaveConfigsIfNeeded()
         {
             if (!useWaveConfigs || (waveConfigs != null && waveConfigs.Count > 0))
@@ -1167,6 +1103,7 @@ namespace Enemy
             EnemyWaveConfigAsset[] assets = Resources.LoadAll<EnemyWaveConfigAsset>("EnemyWaves");
             if (assets == null || assets.Length == 0)
             {
+                DebugSpawn("[EnemySpawnDebug] Resources/EnemyWaves 没有找到波次配置", false);
                 return;
             }
 
@@ -1203,23 +1140,57 @@ namespace Enemy
                 }
             }
 
+            CacheSpawnPointsFromChildren();
+            CacheSpawnPointsFromScene();
+        }
+
+        private void CacheSpawnPointsFromChildren()
+        {
             Transform[] children = GetComponentsInChildren<Transform>(true);
             for (int i = 0; i < children.Length; i++)
             {
-                Transform child = children[i];
-                if (child == null || child == transform)
-                {
-                    continue;
-                }
-
-                if (!child.name.StartsWith("Birthplace", StringComparison.OrdinalIgnoreCase)
-                    || spawnPoints.Contains(child))
-                {
-                    continue;
-                }
-
-                spawnPoints.Add(child);
+                TryAddSpawnPoint(children[i]);
             }
+        }
+
+        private void CacheSpawnPointsFromScene()
+        {
+            if (Time.time < _nextSpawnPointSceneScanTime)
+            {
+                return;
+            }
+
+            _nextSpawnPointSceneScanTime = Time.time + SpawnPointSceneScanInterval;
+            Transform[] sceneTransforms = FindObjectsOfType<Transform>(true);
+            for (int i = 0; i < sceneTransforms.Length; i++)
+            {
+                Transform sceneTransform = sceneTransforms[i];
+                if (sceneTransform == null || sceneTransform == transform)
+                {
+                    continue;
+                }
+
+                Scene ownerScene = sceneTransform.gameObject.scene;
+                if (!ownerScene.IsValid() || !ownerScene.isLoaded)
+                {
+                    continue;
+                }
+
+                TryAddSpawnPoint(sceneTransform);
+            }
+        }
+
+        private void TryAddSpawnPoint(Transform spawnPoint)
+        {
+            if (spawnPoint == null
+                || spawnPoint == transform
+                || !spawnPoint.name.StartsWith("Birthplace", StringComparison.OrdinalIgnoreCase)
+                || spawnPoints.Contains(spawnPoint))
+            {
+                return;
+            }
+
+            spawnPoints.Add(spawnPoint);
         }
 
         private Transform PickSpawnPoint(string nameKeyword, float clearRadius, float scatterRadius, bool requireClear)
@@ -1227,6 +1198,7 @@ namespace Enemy
             CacheSpawnPointsIfNeeded();
             if (spawnPoints == null || spawnPoints.Count == 0)
             {
+                DebugSpawn("[EnemySpawnDebug] 场景内没有找到 Birthplace 出生点", false);
                 return null;
             }
 
@@ -1246,6 +1218,7 @@ namespace Enemy
 
                 if (ShouldBlockSpawnPointByPlayerDistance(spawnPoint))
                 {
+                    DebugSpawn($"[EnemySpawnDebug] 出生点被玩家距离挡住 Point={spawnPoint.name}", false);
                     continue;
                 }
 
@@ -1253,9 +1226,66 @@ namespace Enemy
                 {
                     return spawnPoint;
                 }
+
+                DebugSpawn($"[EnemySpawnDebug] 出生点附近不满足生成条件 Point={spawnPoint.name}", false);
             }
 
             return null;
+        }
+
+        private Transform PickSpawnPointRoundRobin(
+            string nameKeyword,
+            float clearRadius,
+            float scatterRadius,
+            bool requireClear,
+            ref int nextIndex)
+        {
+            CacheSpawnPointsIfNeeded();
+            if (spawnPoints == null || spawnPoints.Count == 0)
+            {
+                DebugSpawn("[EnemySpawnDebug] 场景内没有找到 Birthplace 出生点", false);
+                return null;
+            }
+
+            int pointCount = spawnPoints.Count;
+            int startIndex = Mathf.Abs(nextIndex) % pointCount;
+            for (int i = 0; i < pointCount; i++)
+            {
+                int index = (startIndex + i) % pointCount;
+                Transform spawnPoint = spawnPoints[index];
+                if (spawnPoint == null)
+                {
+                    continue;
+                }
+
+                if (!IsSpawnPointNameMatch(spawnPoint.name, nameKeyword))
+                {
+                    continue;
+                }
+
+                if (ShouldBlockSpawnPointByPlayerDistance(spawnPoint))
+                {
+                    DebugSpawn($"[EnemySpawnDebug] 出生点被玩家距离挡住 Point={spawnPoint.name}", false);
+                    continue;
+                }
+
+                if (!requireClear || TryResolveSpawnPosition(spawnPoint, clearRadius, scatterRadius, out _))
+                {
+                    nextIndex = (index + 1) % pointCount;
+                    return spawnPoint;
+                }
+
+                DebugSpawn($"[EnemySpawnDebug] 出生点附近不满足生成条件 Point={spawnPoint.name}", false);
+            }
+
+            return null;
+        }
+
+        [ContextMenu("打印刷怪状态")]
+        private void DebugPrintSpawnState()
+        {
+            LogSpawnState(true);
+            LogSpawnPointSummaryIfNeeded(true);
         }
 
         private static bool IsSpawnPointNameMatch(string spawnPointName, string nameKeyword)
@@ -1531,6 +1561,165 @@ namespace Enemy
 
             EnemyWaveConfig wave = ResolveActiveWave(GetElapsedTime());
             return ResolveSceneMaxEnemyCount(wave);
+        }
+
+        private void TickDebugSpawnState()
+        {
+            if (!debugSpawnState || Time.time < _nextDebugSpawnStateTime)
+            {
+                return;
+            }
+
+            _nextDebugSpawnStateTime = Time.time + Mathf.Max(0.25f, debugSpawnStateInterval);
+            LogSpawnState(false);
+            LogSpawnPointSummaryIfNeeded(false);
+        }
+
+        private void DebugSpawn(string message, bool important)
+        {
+            if (!debugSpawnState)
+            {
+                return;
+            }
+
+            if (!important && Time.time < _nextDebugSpawnStateTime)
+            {
+                return;
+            }
+
+            if (!important)
+            {
+                _nextDebugSpawnStateTime = Time.time + Mathf.Max(0.25f, debugSpawnStateInterval);
+            }
+
+            Debug.Log(message, this);
+        }
+
+        private void LogSpawnState(bool force)
+        {
+            if (!debugSpawnState && !force)
+            {
+                return;
+            }
+
+            int maxCount = ResolveCurrentSceneMaxEnemyCount();
+            string waveState = _isWaitingNextWave
+                ? "WaitingNext"
+                : _isWaveRunning ? "Running" : "Idle";
+            float nextSpawnRemain = Mathf.Max(0f, _nextSpawnTime - Time.time);
+            float nextWaveRemain = _isWaitingNextWave ? Mathf.Max(0f, _currentWaveStartTime - Time.time) : 0f;
+            float waveElapsedTime = _isWaveRunning ? Mathf.Max(0f, Time.time - _currentWaveStartTime) : 0f;
+            int batchCount = _isWaveRunning ? ResolveSpawnCountForWaveElapsed(_currentWave, waveElapsedTime) : 0;
+            int remainWaveCount = _isWaveRunning ? Mathf.Max(0, _currentWaveTargetCount - _currentWaveSpawnedCount) : 0;
+            bool canUseBurstPoint = remainWaveCount >= MinRemainCountForBurstSpawn;
+            int burstBatchCount = canUseBurstPoint ? Mathf.Max(batchCount, MinRemainCountForBurstSpawn) : 0;
+
+            Debug.Log(
+                $"[EnemySpawnState] Auto={autoSpawn} WaveConfig={useWaveConfigs} State={waveState} Wave={_currentWaveIndex} Tier={ResolveDifficultyTier(_currentWave, Mathf.Max(1, _currentWaveIndex))} Spawned={_currentWaveSpawnedCount}/{_currentWaveTargetCount} Remain={remainWaveCount} Batch={batchCount} BurstBatch={burstBatchCount} UseB={canUseBurstPoint} Active={_activeEnemies.Count}/{maxCount} S={CountSpawnPoints(SingleSpawnPointNameKeyword)} B={CountSpawnPoints(BurstSpawnPointNameKeyword)} NextSpawn={nextSpawnRemain:0.00}s NextWave={nextWaveRemain:0.00}s Player={(playerTarget != null ? playerTarget.name : "None")} Alive={BuildAliveCountSummary()} Entries={BuildWaveCandidateSummary(_currentWave, Mathf.Max(1, _currentWaveIndex))}",
+                this);
+        }
+
+        private void LogSpawnPointSummaryIfNeeded(bool force)
+        {
+            if (!debugSpawnState && !force)
+            {
+                return;
+            }
+
+            int totalCount = spawnPoints != null ? spawnPoints.Count : 0;
+            if (!force && totalCount == _lastDebugSpawnPointCount)
+            {
+                return;
+            }
+
+            _lastDebugSpawnPointCount = totalCount;
+            Debug.Log(
+                $"[EnemySpawnPoints] Total={totalCount} S={CountSpawnPoints(SingleSpawnPointNameKeyword)} B={CountSpawnPoints(BurstSpawnPointNameKeyword)}",
+                this);
+        }
+
+        private int CountSpawnPoints(string nameKeyword)
+        {
+            if (spawnPoints == null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < spawnPoints.Count; i++)
+            {
+                Transform spawnPoint = spawnPoints[i];
+                if (spawnPoint != null && IsSpawnPointNameMatch(spawnPoint.name, nameKeyword))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private string BuildAliveCountSummary()
+        {
+            if (_aliveCountByEnemyId.Count == 0)
+            {
+                return "None";
+            }
+
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            foreach (KeyValuePair<int, int> pair in _aliveCountByEnemyId)
+            {
+                if (builder.Length > 0)
+                {
+                    builder.Append(",");
+                }
+
+                builder.Append(pair.Key);
+                builder.Append(":");
+                builder.Append(pair.Value);
+            }
+
+            return builder.ToString();
+        }
+
+        private string BuildWaveCandidateSummary(EnemyWaveConfig wave, int waveIndex)
+        {
+            if (wave == null)
+            {
+                return "None";
+            }
+
+            List<EnemySpawnEntry> entries = wave.GetResolvedSpawnEntriesForWave(Mathf.Max(1, waveIndex));
+            if (entries == null || entries.Count == 0)
+            {
+                return "None";
+            }
+
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                EnemySpawnEntry entry = entries[i];
+                EnemyConfig config = entry?.enemyConfig != null ? entry.enemyConfig.CreateRuntimeConfig() : null;
+                if (entry == null || config == null)
+                {
+                    continue;
+                }
+
+                if (builder.Length > 0)
+                {
+                    builder.Append(",");
+                }
+
+                builder.Append(config.enemyName);
+                builder.Append("(");
+                builder.Append(config.enemyId);
+                builder.Append(":W");
+                builder.Append(entry.weight.ToString("0.#"));
+                builder.Append("/Max");
+                builder.Append(entry.maxAliveCount);
+                builder.Append(")");
+            }
+
+            return builder.Length > 0 ? builder.ToString() : "None";
         }
 
         private void EnsurePool()

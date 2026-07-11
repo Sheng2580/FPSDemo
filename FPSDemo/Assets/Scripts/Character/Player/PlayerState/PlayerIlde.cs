@@ -6,6 +6,11 @@ public class PlayerIlde : PlayerState
 {
    public override void Update()
    {
+      if (player.IsSkillMovementLocked)
+      {
+         return;
+      }
+
       if (ShouldStartJump())
       {
          StartJump();
