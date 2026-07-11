@@ -176,16 +176,29 @@ namespace Enemy
                     continue;
                 }
 
+                brain.RefreshPerceptionForSchedule();
                 _chaseSlotCandidates.Add(brain);
             }
 
             int maxChaseSlots = ResolveMaxChaseSlots();
+            int maxAttackSlots = ResolveMaxAttackSlots();
             _chaseSlotCandidates.Sort(CompareChaseSlotCandidate);
 
+            int attackSlotCount = 0;
             for (int i = 0; i < _chaseSlotCandidates.Count; i++)
             {
                 bool hasSlot = i < maxChaseSlots;
-                _chaseSlotCandidates[i].SetChaseSlot(hasSlot, hasSlot ? i : -1);
+                EnemyBrain brain = _chaseSlotCandidates[i];
+                bool hasAttackSlot = hasSlot
+                                     && brain.Blackboard.isTargetInAttackRange
+                                     && attackSlotCount < maxAttackSlots;
+                int attackSlotRank = hasAttackSlot ? attackSlotCount : -1;
+                if (hasAttackSlot)
+                {
+                    attackSlotCount++;
+                }
+
+                brain.SetCombatSlots(hasSlot, hasSlot ? i : -1, hasAttackSlot, attackSlotRank);
             }
         }
 
@@ -205,6 +218,28 @@ namespace Enemy
                 result = hasRuntimeLimit
                     ? Mathf.Min(result, blackboard.maxChaseEnemyCount)
                     : blackboard.maxChaseEnemyCount;
+                hasRuntimeLimit = true;
+            }
+
+            return Mathf.Clamp(result, 0, _chaseSlotCandidates.Count);
+        }
+
+        private int ResolveMaxAttackSlots()
+        {
+            int result = 1;
+            bool hasRuntimeLimit = false;
+
+            for (int i = 0; i < _chaseSlotCandidates.Count; i++)
+            {
+                EnemyBlackboard blackboard = _chaseSlotCandidates[i].Blackboard;
+                if (blackboard == null || blackboard.maxAttackersCount <= 0)
+                {
+                    continue;
+                }
+
+                result = hasRuntimeLimit
+                    ? Mathf.Min(result, blackboard.maxAttackersCount)
+                    : blackboard.maxAttackersCount;
                 hasRuntimeLimit = true;
             }
 

@@ -1,0 +1,116 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ba8981e0d5546bf8c1b8ddb6d2cd858, type: 3}
+  m_Name: DefaultShotgunWeaponConfig
+  m_EditorClassIdentifier: 
+  config:
+    weaponId: 3
+    weaponName: Default Shotgun
+    fireMode: 0
+    damage: 8
+    fireInterval: 0.72
+    magazineSize: 6
+    maxReserveAmmo: 36
+    reloadTime: 2.35
+    range: 70
+    reloadMode: 1
+    reloadAmmoPerStep: 1
+    reloadStartTime: 0
+    reloadSingleRoundTime: 0.72
+    reloadEndTime: 0
+    canInterruptReloadByFire: 1
+    attackType: 1
+    spreadAngle: 5.5
+    pelletCount: 8
+    maxPenetrationCount: 0
+    penetrationDamageMultiplier: 0.5
+    projectilePrefabKey: ""
+    projectileSpeed: 0
+    projectileLifeTime: 0
+    explosionRadius: 0
+    explosionFalloff: 1
+    hitLayerMask:
+      serializedVersion: 2
+      m_Bits: 115
+    tracerPrefabKey: ""
+    impactEffectKey: KriptoFX Concrete Impact
+    muzzleFlashEffectKey: KriptoFX Shotgun Muzzle Flash
+    muzzleSmokeEffectKey: None
+    fireAudioKey: Shotgun_1 Fire
+    fireVolume: 1
+    firePitchRandom: 0.04
+    fireAudioCooldown: 0.03
+    fireFeedbackIntensity: 1.25
+    defaultImpactEffectKey: KriptoFX Concrete Impact
+    hitSurfaceFeedbacks:
+    - surfaceType: 0
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: Impact Concrete
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 1
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: Impact Concrete
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 2
+      impactEffectKey: KriptoFX Metal Impact
+      impactAudioKey: Impact Metal
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 3
+      impactEffectKey: KriptoFX Wood Impact
+      impactAudioKey: Impact Wood
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 4
+      impactEffectKey: Blood Impact
+      impactAudioKey: Impact Flesh
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 5
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: Impact Glass
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    crosshairSize: 42
+    crosshairMinSprayAmount: 2
+    crosshairSpreadScale: 1.15
+    crosshairFireKickAmount: 2.4
+    crosshairFireKickDecaySpeed: 6.5
+    recoilPitch: -2.4
+    recoilYaw: 0.9
+    viewRecoilPosition: {x: 0, y: -0.025, z: -0.12}
+    viewRecoilRotation: {x: -8, y: 2, z: 0}
+    viewRecoilReturnSpeed: 13
+    aimInSpeed: 8
+    aimOutSpeed: 12
+    aimCameraFov: 45
+    aimViewPositionOffset: {x: -0.035, y: 0.055, z: 0.02}
+    aimViewRotationOffset: {x: 0, y: 0, z: 0}
+    useAimLocalPose: 1
+    aimLocalPosition: {x: -0.04, y: -0.06, z: 0.3193}
+    aimLocalEulerAngles: {x: 0.142, y: 1.735, z: -4.676}
+    aimLocalScale: {x: 0.872284, y: 0.872284, z: 0.872284}
+    idleStateName: Idle
+    equipStateName: Take
+    fireStateName: Fire
+    reloadStateName: Reload
+    fireTransition: 0.05
+    reloadTransition: 0.1
+    equipTransition: 0.1

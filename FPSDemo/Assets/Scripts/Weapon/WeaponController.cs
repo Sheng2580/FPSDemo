@@ -217,27 +217,72 @@ namespace Weapon
                 return;
             }
 
-            Ray ray = new Ray(raycastCamera.transform.position, raycastCamera.transform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, _config.range, ~0, QueryTriggerInteraction.Collide))
+            int pelletCount = GetRaycastPelletCount();
+            for (int i = 0; i < pelletCount; i++)
             {
-                DamageInfo damageInfo = new DamageInfo(
-                    _config.damage,
-                    _config.weaponId,
-                    _config.weaponName,
-                    gameObject,
-                    hit.collider,
-                    hit.point,
-                    hit.normal);
-
-                bool hitEnemy = TryApplyEnemyDamage(hit.collider, ref damageInfo);
-
-                EventCenter.Instance.EventTrigger(GameEvent.WeaponHit, new WeaponHitEventData(damageInfo, hitEnemy, _config));
-
-                if (debugWeaponHit && !hitEnemy)
-                {
-                    Debug.Log($"[WeaponHit] 命中非敌人 Collider={hit.collider.name}", hit.collider);
-                }
+                FireSingleRaycastPellet(raycastCamera, i, pelletCount);
             }
+        }
+
+        private int GetRaycastPelletCount()
+        {
+            if (_config == null || _config.attackType != WeaponAttackType.MultiHitscan)
+            {
+                return 1;
+            }
+
+            return Mathf.Max(1, _config.pelletCount);
+        }
+
+        private void FireSingleRaycastPellet(Camera raycastCamera, int pelletIndex, int pelletCount)
+        {
+            Vector3 direction = CreatePelletDirection(raycastCamera, pelletIndex, pelletCount);
+            Ray ray = new Ray(raycastCamera.transform.position, direction);
+            LayerMask hitLayerMask = _config.hitLayerMask.value != 0
+                ? _config.hitLayerMask
+                : Physics.DefaultRaycastLayers;
+
+            if (!Physics.Raycast(ray, out RaycastHit hit, _config.range, hitLayerMask, QueryTriggerInteraction.Collide))
+            {
+                return;
+            }
+
+            DamageInfo damageInfo = new DamageInfo(
+                _config.damage,
+                _config.weaponId,
+                _config.weaponName,
+                gameObject,
+                hit.collider,
+                hit.point,
+                hit.normal);
+
+            bool hitEnemy = TryApplyEnemyDamage(hit.collider, ref damageInfo);
+
+            EventCenter.Instance.EventTrigger(GameEvent.WeaponHit, new WeaponHitEventData(damageInfo, hitEnemy, _config));
+
+            if (debugWeaponHit && !hitEnemy)
+            {
+                Debug.Log($"[WeaponHit] 命中非敌人 Collider={hit.collider.name}", hit.collider);
+            }
+        }
+
+        private Vector3 CreatePelletDirection(Camera raycastCamera, int pelletIndex, int pelletCount)
+        {
+            Transform cameraTransform = raycastCamera.transform;
+            if (_config.attackType != WeaponAttackType.MultiHitscan || pelletCount <= 1 || _config.spreadAngle <= 0f)
+            {
+                return cameraTransform.forward;
+            }
+
+            // 每颗弹丸在圆锥内随机散布 近处集中 远处自然扩散
+            Vector2 spreadPoint = Random.insideUnitCircle;
+            float yaw = spreadPoint.x * _config.spreadAngle;
+            float pitch = spreadPoint.y * _config.spreadAngle;
+            Quaternion spreadRotation =
+                Quaternion.AngleAxis(yaw, cameraTransform.up) *
+                Quaternion.AngleAxis(-pitch, cameraTransform.right);
+
+            return (spreadRotation * cameraTransform.forward).normalized;
         }
 
         private bool TryApplyEnemyDamage(Collider hitCollider, ref DamageInfo damageInfo)

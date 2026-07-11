@@ -80,6 +80,18 @@ namespace Enemy
         }
     }
 
+    public class HasAttackSlotNode : EnemyConditionNode
+    {
+        public HasAttackSlotNode(EnemyBlackboard blackboard) : base(blackboard)
+        {
+        }
+
+        protected override bool CheckCondition()
+        {
+            return blackboard.hasAttackSlot;
+        }
+    }
+
     public class CanSeeTargetNode : EnemyConditionNode
     {
         public CanSeeTargetNode(EnemyBlackboard blackboard) : base(blackboard)

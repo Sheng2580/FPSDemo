@@ -21,6 +21,12 @@ MonoBehaviour:
     magazineSize: 30
     maxReserveAmmo: 120
     reloadTime: 1.65
+    reloadMode: 0
+    reloadAmmoPerStep: 30
+    reloadStartTime: 0
+    reloadSingleRoundTime: 1.65
+    reloadEndTime: 0
+    canInterruptReloadByFire: 0
     range: 160
     attackType: 0
     spreadAngle: 0.9

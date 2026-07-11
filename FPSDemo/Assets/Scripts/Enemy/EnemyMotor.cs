@@ -34,6 +34,9 @@ namespace Enemy
         [Header("根运动")]
         [SerializeField] private bool useRootMotion = true;
         [SerializeField] private bool fallbackMoveWhenRootMotionDisabled = true;
+        [SerializeField] private bool fallbackMoveWhenRootMotionMissing = true;
+        [SerializeField] private float rootMotionFallbackMinDelta = 0.001f;
+        [SerializeField] private float rootMotionFallbackSpeedMultiplier = 0.7f;
         [SerializeField] private float rootMotionSpeedMultiplier = 1f;
         [SerializeField] private float gravity = -20f;
 
@@ -72,6 +75,7 @@ namespace Enemy
         private Vector3 _waitAroundOffset;
         private float _nextTargetScatterRefreshTime;
         private float _nextWaitAroundRefreshTime;
+        private int _lastRootMotionFrame = -1;
         private bool _wantsMove;
         private bool _knockbackActive;
         private bool _isTraversingOffMeshLink;
@@ -86,6 +90,16 @@ namespace Enemy
         private void Reset()
         {
             AutoBind();
+        }
+
+        private void LateUpdate()
+        {
+            if (!ShouldUseRootMotionFallback() || _lastRootMotionFrame == Time.frameCount)
+            {
+                return;
+            }
+
+            ApplyFallbackMove(_moveDirection, rootMotionFallbackSpeedMultiplier);
         }
 
         public void Init(
@@ -266,8 +280,20 @@ namespace Enemy
                 return;
             }
 
+            _lastRootMotionFrame = Time.frameCount;
+
             // 根运动提供基础步伐，导航只修正朝向和路径方向
             Vector3 motion = _wantsMove ? deltaPosition * Mathf.Max(0f, rootMotionSpeedMultiplier) : Vector3.zero;
+            Vector3 horizontalMotion = motion;
+            horizontalMotion.y = 0f;
+            if (_wantsMove
+                && fallbackMoveWhenRootMotionMissing
+                && horizontalMotion.sqrMagnitude < rootMotionFallbackMinDelta * rootMotionFallbackMinDelta)
+            {
+                ApplyFallbackMove(_moveDirection, rootMotionFallbackSpeedMultiplier);
+                return;
+            }
+
             motion.y += GetGravityDelta();
             MoveWithController(motion);
             SyncAgentPosition();
@@ -569,15 +595,30 @@ namespace Enemy
 
         private void ApplyFallbackMove(Vector3 direction)
         {
+            ApplyFallbackMove(direction, 1f);
+        }
+
+        private void ApplyFallbackMove(Vector3 direction, float speedMultiplier)
+        {
             if (direction.sqrMagnitude <= 0.0001f)
             {
                 return;
             }
 
-            Vector3 motion = direction.normalized * (_moveSpeed * Time.deltaTime);
+            Vector3 motion = direction.normalized * (_moveSpeed * Mathf.Max(0f, speedMultiplier) * Time.deltaTime);
             motion.y += GetGravityDelta();
             MoveWithController(motion);
             SyncAgentPosition();
+        }
+
+        private bool ShouldUseRootMotionFallback()
+        {
+            return useRootMotion
+                   && fallbackMoveWhenRootMotionMissing
+                   && _wantsMove
+                   && !_isTraversingOffMeshLink
+                   && !_knockbackActive
+                   && _moveDirection.sqrMagnitude > 0.0001f;
         }
 
         private void FaceTarget(Vector3 toTarget)

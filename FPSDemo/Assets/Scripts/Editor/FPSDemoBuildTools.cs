@@ -36,7 +36,8 @@ public static class FPSDemoBuildTools
     {
         "Assets/Art/ABRes/Player/Player.prefab",
         "Assets/Art/ABRes/Player/PlayerWeapon/PistolView.prefab",
-        "Assets/Art/ABRes/Player/PlayerWeapon/AssaultRifleView.prefab"
+        "Assets/Art/ABRes/Player/PlayerWeapon/AssaultRifleView.prefab",
+        "Assets/Art/ABRes/Player/PlayerWeapon/ShotgunView.prefab"
     };
 
     private static readonly string[] CombatFeedbackAssetPaths =
@@ -63,6 +64,7 @@ public static class FPSDemoBuildTools
         "Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/WoodImpact.prefab",
         "Assets/Art/ABRes/CombatFeedback/Audio/Pistol_1 Fire.wav",
         "Assets/Art/ABRes/CombatFeedback/Audio/Assault Rifle_1 Fire.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Shotgun_1 Fire.wav",
         "Assets/Art/ABRes/CombatFeedback/Audio/Hitmarker.wav",
         "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Concrete.wav",
         "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Metal.wav",

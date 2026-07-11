@@ -58,6 +58,7 @@ namespace Combat
         [SerializeField] private string playerEditorAssetPath = DefaultPlayerEditorPath;
         [SerializeField] private string weaponRootName = DefaultWeaponRootName;
         [SerializeField] private int defaultWeaponIndex;
+        [SerializeField] private bool useScenePlayerIfExists = true;
 
         [Header("本局默认武器")]
         [SerializeField]
@@ -74,7 +75,13 @@ namespace Combat
                 DefaultPlayerBundleName,
                 "AssaultRifleView",
                 "WeaponConfigs/DefaultAssaultRifleWeaponConfig",
-                "Assets/Art/ABRes/Player/PlayerWeapon/AssaultRifleView.prefab")
+                "Assets/Art/ABRes/Player/PlayerWeapon/AssaultRifleView.prefab"),
+            new RunWeaponEntry(
+                "Default Shotgun",
+                DefaultPlayerBundleName,
+                "ShotgunView",
+                "WeaponConfigs/DefaultShotgunWeaponConfig",
+                "Assets/Art/ABRes/Player/PlayerWeapon/ShotgunView.prefab")
         };
 
         [Header("编辑器测试")]
@@ -175,6 +182,14 @@ namespace Combat
                 UIManager.Instance.OpenPanelAsy<global::TounchControllerCanvas>();
             }
 
+            if (useScenePlayerIfExists && TryUseScenePlayer(out playerInstance))
+            {
+                yield return LoadRunWeapons(playerInstance);
+                isLoading = false;
+                Debug.Log("[CombatScene] 已使用场景里的玩家并配置默认武器", playerInstance);
+                yield break;
+            }
+
             GameObject loadedPlayer = null;
             yield return LoadPrefabInstance(
                 playerAssetBundleName,
@@ -195,6 +210,12 @@ namespace Combat
             yield return LoadRunWeapons(playerInstance);
             isLoading = false;
             Debug.Log("[CombatScene] 战斗场景玩家和默认武器加载完成", this);
+        }
+
+        private bool TryUseScenePlayer(out GameObject scenePlayer)
+        {
+            scenePlayer = FindScenePlayer();
+            return scenePlayer != null;
         }
 
         private void EnsureRuntimeManagers()
@@ -229,6 +250,8 @@ namespace Combat
                 Debug.LogError($"[CombatScene] 玩家缺少武器挂点 {weaponRootName}", playerObject);
                 yield break;
             }
+
+            ClearWeaponViews(weaponRoot);
 
             List<CarriedWeaponSlot> weaponSlots = new List<CarriedWeaponSlot>();
             for (int i = 0; i < defaultRunWeapons.Count; i++)
@@ -267,6 +290,21 @@ namespace Combat
             }
 
             inventory.ConfigureRunWeapons(weaponSlots, defaultWeaponIndex);
+        }
+
+        private static void ClearWeaponViews(Transform weaponRoot)
+        {
+            WeaponView[] existingViews = weaponRoot.GetComponentsInChildren<WeaponView>(true);
+            for (int i = existingViews.Length - 1; i >= 0; i--)
+            {
+                WeaponView weaponView = existingViews[i];
+                if (weaponView == null)
+                {
+                    continue;
+                }
+
+                Destroy(weaponView.gameObject);
+            }
         }
 
         private WeaponView AttachWeaponView(GameObject weaponObject, Transform weaponRoot, string weaponName)
@@ -334,6 +372,32 @@ namespace Combat
             }
 
             return spawnObject != null ? spawnObject.transform : null;
+        }
+
+        private GameObject FindScenePlayer()
+        {
+            GameObject namedPlayer = GameObject.Find(playerAssetName);
+            if (IsValidScenePlayer(namedPlayer))
+            {
+                return namedPlayer;
+            }
+
+            PlayerController playerController = FindObjectOfType<PlayerController>();
+            if (playerController != null && IsValidScenePlayer(playerController.gameObject))
+            {
+                return playerController.gameObject;
+            }
+
+            GameObject taggedPlayer = GameObject.FindWithTag("Player");
+            return IsValidScenePlayer(taggedPlayer) ? taggedPlayer : null;
+        }
+
+        private bool IsValidScenePlayer(GameObject candidate)
+        {
+            return candidate != null
+                   && candidate.scene.IsValid()
+                   && candidate.GetComponent<PlayerInventory>() != null
+                   && FindChildRecursive(candidate.transform, weaponRootName) != null;
         }
 
         private static void ResetLocalTransform(Transform target)

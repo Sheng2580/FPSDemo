@@ -21,6 +21,17 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Default Pistol | `DefaultPistolWeaponConfig.asset` | 1 | SemiAuto | 20 | 0.2 | 12 / 48 | 1.4 | 100 | Hitscan | 0.6 | 115 | `WeaponController` 读取运行时武器数据 |
 | Default Assault Rifle | `DefaultAssaultRifleWeaponConfig.asset` | 2 | FullAuto | 16 | 0.09 | 30 / 120 | 1.65 | 160 | Hitscan | 0.9 | 115 | `WeaponController` 读取运行时武器数据 |
+| Default Shotgun | `DefaultShotgunWeaponConfig.asset` | 3 | SemiAuto | 8 | 0.72 | 6 / 36 | 2.35 | 70 | MultiHitscan | 5.5 | 115 | `WeaponController` 按 `pelletCount` 多射线结算 |
+
+## 武器换弹数据
+
+| 武器 | reloadMode | reloadAmmoPerStep | reloadSingleRoundTime | canInterruptReloadByFire | 用法 |
+| --- | --- | --- | --- | --- | --- |
+| Default Pistol | Magazine | 12 | 1.4 | false | 整弹匣换弹，换弹结束一次补满 |
+| Default Assault Rifle | Magazine | 30 | 1.65 | false | 整弹匣换弹，换弹结束一次补满 |
+| Default Shotgun | SingleRound | 1 | 0.72 | true | 逐发装填，每轮加 1 发，有弹时按开火可打断换弹 |
+
+备注：`reloadTime` 仍保留为整段换弹时长和旧配置兜底；`SingleRound` 模式下逻辑主要读取 `reloadSingleRoundTime`，后续加快换弹时应缩短单发装填时间或提高动画播放速度，而不是一次直接补满。
 
 ## 武器准星数据
 
@@ -28,15 +39,17 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Default Pistol | 20 | 2 | 0.8 | 1.2 | 8 | `DefaultPistolWeaponConfig.asset` | `AkilaCrosshairDriver` 读取当前 `WeaponConfig` |
 | Default Assault Rifle | 30 | 2 | 0.8 | 2 | 10.5 | `DefaultAssaultRifleWeaponConfig.asset` | `AkilaCrosshairDriver` 读取当前 `WeaponConfig` |
+| Default Shotgun | 42 | 2 | 1.15 | 2.4 | 6.5 | `DefaultShotgunWeaponConfig.asset` | `AkilaCrosshairDriver` 读取当前 `WeaponConfig` |
 
 备注：`WeaponConfig.ApplyMissingDefaults()` 会为旧资源补缺省值，但正式调参以资源文件为准。
 
 ## 武器后坐力与开镜数据
 
-| 武器 | recoilPitch | recoilYaw | viewRecoilPosition | viewRecoilRotation | viewRecoilReturnSpeed | aimFov | aimLocalPosition | aimLocalScale | 用法 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Default Pistol | -1.5 | 0.5 | `(0, -0.015, -0.08)` | `(-6, 1.5, 0)` | 18 | 50 | `(-0.084, -0.817, 0.35677)` | `(0.04, 0.04, 0.04)` | 武器后坐力、开镜姿态 |
-| Default Assault Rifle | -0.32 | 0.16 | `(0, -0.004, -0.025)` | `(-1.25, 0.25, 0)` | 16 | 30 | `(-0.162, -1.517, -0.13)` | `(0.06154, 0.06154, 0.06154)` | 武器后坐力、开镜姿态 |
+| 武器 | recoilPitch | recoilYaw | viewRecoilPosition | viewRecoilRotation | viewRecoilReturnSpeed | aimFov | aimLocalPosition | aimLocalEulerAngles | aimLocalScale | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Default Pistol | -1.5 | 0.5 | `(0, -0.015, -0.08)` | `(-6, 1.5, 0)` | 18 | 50 | `(-0.084, -0.817, 0.35677)` | `(0, 0, 0)` | `(0.04, 0.04, 0.04)` | 武器后坐力、开镜姿态 |
+| Default Assault Rifle | -0.32 | 0.16 | `(0, -0.004, -0.025)` | `(-1.25, 0.25, 0)` | 16 | 30 | `(-0.162, -1.517, -0.13)` | `(0, 0, 0)` | `(0.06154, 0.06154, 0.06154)` | 武器后坐力、开镜姿态 |
+| Default Shotgun | -2.4 | 0.9 | `(0, -0.025, -0.12)` | `(-8, 2, 0)` | 13 | 45 | `(-0.04, -0.06, 0.3193)` | `(0.142, 1.735, -4.676)` | `(0.872284, 0.872284, 0.872284)` | 武器后坐力、开镜姿态；来自用户调好的 ShotgunView 开镜位置数据 |
 
 ## 战斗表现 Key
 
@@ -44,8 +57,11 @@
 
 | 武器 | muzzleFlashEffectKey | muzzleSmokeEffectKey | fireAudioKey | fireVolume | firePitchRandom | fireAudioCooldown | fireFeedbackIntensity | defaultImpactEffectKey | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Default Pistol | Muzzle Flash | Muzzle Smoke | Pistol_1 Fire | 1 | 0.04 | 0.03 | 1 | Stone Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
-| Default Assault Rifle | Muzzle Flash | Muzzle Smoke | Assault Rifle_1 Fire | 1 | 0.04 | 0.03 | 1 | Stone Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
+| Default Pistol | KriptoFX Pistol Muzzle Flash | None | Pistol_1 Fire | 1 | 0.04 | 0.03 | 1 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
+| Default Assault Rifle | KriptoFX Assault Rifle Muzzle Flash | None | Assault Rifle_1 Fire | 1 | 0.04 | 0.03 | 1 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
+| Default Shotgun | KriptoFX Shotgun Muzzle Flash | None | Shotgun_1 Fire | 1 | 0.04 | 0.03 | 1.25 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
+
+规则：武器表现只由 `WeaponConfig` 维护 key，表现层只按 key 播放；不得在 `WeaponController`、`WeaponView` 或 ShotgunView prefab 中硬写特效/音效资源引用。散弹枪当前使用专用 key，资源项已登记在 `CombatFeedbackResources.asset`；后续替换散弹枪音效或枪口火光时只改资源表和本快速表。
 
 ## 命中表面数据
 
@@ -53,13 +69,13 @@
 
 | surfaceType | impactEffectKey | impactAudioKey | decalKey | decalLifeTime | decalScale | 当前来源 | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Default | Stone Impact | 空 | 空 | 8 | 1 | 两把武器资源相同 | 默认命中特效 |
-| Stone | Stone Impact | 空 | 空 | 8 | 1 | 两把武器资源相同 | 石头 / 墙体命中特效 |
-| Metal | Metal Impact | 空 | 空 | 8 | 1 | 两把武器资源相同 | 金属命中特效 |
-| Wood | Wood Impact | 空 | 空 | 8 | 1 | 两把武器资源相同 | 木头命中特效 |
-| Flesh | Blood Impact | 空 | 空 | 8 | 1 | 两把武器资源相同 | 敌人血肉命中特效 |
+| Default | KriptoFX Concrete Impact | Impact Concrete | 空 | 8 | 1 | 三把武器资源相同 | 默认命中特效 |
+| Stone | KriptoFX Concrete Impact | Impact Concrete | 空 | 8 | 1 | 三把武器资源相同 | 石头 / 墙体命中特效 |
+| Metal | KriptoFX Metal Impact | Impact Metal | 空 | 8 | 1 | 三把武器资源相同 | 金属命中特效 |
+| Wood | KriptoFX Wood Impact | Impact Wood | 空 | 8 | 1 | 三把武器资源相同 | 木头命中特效 |
+| Flesh | Blood Impact | Impact Flesh | 空 | 8 | 1 | 三把武器资源相同 | 敌人血肉命中特效 |
 
-备注：`impactAudioKey` 和 `decalKey` 目前留空，后续有命中音效或弹孔贴花资源再补。
+备注：`decalKey` 目前留空，后续有弹孔贴花资源再补。`Glass` 表面当前使用 `KriptoFX Concrete Impact / Impact Glass` 兜底。
 
 ## CombatFeedback ABRes 资源表
 
@@ -73,8 +89,15 @@
 | Stone Impact | combat_feedback | Stone Impact | `Effects/Stone Impact.prefab` |
 | Metal Impact | combat_feedback | Metal Impact | `Effects/Metal Impact.prefab` |
 | Wood Impact | combat_feedback | Wood Impact | `Effects/Wood Impact.prefab` |
+| KriptoFX Pistol Muzzle Flash | combat_feedback | MuzzleFlash1 | `Effects/MuzzleFlashes/MuzzleFlash1.prefab` |
+| KriptoFX Assault Rifle Muzzle Flash | combat_feedback | MuzzleFlash8 | `Effects/MuzzleFlashes/MuzzleFlash8.prefab` |
+| KriptoFX Shotgun Muzzle Flash | combat_feedback | MuzzleFlash7 | `Effects/MuzzleFlashes/MuzzleFlash7.prefab` |
+| KriptoFX Concrete Impact | combat_feedback | ConcreteImpact | `Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/ConcreteImpact.prefab` |
+| KriptoFX Metal Impact | combat_feedback | MetalImpact | `Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/MetalImpact.prefab` |
+| KriptoFX Wood Impact | combat_feedback | WoodImpact | `Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/WoodImpact.prefab` |
 | Pistol_1 Fire | combat_feedback | Pistol_1 Fire | `Audio/Pistol_1 Fire.wav` |
 | Assault Rifle_1 Fire | combat_feedback | Assault Rifle_1 Fire | `Audio/Assault Rifle_1 Fire.wav` |
+| Shotgun_1 Fire | combat_feedback | Shotgun_1 Fire | `Audio/Shotgun_1 Fire.wav` |
 | Hitmarker | combat_feedback | Hitmarker | `Audio/Hitmarker.wav` |
 
 ## 敌人配置

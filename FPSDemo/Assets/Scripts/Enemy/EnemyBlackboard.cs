@@ -63,6 +63,8 @@ namespace Enemy
         public float lastThinkTime;
         public bool hasChaseSlot = true;
         public int chaseSlotRank = -1;
+        public bool hasAttackSlot = true;
+        public int attackSlotRank = -1;
 
         public void Init(
             EnemyController newController,
@@ -111,6 +113,8 @@ namespace Enemy
             lastThinkTime = 0f;
             hasChaseSlot = true;
             chaseSlotRank = -1;
+            hasAttackSlot = true;
+            attackSlotRank = -1;
 
             RefreshPerception();
         }
@@ -163,6 +167,8 @@ namespace Enemy
             lastThinkTime = 0f;
             hasChaseSlot = true;
             chaseSlotRank = -1;
+            hasAttackSlot = true;
+            attackSlotRank = -1;
 
             RefreshPerception();
         }

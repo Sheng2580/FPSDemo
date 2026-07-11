@@ -45,6 +45,10 @@ MonoBehaviour:
     assetBundleName: combat_feedback
     assetName: MuzzleFlash8
     prefab: {fileID: 141106, guid: 5cdf043766019ab49a66cea4cfdc047b, type: 3}
+  - key: KriptoFX Shotgun Muzzle Flash
+    assetBundleName: combat_feedback
+    assetName: MuzzleFlash7
+    prefab: {fileID: 179846, guid: 15d0eae3002f3f247b110cd7610d81b6, type: 3}
   - key: KriptoFX Concrete Impact
     assetBundleName: combat_feedback
     assetName: ConcreteImpact
@@ -66,6 +70,10 @@ MonoBehaviour:
     assetBundleName: combat_feedback
     assetName: Assault Rifle_1 Fire
     clip: {fileID: 8300000, guid: b3a1b0f854d515b4798e653179fdaea9, type: 3}
+  - key: Shotgun_1 Fire
+    assetBundleName: combat_feedback
+    assetName: Shotgun_1 Fire
+    clip: {fileID: 8300000, guid: 1db9afadeaff4f8c84be7fbb6633e48e, type: 3}
   - key: Hitmarker
     assetBundleName: combat_feedback
     assetName: Hitmarker

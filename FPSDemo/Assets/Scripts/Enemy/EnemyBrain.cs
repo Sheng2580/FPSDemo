@@ -206,8 +206,35 @@ namespace Enemy
 
         public void SetChaseSlot(bool hasSlot, int slotRank)
         {
-            _blackboard.hasChaseSlot = hasSlot;
-            _blackboard.chaseSlotRank = hasSlot ? slotRank : -1;
+            SetCombatSlots(hasSlot, slotRank, hasSlot, slotRank);
+        }
+
+        public void SetCombatSlots(bool hasChaseSlot, int chaseSlotRank, bool hasAttackSlot, int attackSlotRank)
+        {
+            bool changed = _blackboard.hasChaseSlot != hasChaseSlot
+                           || _blackboard.chaseSlotRank != chaseSlotRank
+                           || _blackboard.hasAttackSlot != hasAttackSlot
+                           || _blackboard.attackSlotRank != attackSlotRank;
+
+            _blackboard.hasChaseSlot = hasChaseSlot;
+            _blackboard.chaseSlotRank = hasChaseSlot ? chaseSlotRank : -1;
+            _blackboard.hasAttackSlot = hasAttackSlot;
+            _blackboard.attackSlotRank = hasAttackSlot ? attackSlotRank : -1;
+
+            if (changed)
+            {
+                _blackboard.nextThinkTime = Mathf.Min(_blackboard.nextThinkTime, Time.time);
+            }
+        }
+
+        public void RefreshPerceptionForSchedule()
+        {
+            if (!_active)
+            {
+                return;
+            }
+
+            _blackboard.RefreshPerception();
         }
 
         private void ApplyPerformanceTier(EnemyPerformanceTier tier)

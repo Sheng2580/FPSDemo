@@ -23,6 +23,14 @@ namespace Weapon.Data
         Area
     }
 
+    public enum WeaponReloadMode
+    {
+        // 普通弹匣换弹 一次换弹结束后直接补满
+        Magazine,
+        // 散弹枪等逐发装填 每轮换弹只加指定数量
+        SingleRound
+    }
+
     public enum HitSurfaceType
     {
         Default,
@@ -91,13 +99,19 @@ namespace Weapon.Data
         public const float DefaultAssaultRifleCrosshairSpreadScale = 0.55f;
         public const float DefaultAssaultRifleCrosshairFireKickAmount = 0.55f;
         public const float DefaultAssaultRifleCrosshairFireKickDecaySpeed = 10.5f;
+        public const float DefaultShotgunCrosshairSize = 42f;
+        public const float DefaultShotgunCrosshairSpreadScale = 1.15f;
+        public const float DefaultShotgunCrosshairFireKickAmount = 2.4f;
+        public const float DefaultShotgunCrosshairFireKickDecaySpeed = 6.5f;
         public const string DefaultMuzzleFlashEffectKey = "KriptoFX Pistol Muzzle Flash";
         public const string DefaultPistolMuzzleFlashEffectKey = "KriptoFX Pistol Muzzle Flash";
         public const string DefaultAssaultRifleMuzzleFlashEffectKey = "KriptoFX Assault Rifle Muzzle Flash";
+        public const string DefaultShotgunMuzzleFlashEffectKey = "KriptoFX Shotgun Muzzle Flash";
         public const string DefaultMuzzleSmokeEffectKey = "None";
-        public const string DefaultImpactEffectKey = "Stone Impact";
+        public const string DefaultImpactEffectKey = "KriptoFX Concrete Impact";
         public const string DefaultPistolFireAudioKey = "Pistol_1 Fire";
         public const string DefaultAssaultRifleFireAudioKey = "Assault Rifle_1 Fire";
+        public const string DefaultShotgunFireAudioKey = "Shotgun_1 Fire";
         public const string DefaultConcreteImpactAudioKey = "Impact Concrete";
         public const string DefaultMetalImpactAudioKey = "Impact Metal";
         public const string DefaultWoodImpactAudioKey = "Impact Wood";
@@ -123,6 +137,14 @@ namespace Weapon.Data
         public int maxReserveAmmo;
         public float reloadTime;
         public float range;
+
+        // 换弹数据 普通枪整弹匣 散弹枪逐发装填
+        public WeaponReloadMode reloadMode;
+        public int reloadAmmoPerStep;
+        public float reloadStartTime;
+        public float reloadSingleRoundTime;
+        public float reloadEndTime;
+        public bool canInterruptReloadByFire;
 
         // 攻击结算数据
         public WeaponAttackType attackType;
@@ -204,6 +226,12 @@ namespace Weapon.Data
                 maxReserveAmmo = 48,
                 reloadTime = 1.4f,
                 range = 100f,
+                reloadMode = WeaponReloadMode.Magazine,
+                reloadAmmoPerStep = 12,
+                reloadStartTime = 0f,
+                reloadSingleRoundTime = 1.4f,
+                reloadEndTime = 0f,
+                canInterruptReloadByFire = false,
                 attackType = WeaponAttackType.Hitscan,
                 spreadAngle = 0.6f,
                 pelletCount = 1,
@@ -272,6 +300,12 @@ namespace Weapon.Data
                 maxReserveAmmo = 120,
                 reloadTime = 1.65f,
                 range = 160f,
+                reloadMode = WeaponReloadMode.Magazine,
+                reloadAmmoPerStep = 30,
+                reloadStartTime = 0f,
+                reloadSingleRoundTime = 1.65f,
+                reloadEndTime = 0f,
+                canInterruptReloadByFire = false,
                 attackType = WeaponAttackType.Hitscan,
                 spreadAngle = 0.9f,
                 pelletCount = 1,
@@ -319,6 +353,80 @@ namespace Weapon.Data
                 reloadStateName = "Reload",
                 fireTransition = 0.03f,
                 reloadTransition = 0.08f,
+                equipTransition = 0.1f
+            };
+        }
+
+        /// <summary>
+        /// 默认散弹枪
+        /// </summary>
+        /// <returns></returns>
+        public static WeaponConfig CreateDefaultShotgun()
+        {
+            return new WeaponConfig
+            {
+                weaponId = 3,
+                weaponName = "Default Shotgun",
+                fireMode = WeaponFireMode.SemiAuto,
+                damage = 8f,
+                fireInterval = 0.72f,
+                magazineSize = 6,
+                maxReserveAmmo = 36,
+                reloadTime = 2.35f,
+                range = 70f,
+                reloadMode = WeaponReloadMode.SingleRound,
+                reloadAmmoPerStep = 1,
+                reloadStartTime = 0f,
+                reloadSingleRoundTime = 0.72f,
+                reloadEndTime = 0f,
+                canInterruptReloadByFire = true,
+                attackType = WeaponAttackType.MultiHitscan,
+                spreadAngle = 5.5f,
+                pelletCount = 8,
+                maxPenetrationCount = 0,
+                penetrationDamageMultiplier = 0.5f,
+                projectilePrefabKey = string.Empty,
+                projectileSpeed = 0f,
+                projectileLifeTime = 0f,
+                explosionRadius = 0f,
+                explosionFalloff = 1f,
+                hitLayerMask = Physics.DefaultRaycastLayers,
+                tracerPrefabKey = string.Empty,
+                impactEffectKey = DefaultImpactEffectKey,
+                muzzleFlashEffectKey = DefaultShotgunMuzzleFlashEffectKey,
+                muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
+                fireAudioKey = DefaultShotgunFireAudioKey,
+                fireVolume = DefaultFireVolume,
+                firePitchRandom = DefaultFirePitchRandom,
+                fireAudioCooldown = DefaultFireAudioCooldown,
+                fireFeedbackIntensity = 1.25f,
+                defaultImpactEffectKey = DefaultImpactEffectKey,
+                hitSurfaceFeedbacks = CreateDefaultHitSurfaceFeedbacks(),
+                crosshairSize = DefaultShotgunCrosshairSize,
+                crosshairMinSprayAmount = DefaultCrosshairMinSprayAmount,
+                crosshairSpreadScale = DefaultShotgunCrosshairSpreadScale,
+                crosshairFireKickAmount = DefaultShotgunCrosshairFireKickAmount,
+                crosshairFireKickDecaySpeed = DefaultShotgunCrosshairFireKickDecaySpeed,
+                recoilPitch = -2.4f,
+                recoilYaw = 0.9f,
+                viewRecoilPosition = new Vector3(0f, -0.025f, -0.12f),
+                viewRecoilRotation = new Vector3(-8f, 2f, 0f),
+                viewRecoilReturnSpeed = 13f,
+                aimInSpeed = 8f,
+                aimOutSpeed = 12f,
+                aimCameraFov = 45f,
+                aimViewPositionOffset = new Vector3(-0.035f, 0.055f, 0.02f),
+                aimViewRotationOffset = Vector3.zero,
+                useAimLocalPose = true,
+                aimLocalPosition = new Vector3(-0.04f, -0.06f, 0.3193f),
+                aimLocalEulerAngles = new Vector3(0.142f, 1.735f, -4.676f),
+                aimLocalScale = new Vector3(0.872284f, 0.872284f, 0.872284f),
+                idleStateName = "Idle",
+                equipStateName = "Take",
+                fireStateName = "Fire",
+                reloadStateName = "Reload",
+                fireTransition = 0.05f,
+                reloadTransition = 0.1f,
                 equipTransition = 0.1f
             };
         }
@@ -376,6 +484,7 @@ namespace Weapon.Data
                 explosionFalloff = 1f;
             }
 
+            ApplyMissingReloadDefaults();
             if (hitLayerMask.value == 0)
             {
                 hitLayerMask = Physics.DefaultRaycastLayers;
@@ -383,6 +492,33 @@ namespace Weapon.Data
 
             ApplyMissingCombatFeedbackDefaults();
             ApplyMissingCrosshairDefaults();
+        }
+
+        private void ApplyMissingReloadDefaults()
+        {
+            if (reloadMode == WeaponReloadMode.SingleRound)
+            {
+                if (reloadAmmoPerStep <= 0)
+                {
+                    reloadAmmoPerStep = 1;
+                }
+
+                if (reloadSingleRoundTime <= 0f)
+                {
+                    reloadSingleRoundTime = reloadTime > 0f ? reloadTime : 0.6f;
+                }
+
+                reloadStartTime = Mathf.Max(0f, reloadStartTime);
+                reloadEndTime = Mathf.Max(0f, reloadEndTime);
+                return;
+            }
+
+            reloadMode = WeaponReloadMode.Magazine;
+            reloadAmmoPerStep = magazineSize;
+            reloadStartTime = 0f;
+            reloadSingleRoundTime = reloadTime > 0f ? reloadTime : 1f;
+            reloadEndTime = 0f;
+            canInterruptReloadByFire = false;
         }
 
         private void ApplyMissingCombatFeedbackDefaults()
@@ -448,6 +584,11 @@ namespace Weapon.Data
 
         private string ResolveDefaultFireAudioKey()
         {
+            if (weaponId == 3 || attackType == WeaponAttackType.MultiHitscan)
+            {
+                return DefaultShotgunFireAudioKey;
+            }
+
             if (weaponId == 2 || fireMode == WeaponFireMode.FullAuto)
             {
                 return DefaultAssaultRifleFireAudioKey;
@@ -458,6 +599,11 @@ namespace Weapon.Data
 
         private string ResolveDefaultMuzzleFlashEffectKey()
         {
+            if (weaponId == 3 || attackType == WeaponAttackType.MultiHitscan)
+            {
+                return DefaultShotgunMuzzleFlashEffectKey;
+            }
+
             if (weaponId == 2 || fireMode == WeaponFireMode.FullAuto)
             {
                 return DefaultAssaultRifleMuzzleFlashEffectKey;
@@ -519,6 +665,15 @@ namespace Weapon.Data
                 return;
             }
 
+            if (weaponId == 3 || attackType == WeaponAttackType.MultiHitscan)
+            {
+                size = DefaultShotgunCrosshairSize;
+                spreadScale = DefaultShotgunCrosshairSpreadScale;
+                fireKickAmount = DefaultShotgunCrosshairFireKickAmount;
+                fireKickDecaySpeed = DefaultShotgunCrosshairFireKickDecaySpeed;
+                return;
+            }
+
             if (weaponId == 1 || fireMode == WeaponFireMode.SemiAuto)
             {
                 size = DefaultPistolCrosshairSize;
@@ -565,9 +720,9 @@ namespace Weapon.Data
             switch (surfaceType)
             {
                 case HitSurfaceType.Metal:
-                    return "Metal Impact";
+                    return "KriptoFX Metal Impact";
                 case HitSurfaceType.Wood:
-                    return "Wood Impact";
+                    return "KriptoFX Wood Impact";
                 case HitSurfaceType.Flesh:
                     return "Blood Impact";
                 case HitSurfaceType.Glass:

@@ -26,6 +26,8 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 1
     motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -93,14 +95,7 @@ ModelImporter:
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
-      events:
-      - time: 0.44398844
-        functionName: ShakeCameras
-        data: 
-        objectReferenceParameter: {instanceID: 0}
-        floatParameter: 0.5
-        intParameter: 0
-        messageOptions: 0
+      events: []
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}
@@ -129,21 +124,7 @@ ModelImporter:
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
-      events:
-      - time: 0.61442596
-        functionName: Reload
-        data: 
-        objectReferenceParameter: {instanceID: 0}
-        floatParameter: 0
-        intParameter: 1
-        messageOptions: 0
-      - time: 0.66098815
-        functionName: ShakeCameras
-        data: 
-        objectReferenceParameter: {instanceID: 0}
-        floatParameter: 0.3
-        intParameter: 0
-        messageOptions: 0
+      events: []
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}
@@ -172,14 +153,7 @@ ModelImporter:
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
-      events:
-      - time: 0.72017825
-        functionName: ShakeCameras
-        data: 
-        objectReferenceParameter: {instanceID: 0}
-        floatParameter: 0.3
-        intParameter: 0
-        messageOptions: 0
+      events: []
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}
@@ -208,14 +182,7 @@ ModelImporter:
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
-      events:
-      - time: 0.7369006
-        functionName: ShakeCameras
-        data: 
-        objectReferenceParameter: {instanceID: 0}
-        floatParameter: 0.3
-        intParameter: 0
-        messageOptions: 0
+      events: []
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}
@@ -783,10 +750,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 290322
-  packageName: FPS Framework Pro 2.0
-  packageVersion: 2.2.0
-  assetPath: Assets/Akila/FPS Framework/Art/Models/Weapons/Shotgun_1/Shotgun_1 Animated.fbx
-  uploadId: 855696
