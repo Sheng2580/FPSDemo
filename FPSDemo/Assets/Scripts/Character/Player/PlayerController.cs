@@ -70,6 +70,7 @@ public class PlayerController : CharacterBase<PlayerModel>
     {
         base.Update();
         UpdateJumpTimers();
+        TryStartBufferedJump();
     }
 
     /// <summary>
@@ -154,6 +155,32 @@ public class PlayerController : CharacterBase<PlayerModel>
         _coyoteTimer = 0f;
     }
 
+    public bool TryStartBufferedJump()
+    {
+        if (!HasBufferedJump || (!IsGrounded && !CanUseCoyoteJump))
+        {
+            return false;
+        }
+
+        if (Motor == null)
+        {
+            return false;
+        }
+
+        float jumpHeight = Stats != null
+            ? Stats.JumpHeight
+            : PlayerBaseConfig.CreateDefault().jumpHeight;
+
+        ConsumeJumpBuffer();
+        ClearCoyoteTimer();
+
+        // 跳跃速度由高度和重力反推 保证配置的是高度不是随手速度
+        float jumpVelocity = Mathf.Sqrt(2f * Gravity * jumpHeight);
+        Motor.Jump(jumpVelocity);
+        ChangeState(PlayerStateType.Jump);
+        return true;
+    }
+
     private void UpdateJumpTimers()
     {
         if (Stats == null)
@@ -165,7 +192,7 @@ public class PlayerController : CharacterBase<PlayerModel>
             }
         }
 
-        if (GameInputManger.Instance != null && GameInputManger.Instance.Jump)
+        if (GameInputManger.Instance != null && GameInputManger.Instance.ConsumeJumpInput())
         {
             _jumpBufferTimer = Stats.JumpBufferTime;
         }

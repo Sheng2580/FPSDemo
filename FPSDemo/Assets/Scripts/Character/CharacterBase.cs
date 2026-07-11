@@ -76,6 +76,11 @@ public abstract class CharacterBase : MonoBehaviour, IStateMachineOwner
     /// <returns></returns>
     protected virtual bool GroundedDetection()
     {
+        if (characterController != null && characterController.isGrounded)
+        {
+            return true;
+        }
+
         return Physics.CheckSphere(
             GetGroundDetectionPosition(),
             groundDetectionRadius,
@@ -90,6 +95,14 @@ public abstract class CharacterBase : MonoBehaviour, IStateMachineOwner
     /// <returns></returns>
     protected Vector3 GetGroundDetectionPosition()
     {
+        if (characterController != null)
+        {
+            Bounds controllerBounds = characterController.bounds;
+            Vector3 center = controllerBounds.center;
+            // 地面检测点按 CharacterController 底部计算 避免玩家根节点高度导致检测球悬空
+            return new Vector3(center.x, controllerBounds.min.y + groundDetectionOffset, center.z);
+        }
+
         return transform.position + Vector3.down * groundDetectionOffset;
     }
 

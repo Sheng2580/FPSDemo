@@ -35,7 +35,8 @@ public enum GameEvent
     EnemyWaveCleared,
     WeaponFired,
     WeaponHit,
-    DamageResolved
+    DamageResolved,
+    MobileJumpPressed
 }
 
 public readonly struct PlayerWeaponChangedEventData

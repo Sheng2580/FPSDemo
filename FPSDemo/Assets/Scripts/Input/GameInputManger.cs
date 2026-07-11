@@ -12,9 +12,12 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    private Vector2 _touchLookDelta;
    private bool _isMobileFireHeld;
    private bool _isMobileSightHeld;
+   [SerializeField] private float mobileJumpInputBufferTime = 0.18f;
    private int _mobileFirePressedFrame = -1;
    private int _mobileFireReleasedFrame = -1;
    private int _mobileReloadPressedFrame = -1;
+   private int _mobileJumpPressedFrame = -1;
+   private float _mobileJumpInputExpireTime = -1f;
    private int _mobileSightPressedFrame = -1;
    private int _mobileSightReleasedFrame = -1;
    public bool IsPlayerInputEnabled { get; private set; } = true;
@@ -43,6 +46,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
                              && (UnityEngine.Input.GetKeyDown(KeyCode.R)
                                  || MobileReloadPressed);
    public bool MobileReloadPressed => _mobileReloadPressedFrame == Time.frameCount;
+   public bool MobileJumpPressed => HasBufferedMobileJumpInput();
    public bool AimDown => IsPlayerInputEnabled
                           && (DirectAimDown
                               || MobileSightPressed);
@@ -77,7 +81,9 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    public bool F => _gameInputActions.GameInput.F.triggered;
    public bool Tab => _gameInputActions.GameInput.Tab.triggered;
    public bool Skill => _gameInputActions.GameInput.Skill.triggered;
-   public bool Jump => _gameInputActions.GameInput.Jump.triggered;
+   public bool Jump => IsPlayerInputEnabled
+                       && (_gameInputActions.GameInput.Jump.triggered
+                           || MobileJumpPressed);
    public bool Slide => _gameInputActions.GameInput.Slide.triggered;
    public bool LockCamera => IsPlayerInputEnabled && _gameInputActions.GameInput.lockCamera.WasPressedThisFrame();
    
@@ -100,6 +106,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       EventCenter.Instance.AddEventListener(GameEvent.MobileFireReleased, OnMobileFireReleased);
       EventCenter.Instance.AddEventListener(GameEvent.MobileFireHolding, OnMobileFireHolding);
       EventCenter.Instance.AddEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
+      EventCenter.Instance.AddEventListener(GameEvent.MobileJumpPressed, OnMobileJumpPressed);
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
       EventCenter.Instance.AddEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
@@ -122,6 +129,7 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireReleased, OnMobileFireReleased);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileFireHolding, OnMobileFireHolding);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileReloadPressed, OnMobileReloadPressed);
+      EventCenter.Instance.RemoveEventListener(GameEvent.MobileJumpPressed, OnMobileJumpPressed);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightPressed, OnMobileSightPressed);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightReleased, OnMobileSightReleased);
       EventCenter.Instance.RemoveEventListener(GameEvent.MobileSightCanceled, OnMobileSightCanceled);
@@ -131,6 +139,28 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    public void SetPlayerInputEnabled(bool isEnabled)
    {
       IsPlayerInputEnabled = isEnabled;
+   }
+
+   public bool ConsumeJumpInput()
+   {
+      if (!IsPlayerInputEnabled)
+      {
+         return false;
+      }
+
+      if (_gameInputActions.GameInput.Jump.triggered)
+      {
+         return true;
+      }
+
+      if (!HasBufferedMobileJumpInput())
+      {
+         return false;
+      }
+
+      // 手机 UI 事件可能晚于玩家 Update 执行 所以跳跃输入需要消费式缓存
+      _mobileJumpInputExpireTime = -1f;
+      return true;
    }
 
    public void SetTouchMovement(Vector2 movement)
@@ -187,6 +217,18 @@ public class GameInputManger : UnitySingleTon<GameInputManger>
    {
       // 记录换弹按下帧
       _mobileReloadPressedFrame = Time.frameCount;
+   }
+
+   private void OnMobileJumpPressed()
+   {
+      // 记录跳跃按下帧
+      _mobileJumpPressedFrame = Time.frameCount;
+      _mobileJumpInputExpireTime = Time.unscaledTime + Mathf.Max(0.05f, mobileJumpInputBufferTime);
+   }
+
+   private bool HasBufferedMobileJumpInput()
+   {
+      return _mobileJumpInputExpireTime >= Time.unscaledTime;
    }
 
    private void OnMobileSightPressed()
