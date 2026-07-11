@@ -70,7 +70,6 @@ namespace Enemy
 
         [Header("场景测试生成")]
         [SerializeField] private bool enableKeyboardSpawnTest = true;
-        [SerializeField] private bool disableAutoSpawnWhenKeyboardTesting = true;
         [SerializeField] private KeyCode singleSpawnKey = KeyCode.S;
         [SerializeField] private bool singleSpawnRequiresShift = true;
         [SerializeField] private KeyCode burstSpawnKey = KeyCode.B;
@@ -120,7 +119,6 @@ namespace Enemy
             EnsurePool();
             CachePlayerTarget();
             CacheSpawnPointsIfNeeded();
-            ApplyKeyboardTestMode();
             LoadWaveConfigsIfNeeded();
             PreloadEnemyPrefabsFromAssetBundle();
         }
@@ -874,16 +872,6 @@ namespace Enemy
 
                 spawnPoints.Add(child);
             }
-        }
-
-        private void ApplyKeyboardTestMode()
-        {
-            if (!enableKeyboardSpawnTest || !disableAutoSpawnWhenKeyboardTesting)
-            {
-                return;
-            }
-
-            autoSpawn = false;
         }
 
         private Transform PickSpawnPoint(string nameKeyword, float clearRadius, float scatterRadius, bool requireClear)
