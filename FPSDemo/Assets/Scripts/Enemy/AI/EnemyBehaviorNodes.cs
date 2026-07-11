@@ -68,6 +68,18 @@ namespace Enemy
         }
     }
 
+    public class HasChaseSlotNode : EnemyConditionNode
+    {
+        public HasChaseSlotNode(EnemyBlackboard blackboard) : base(blackboard)
+        {
+        }
+
+        protected override bool CheckCondition()
+        {
+            return blackboard.hasChaseSlot;
+        }
+    }
+
     public class CanSeeTargetNode : EnemyConditionNode
     {
         public CanSeeTargetNode(EnemyBlackboard blackboard) : base(blackboard)

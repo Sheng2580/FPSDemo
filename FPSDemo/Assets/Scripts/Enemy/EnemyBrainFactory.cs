@@ -33,6 +33,7 @@ namespace Enemy
             root.AddChild(hitSequence);
 
             Sequence attackSequence = new Sequence();
+            attackSequence.AddChild(new HasChaseSlotNode(blackboard));
             attackSequence.AddChild(new IsTargetInAttackRangeNode(blackboard));
             attackSequence.AddChild(new RequestEnemyStateNode(blackboard, EnemyStateType.Attack));
             root.AddChild(attackSequence);

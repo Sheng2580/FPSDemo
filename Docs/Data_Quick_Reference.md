@@ -159,3 +159,17 @@
 - 如果后续新增 `Enemy_ZombieNerd_LOD2.prefab` 或 `Enemy_ZombieBrute_LOD2.prefab` 到 ABRes，必须同步改本表和对应 EnemyConfig 资源。
 - 所有武器表现 key 必须先存在于 `CombatFeedbackResources.asset`，再写入武器配置。
 - 本表是快速读取表，不替代源码和 Unity Inspector。最终运行值以资源文件和 `ApplyMissingDefaults()` 后的运行时数据为准。
+
+## 敌人波次待补数据
+
+后续正式波次需要从“按时间切波”升级为“本波清空后进下一波”，数据层需要补这些字段：
+
+| 字段 | 建议位置 | 用法 |
+| --- | --- | --- |
+| waveTotalSpawnCount | EnemyWaveConfig | 本波总生成数量，用于判断本波是否已经刷完 |
+| clearDelay | EnemyWaveConfig | 本波清空后等待多久进入下一波 |
+| softlockTimeout | EnemyWaveConfig 或 EnemyAIProfile | 单只怪长期不可达后的兜底时间 |
+| stuckTeleportRadius | EnemyWaveConfig 或 EnemyAIProfile | 卡住敌人重新投放到玩家外围的半径 |
+| allowRecycleWhenUnreachable | EnemyWaveConfig | 传送失败时是否允许回池并计入清波 |
+
+当前 `maxActiveAgentCount` 已被控制层临时用作最大追击玩家数量。拿到追击名额的怪直接 Run，没拿到名额的怪 Walk 到玩家外圈徘徊等待。

@@ -230,6 +230,18 @@ namespace Enemy
                 animator);
         }
 
+        protected bool HasAnimationState(string stateName, int layer = 0)
+        {
+            if (string.IsNullOrEmpty(stateName) || !TryGetAnimator(out Animator animator))
+            {
+                return false;
+            }
+
+            string fullPath = BuildStatePath(stateName, layer);
+            return animator.HasState(layer, Animator.StringToHash(fullPath))
+                   || animator.HasState(layer, Animator.StringToHash(stateName));
+        }
+
         protected virtual bool CurrAnimationStateName(string stateName, out float normalizedTime, int layer = 0)
         {
             normalizedTime = 0f;
@@ -337,13 +349,6 @@ namespace Enemy
 
     public class EnemyChaseState : EnemyState
     {
-        private const float RunStartDistance = 9f;
-        private const float RunStopDistance = 6.5f;
-        private const float LocomotionSwitchCooldown = 0.25f;
-
-        private bool _isRunning;
-        private float _nextLocomotionSwitchTime;
-
         public override EnemyStateType StateType => EnemyStateType.Chase;
 
         public EnemyChaseState(EnemyBlackboard blackboard, EnemyMotor motor, EnemyModel model) : base(blackboard, motor, model)
@@ -353,45 +358,36 @@ namespace Enemy
         public override void Enter()
         {
             base.Enter();
-            _isRunning = ShouldStartRunImmediately();
-            _nextLocomotionSwitchTime = Time.time + LocomotionSwitchCooldown;
         }
 
         public override void Tick()
         {
-            bool run = ResolveRunState();
+            bool hasChaseSlot = blackboard.hasChaseSlot;
             if (model != null)
             {
-                PlayAnimation(run ? model.RunStateName : model.WalkStateName, model.LocomotionTransition);
+                if (motor != null && motor.IsTraversingOffMeshLink)
+                {
+                    string linkStateName = HasAnimationState(model.LinkTraverseStateName)
+                        ? model.LinkTraverseStateName
+                        : model.RunStateName;
+                    PlayAnimation(linkStateName, model.LocomotionTransition);
+                }
+                else
+                {
+                    PlayAnimation(hasChaseSlot ? model.RunStateName : model.WalkStateName, model.LocomotionTransition);
+                }
             }
-            motor?.TickChase(blackboard.desiredMoveDirection, run);
+            motor?.TickChase(blackboard.desiredMoveDirection, hasChaseSlot, hasChaseSlot);
         }
 
-        private bool ShouldStartRunImmediately()
+        public override bool CanExitTo(EnemyStateType nextState)
         {
-            return blackboard.performanceTier == EnemyPerformanceTier.Far
-                   || blackboard.sqrDistanceToTarget >= RunStartDistance * RunStartDistance;
-        }
-
-        private bool ResolveRunState()
-        {
-            bool nextRunState = _isRunning
-                ? blackboard.sqrDistanceToTarget > RunStopDistance * RunStopDistance
-                : blackboard.sqrDistanceToTarget >= RunStartDistance * RunStartDistance;
-
-            if (blackboard.performanceTier == EnemyPerformanceTier.Far)
+            if (nextState == EnemyStateType.Dead || nextState == EnemyStateType.Hit)
             {
-                nextRunState = true;
+                return true;
             }
 
-            if (nextRunState == _isRunning || Time.time < _nextLocomotionSwitchTime)
-            {
-                return _isRunning;
-            }
-
-            _isRunning = nextRunState;
-            _nextLocomotionSwitchTime = Time.time + LocomotionSwitchCooldown;
-            return _isRunning;
+            return motor == null || !motor.IsTraversingOffMeshLink;
         }
     }
 

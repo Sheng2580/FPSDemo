@@ -17,11 +17,37 @@ namespace Enemy
         [SerializeField] private float middleDistance = 8f;
         [SerializeField] private float farDistance = 18f;
 
+        [Header("追击散点")]
+        [SerializeField] private float chaseTargetScatterRadius = 2.4f;
+        [SerializeField] private float nearTargetScatterRadius = 0.85f;
+        [SerializeField] private float targetScatterRefreshMinInterval = 1.4f;
+        [SerializeField] private float targetScatterRefreshMaxInterval = 3.2f;
+        [SerializeField] private float avoidanceDirectionWeight = 0.7f;
+
+        [Header("等待包围")]
+        [SerializeField] private float waitAroundRadius = 5.5f;
+        [SerializeField] private float waitAroundRadiusJitter = 1.4f;
+        [SerializeField] private float waitAroundRefreshMinInterval = 1.6f;
+        [SerializeField] private float waitAroundRefreshMaxInterval = 3.8f;
+        [SerializeField] private float waitDestinationReachDistance = 0.65f;
+
         [Header("根运动")]
         [SerializeField] private bool useRootMotion = true;
         [SerializeField] private bool fallbackMoveWhenRootMotionDisabled = true;
         [SerializeField] private float rootMotionSpeedMultiplier = 1f;
         [SerializeField] private float gravity = -20f;
+
+        [Header("导航链接")]
+        [SerializeField] private float offMeshLinkTraverseDuration = 0.55f;
+        [SerializeField] private float offMeshLinkArcHeight = 1.25f;
+        [SerializeField] private float offMeshLinkEndSampleRadius = 1.5f;
+        [SerializeField] private bool debugOffMeshLink;
+
+        [Header("导航约束")]
+        [SerializeField] private bool constrainToNavMesh = true;
+        [SerializeField] private float navMeshClampDistance = 0.9f;
+        [SerializeField] private float navMeshClampMinInterval = 0.08f;
+        [SerializeField] private float navMeshClampHorizontalOffset = 0.28f;
 
         [Header("引用")]
         [SerializeField] private EnemyView view;
@@ -37,8 +63,20 @@ namespace Enemy
         private float _verticalVelocity;
         private float _knockbackRemainingDistance;
         private float _knockbackSpeed;
+        private float _offMeshLinkTimer;
+        private float _nextNavMeshClampTime;
+        private Vector3 _offMeshLinkStart;
+        private Vector3 _offMeshLinkEnd;
+        private Vector3 _lastOffMeshLinkPosition;
+        private Vector3 _targetScatterOffset;
+        private Vector3 _waitAroundOffset;
+        private float _nextTargetScatterRefreshTime;
+        private float _nextWaitAroundRefreshTime;
         private bool _wantsMove;
         private bool _knockbackActive;
+        private bool _isTraversingOffMeshLink;
+
+        public bool IsTraversingOffMeshLink => _isTraversingOffMeshLink;
 
         private void Awake()
         {
@@ -65,6 +103,8 @@ namespace Enemy
             _angularSpeed = Mathf.Max(1f, angularSpeed);
             _stoppingDistance = Mathf.Max(0.1f, stoppingDistance);
             _nextDestinationTime = 0f;
+            RefreshTargetScatterOffset(true);
+            RefreshWaitAroundOffset(true);
 
             ConfigureAgent(acceleration);
             view?.SetRootMotionEnabled(useRootMotion);
@@ -104,7 +144,24 @@ namespace Enemy
 
         public void TickChase(Vector3 desiredDirection, bool run)
         {
-            Vector3 direction = ResolveMoveDirection(desiredDirection);
+            TickChase(desiredDirection, run, true);
+        }
+
+        public void TickChase(Vector3 desiredDirection, bool run, bool pursueTarget)
+        {
+            if (TryTickOffMeshLinkTraversal())
+            {
+                return;
+            }
+
+            Vector3 direction = ResolveMoveDirection(desiredDirection, pursueTarget);
+
+            if (TryBeginOffMeshLinkTraversal())
+            {
+                TickOffMeshLinkTraversal();
+                return;
+            }
+
             _moveDirection = direction;
             _wantsMove = direction.sqrMagnitude > 0.0001f;
 
@@ -136,6 +193,7 @@ namespace Enemy
         {
             _wantsMove = false;
             _moveDirection = Vector3.zero;
+            _isTraversingOffMeshLink = false;
             StopAgentPath(clearPath: false);
         }
 
@@ -146,6 +204,7 @@ namespace Enemy
             _knockbackActive = false;
             _knockbackRemainingDistance = 0f;
             _verticalVelocity = 0f;
+            _isTraversingOffMeshLink = false;
             StopAgentPath(clearPath: true);
         }
 
@@ -169,6 +228,7 @@ namespace Enemy
 
             _wantsMove = false;
             _moveDirection = Vector3.zero;
+            _isTraversingOffMeshLink = false;
             _knockbackDirection = horizontalDirection.normalized;
             _knockbackRemainingDistance = Mathf.Max(0f, distance);
             _knockbackSpeed = _knockbackRemainingDistance / Mathf.Max(0.01f, duration);
@@ -201,7 +261,7 @@ namespace Enemy
 
         public void ReceiveRootMotion(Vector3 deltaPosition, Quaternion deltaRotation)
         {
-            if (!useRootMotion)
+            if (!useRootMotion || _isTraversingOffMeshLink)
             {
                 return;
             }
@@ -213,7 +273,126 @@ namespace Enemy
             SyncAgentPosition();
         }
 
-        private Vector3 ResolveMoveDirection(Vector3 desiredDirection)
+        private bool TryTickOffMeshLinkTraversal()
+        {
+            if (!_isTraversingOffMeshLink)
+            {
+                return false;
+            }
+
+            TickOffMeshLinkTraversal();
+            return true;
+        }
+
+        private bool TryBeginOffMeshLinkTraversal()
+        {
+            if (_isTraversingOffMeshLink || !CanUseNavMeshAgent() || !agent.isOnOffMeshLink)
+            {
+                return false;
+            }
+
+            OffMeshLinkData linkData = agent.currentOffMeshLinkData;
+            if (!linkData.valid)
+            {
+                return false;
+            }
+
+            _offMeshLinkStart = transform.position;
+            _offMeshLinkEnd = ResolveOffMeshLinkEnd(linkData);
+            _lastOffMeshLinkPosition = _offMeshLinkStart;
+            _offMeshLinkTimer = 0f;
+            _verticalVelocity = 0f;
+            _knockbackActive = false;
+            _isTraversingOffMeshLink = true;
+
+            Vector3 linkDirection = _offMeshLinkEnd - _offMeshLinkStart;
+            linkDirection.y = 0f;
+            _moveDirection = linkDirection.sqrMagnitude > 0.0001f ? linkDirection.normalized : transform.forward;
+            _wantsMove = true;
+
+            agent.isStopped = true;
+
+            if (debugOffMeshLink)
+            {
+                Debug.Log(
+                    $"[EnemyMotor] {name} 开始穿越 NavMeshLink Start={_offMeshLinkStart} End={_offMeshLinkEnd}",
+                    this);
+            }
+
+            return true;
+        }
+
+        private Vector3 ResolveOffMeshLinkEnd(OffMeshLinkData linkData)
+        {
+            Vector3 endPosition = linkData.endPos;
+            if (NavMesh.SamplePosition(endPosition, out NavMeshHit hit, offMeshLinkEndSampleRadius, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+
+            return endPosition;
+        }
+
+        private void TickOffMeshLinkTraversal()
+        {
+            if (!_isTraversingOffMeshLink)
+            {
+                return;
+            }
+
+            float duration = Mathf.Max(0.05f, offMeshLinkTraverseDuration);
+            _offMeshLinkTimer += Time.deltaTime;
+            float t = Mathf.Clamp01(_offMeshLinkTimer / duration);
+            float smoothT = Mathf.SmoothStep(0f, 1f, t);
+            Vector3 nextPosition = Vector3.Lerp(_offMeshLinkStart, _offMeshLinkEnd, smoothT);
+            nextPosition.y += Mathf.Sin(smoothT * Mathf.PI) * Mathf.Max(0f, offMeshLinkArcHeight);
+
+            Vector3 motion = nextPosition - _lastOffMeshLinkPosition;
+            if (motion.sqrMagnitude > 0.0000001f)
+            {
+                MoveWithController(motion);
+            }
+
+            _lastOffMeshLinkPosition = transform.position;
+            FaceTarget(_moveDirection);
+
+            if (t < 1f)
+            {
+                return;
+            }
+
+            CompleteOffMeshLinkTraversal();
+        }
+
+        private void CompleteOffMeshLinkTraversal()
+        {
+            Vector3 finishPosition = _offMeshLinkEnd;
+            if (NavMesh.SamplePosition(finishPosition, out NavMeshHit hit, offMeshLinkEndSampleRadius, NavMesh.AllAreas))
+            {
+                finishPosition = hit.position;
+            }
+
+            transform.position = finishPosition;
+            _lastOffMeshLinkPosition = finishPosition;
+            _verticalVelocity = 0f;
+            _isTraversingOffMeshLink = false;
+            _wantsMove = false;
+
+            if (CanUseNavMeshAgent())
+            {
+                agent.Warp(finishPosition);
+                agent.CompleteOffMeshLink();
+                agent.isStopped = false;
+                agent.nextPosition = finishPosition;
+            }
+
+            if (debugOffMeshLink)
+            {
+                Debug.Log($"[EnemyMotor] {name} 完成 NavMeshLink 穿越", this);
+            }
+        }
+
+        private Vector3 ResolveMoveDirection(Vector3 desiredDirection, bool pursueTarget)
         {
             // Agent 不接管 Transform，避免和 CharacterController 争位置
             Vector3 fallbackDirection = desiredDirection;
@@ -222,6 +401,13 @@ namespace Enemy
             if (fallbackDirection.sqrMagnitude > 0.0001f)
             {
                 fallbackDirection.Normalize();
+            }
+
+            if (_target != null && !pursueTarget && !CanUseNavMeshAgent())
+            {
+                Vector3 waitDirection = ResolveWaitAroundDestination() - transform.position;
+                waitDirection.y = 0f;
+                return waitDirection.sqrMagnitude > 0.0001f ? waitDirection.normalized : fallbackDirection;
             }
 
             if (!CanUseNavMeshAgent() || _target == null)
@@ -235,13 +421,64 @@ namespace Enemy
             Vector3 toTarget = _target.position - transform.position;
             toTarget.y = 0f;
             float distanceSqr = toTarget.sqrMagnitude;
+            Vector3 destination = pursueTarget
+                ? ResolveChaseDestination(distanceSqr)
+                : ResolveWaitAroundDestination();
+
+            Vector3 toDestination = destination - transform.position;
+            toDestination.y = 0f;
+            if (!pursueTarget && toDestination.sqrMagnitude <= waitDestinationReachDistance * waitDestinationReachDistance)
+            {
+                RefreshWaitAroundOffset(true);
+                destination = ResolveWaitAroundDestination();
+                toDestination = destination - transform.position;
+                toDestination.y = 0f;
+            }
 
             if (Time.time >= _nextDestinationTime)
             {
                 _nextDestinationTime = Time.time + GetDestinationInterval(distanceSqr);
-                agent.SetDestination(_target.position);
+                agent.SetDestination(destination);
             }
 
+            if (agent.desiredVelocity.sqrMagnitude > 0.0001f)
+            {
+                Vector3 desiredVelocity = agent.desiredVelocity;
+                desiredVelocity.y = 0f;
+                if (desiredVelocity.sqrMagnitude > 0.0001f)
+                {
+                    Vector3 avoidanceDirection = desiredVelocity.normalized;
+                    Vector3 steeringDirection = ResolveSteeringDirection();
+                    if (steeringDirection.sqrMagnitude > 0.0001f)
+                    {
+                        return Vector3.Slerp(
+                            steeringDirection,
+                            avoidanceDirection,
+                            Mathf.Clamp01(avoidanceDirectionWeight)).normalized;
+                    }
+
+                    return avoidanceDirection;
+                }
+            }
+
+            Vector3 steering = ResolveSteeringDirection();
+            if (steering.sqrMagnitude > 0.0001f)
+            {
+                return steering;
+            }
+
+            Vector3 fallbackToDestination = destination - transform.position;
+            fallbackToDestination.y = 0f;
+            if (fallbackToDestination.sqrMagnitude > 0.0001f)
+            {
+                return fallbackToDestination.normalized;
+            }
+
+            return fallbackDirection;
+        }
+
+        private Vector3 ResolveSteeringDirection()
+        {
             Vector3 steering = agent.steeringTarget - transform.position;
             steering.y = 0f;
 
@@ -250,14 +487,84 @@ namespace Enemy
                 return steering.normalized;
             }
 
-            if (agent.desiredVelocity.sqrMagnitude > 0.0001f)
+            return Vector3.zero;
+        }
+
+        private Vector3 ResolveChaseDestination(float distanceSqr)
+        {
+            RefreshTargetScatterOffset(false);
+
+            float distance = Mathf.Sqrt(Mathf.Max(0f, distanceSqr));
+            float farRadius = Mathf.Max(0f, chaseTargetScatterRadius);
+            float nearRadius = Mathf.Max(0f, nearTargetScatterRadius);
+            float radius = distance <= _stoppingDistance + 1f
+                ? nearRadius
+                : Mathf.Lerp(nearRadius, farRadius, Mathf.InverseLerp(_stoppingDistance + 1f, middleDistance, distance));
+
+            Vector3 offset = _targetScatterOffset;
+            offset.y = 0f;
+            if (offset.sqrMagnitude > radius * radius && offset.sqrMagnitude > 0.0001f)
             {
-                Vector3 desiredVelocity = agent.desiredVelocity;
-                desiredVelocity.y = 0f;
-                return desiredVelocity.normalized;
+                offset = offset.normalized * radius;
             }
 
-            return fallbackDirection;
+            return _target.position + offset;
+        }
+
+        private Vector3 ResolveWaitAroundDestination()
+        {
+            RefreshWaitAroundOffset(false);
+
+            if (_target == null)
+            {
+                return transform.position;
+            }
+
+            Vector3 destination = _target.position + _waitAroundOffset;
+            if (NavMesh.SamplePosition(destination, out NavMeshHit hit, Mathf.Max(1f, waitAroundRadiusJitter + 1f), NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+
+            return destination;
+        }
+
+        private void RefreshTargetScatterOffset(bool force)
+        {
+            if (!force && Time.time < _nextTargetScatterRefreshTime)
+            {
+                return;
+            }
+
+            float minRadius = Mathf.Min(nearTargetScatterRadius, chaseTargetScatterRadius);
+            float maxRadius = Mathf.Max(nearTargetScatterRadius, chaseTargetScatterRadius);
+            Vector2 randomOffset = Random.insideUnitCircle.normalized
+                                   * Random.Range(Mathf.Max(0f, minRadius), Mathf.Max(0f, maxRadius));
+            _targetScatterOffset = new Vector3(randomOffset.x, 0f, randomOffset.y);
+            _nextTargetScatterRefreshTime = Time.time + Random.Range(
+                Mathf.Max(0.1f, targetScatterRefreshMinInterval),
+                Mathf.Max(targetScatterRefreshMinInterval, targetScatterRefreshMaxInterval));
+        }
+
+        private void RefreshWaitAroundOffset(bool force)
+        {
+            if (!force && Time.time < _nextWaitAroundRefreshTime && _waitAroundOffset.sqrMagnitude > 0.0001f)
+            {
+                return;
+            }
+
+            Vector2 direction = Random.insideUnitCircle;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                direction = Vector2.right;
+            }
+
+            direction.Normalize();
+            float radius = Mathf.Max(0.5f, waitAroundRadius + Random.Range(-waitAroundRadiusJitter, waitAroundRadiusJitter));
+            _waitAroundOffset = new Vector3(direction.x * radius, 0f, direction.y * radius);
+            _nextWaitAroundRefreshTime = Time.time + Random.Range(
+                Mathf.Max(0.1f, waitAroundRefreshMinInterval),
+                Mathf.Max(waitAroundRefreshMinInterval, waitAroundRefreshMaxInterval));
         }
 
         private void ApplyFallbackMove(Vector3 direction)
@@ -342,10 +649,40 @@ namespace Enemy
 
         private void SyncAgentPosition()
         {
+            if (!_isTraversingOffMeshLink)
+            {
+                ClampToNavMeshIfNeeded();
+            }
+
             if (agent != null && agent.enabled && agent.isOnNavMesh)
             {
                 agent.nextPosition = transform.position;
             }
+        }
+
+        private void ClampToNavMeshIfNeeded()
+        {
+            if (!constrainToNavMesh || Time.time < _nextNavMeshClampTime)
+            {
+                return;
+            }
+
+            _nextNavMeshClampTime = Time.time + Mathf.Max(0.02f, navMeshClampMinInterval);
+
+            if (!NavMesh.SamplePosition(transform.position, out NavMeshHit hit, navMeshClampDistance, NavMesh.AllAreas))
+            {
+                return;
+            }
+
+            Vector3 horizontalOffset = hit.position - transform.position;
+            horizontalOffset.y = 0f;
+            if (horizontalOffset.sqrMagnitude < navMeshClampHorizontalOffset * navMeshClampHorizontalOffset)
+            {
+                return;
+            }
+
+            // 根运动可能把身体带到 NavMesh 边缘外，这里只轻微拉回水平位置
+            transform.position = new Vector3(hit.position.x, transform.position.y, hit.position.z);
         }
 
         private float GetDestinationInterval(float distanceSqr)
@@ -384,6 +721,10 @@ namespace Enemy
             agent.stoppingDistance = _stoppingDistance;
             agent.updatePosition = false;
             agent.updateRotation = false;
+            agent.autoTraverseOffMeshLink = false;
+            agent.autoRepath = true;
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.GoodQualityObstacleAvoidance;
+            agent.avoidancePriority = Random.Range(35, 75);
 
             if (!TryPlaceAgentOnNavMesh())
             {

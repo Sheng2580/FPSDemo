@@ -204,6 +204,12 @@ namespace Enemy
             ApplyPerformanceTier(tier);
         }
 
+        public void SetChaseSlot(bool hasSlot, int slotRank)
+        {
+            _blackboard.hasChaseSlot = hasSlot;
+            _blackboard.chaseSlotRank = hasSlot ? slotRank : -1;
+        }
+
         private void ApplyPerformanceTier(EnemyPerformanceTier tier)
         {
             if (_aiProfile == null || motor == null)

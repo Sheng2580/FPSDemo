@@ -326,3 +326,90 @@ sequenceDiagram
 4. 最后看 `[EnemyAnim]`
 
 不要先改动画，先确认数据流有没有走通。
+
+## 13. 波次推进和大量怪追击架构
+
+### 13.1 正式波次推进目标
+
+正式肉鸽刷怪不再长期依赖纯时间切波。后续目标是当前波次怪物清空后，再进入下一波。
+
+```mermaid
+flowchart LR
+    WaveStart["WaveStart\n读取当前波次"] --> SpawnLoop["SpawnLoop\n按刷新间隔和上限生成"]
+    SpawnLoop --> AliveCheck["AliveCheck\n统计本波已生成和存活"]
+    AliveCheck --> ClearJudge{"本波是否清空"}
+    ClearJudge -- 否 --> SpawnLoop
+    ClearJudge -- 是 --> ClearDelay["ClearDelay\n短暂停顿或奖励"]
+    ClearDelay --> NextWave["NextWave\n进入下一波"]
+```
+
+控制层需要的数据字段：
+
+- `waveTotalSpawnCount`：本波总生成数量
+- `clearDelay`：清波后的等待时间
+- `softlockTimeout`：单只怪长时间不可达时的兜底时间
+- `stuckTeleportRadius`：卡住后重新投放到玩家外围的半径
+- `allowRecycleWhenUnreachable`：不可达时是否允许直接回池并计入清波
+
+当前数据层已有 `sceneMaxEnemyCount`、`maxActiveAgentCount`、`maxAttackersCount`，但还缺少本波总数量和清波条件，所以当前代码仍保留时间波次和测试刷怪。
+
+### 13.2 追击名额和绕圈等待
+
+大量敌人同屏时，不能让所有敌人都直接压到玩家身上。
+
+```mermaid
+flowchart TB
+    Scheduler["EnemyAIScheduler"] --> Sort["按离玩家距离排序"]
+    Sort --> Slot["分配追击名额\nmaxActiveAgentCount"]
+    Slot --> HasSlot["hasChaseSlot = true"]
+    Slot --> NoSlot["hasChaseSlot = false"]
+    HasSlot --> Run["ChaseState 播放 Run\n直接追玩家"]
+    HasSlot --> Attack["进入攻击距离后允许 Attack"]
+    NoSlot --> Walk["ChaseState 播放 Walk\n走到玩家外围点"]
+    NoSlot --> Wait["绕玩家徘徊等待下一次名额刷新"]
+```
+
+当前控制层规则：
+
+- 有追击名额的敌人直接 Run，不再按距离切 Walk
+- 没有追击名额的敌人 Walk 到玩家外圈随机点，形成徘徊等待
+- 没有追击名额的敌人即使离玩家很近，也不会进入 Attack
+- 追击名额按距离优先给离玩家近的敌人，后续可以加入 `attackPriority`
+
+### 13.3 行为树距离分层
+
+行为树更新频率继续由 `EnemyAIScheduler` 控制。
+
+```mermaid
+flowchart LR
+    Enemy["EnemyBrain"] --> Distance["读取 sqrDistanceToTarget"]
+    Distance --> Near["Near\n高频决策"]
+    Distance --> Mid["Mid\n中频决策"]
+    Distance --> Far["Far\n低频决策"]
+    Distance --> Sleep["Sleep\n极低频决策"]
+```
+
+分层只影响思考频率和性能策略，不再直接决定 Walk 或 Run。
+
+### 13.4 防断波方案
+
+如果一只怪被地形卡住，不能让玩家找不到怪而导致下一波永远不刷。
+
+建议后续做三层兜底：
+
+1. `EnemyMotor` 记录一段时间内到玩家的距离变化和路径状态
+2. `EnemySpawnManager` 维护本波敌人列表，发现超时不可达敌人后触发兜底
+3. 兜底优先尝试传送到玩家外围可达 NavMesh 点，失败后回池并计入本波清理
+
+```mermaid
+flowchart TB
+    EnemyMove["敌人移动采样"] --> StuckJudge{"距离长期不变\n或路径不可达"}
+    StuckJudge -- 否 --> Normal["继续正常追击"]
+    StuckJudge -- 是 --> TeleportTry["尝试传送到玩家外围可达点"]
+    TeleportTry --> TeleportOk{"传送成功"}
+    TeleportOk -- 是 --> Resume["继续追击"]
+    TeleportOk -- 否 --> Recycle["回池并标记本波已处理"]
+    Recycle --> WaveCheck["触发清波检查"]
+```
+
+这个机制必须保留 Debug 日志，例如 `[EnemySoftlock]`，方便测试场景烘焙和 NavMeshLink 时定位问题。

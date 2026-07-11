@@ -20,6 +20,8 @@ namespace Enemy
         public int enemyId;
         public string enemyName;
         public int goldReward;
+        public int maxChaseEnemyCount = 12;
+        public int maxAttackersCount = 3;
 
         public float maxHealth;
         public float moveSpeed;
@@ -30,6 +32,7 @@ namespace Enemy
         public float attackInterval;
         public float attackHitDelay;
         public float detectionRange = 40f;
+        public bool alwaysKnowTarget = true;
 
         public Vector3 targetPosition;
         public Vector3 toTarget;
@@ -58,6 +61,8 @@ namespace Enemy
         public EnemyPerformanceTier performanceTier = EnemyPerformanceTier.Near;
         public float nextThinkTime;
         public float lastThinkTime;
+        public bool hasChaseSlot = true;
+        public int chaseSlotRank = -1;
 
         public void Init(
             EnemyController newController,
@@ -80,6 +85,8 @@ namespace Enemy
             enemyId = definition.enemyId;
             enemyName = definition.enemyName;
             goldReward = Mathf.Max(0, definition.goldReward);
+            maxChaseEnemyCount = 12;
+            maxAttackersCount = 3;
 
             maxHealth = Mathf.Max(1f, definition.maxHealth);
             moveSpeed = Mathf.Max(0.1f, definition.moveSpeed);
@@ -102,6 +109,8 @@ namespace Enemy
             performanceTier = EnemyPerformanceTier.Near;
             nextThinkTime = 0f;
             lastThinkTime = 0f;
+            hasChaseSlot = true;
+            chaseSlotRank = -1;
 
             RefreshPerception();
         }
@@ -127,6 +136,8 @@ namespace Enemy
             enemyId = runtimeStats.enemyId;
             enemyName = runtimeStats.enemyName;
             goldReward = Mathf.Max(0, runtimeStats.goldReward);
+            maxChaseEnemyCount = Mathf.Max(0, runtimeStats.maxActiveAgentCount);
+            maxAttackersCount = Mathf.Max(1, runtimeStats.maxAttackersCount);
 
             maxHealth = Mathf.Max(1f, runtimeStats.maxHealth);
             moveSpeed = Mathf.Max(0.1f, runtimeStats.moveSpeed);
@@ -150,6 +161,8 @@ namespace Enemy
             performanceTier = EnemyPerformanceTier.Near;
             nextThinkTime = 0f;
             lastThinkTime = 0f;
+            hasChaseSlot = true;
+            chaseSlotRank = -1;
 
             RefreshPerception();
         }
@@ -180,7 +193,7 @@ namespace Enemy
             float attackDistanceValue = attackDistance;
             float detectionRangeValue = detectionRange;
 
-            canSeeTarget = sqrDistanceToTarget <= detectionRangeValue * detectionRangeValue;
+            canSeeTarget = alwaysKnowTarget || sqrDistanceToTarget <= detectionRangeValue * detectionRangeValue;
             isTargetInAttackRange = sqrDistanceToTarget <= attackDistanceValue * attackDistanceValue;
 
             if (toTarget.sqrMagnitude > 0.0001f)
@@ -249,6 +262,8 @@ namespace Enemy
             ClearHitStun();
             currentState = EnemyStateType.None;
             performanceTier = EnemyPerformanceTier.Sleep;
+            hasChaseSlot = false;
+            chaseSlotRank = -1;
         }
     }
 }

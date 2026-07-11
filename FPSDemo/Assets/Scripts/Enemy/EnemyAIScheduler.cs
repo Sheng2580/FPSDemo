@@ -11,6 +11,10 @@ namespace Enemy
         [Header("调度预算")]
         [SerializeField] private int maxDecisionTicksPerFrame = 8;
 
+        [Header("追击名额")]
+        [SerializeField] private int fallbackMaxChaseEnemyCount = 12;
+        [SerializeField] private float chaseSlotRefreshInterval = 0.25f;
+
         [Header("距离分层")]
         [SerializeField] private float nearDistance = 10f;
         [SerializeField] private float midDistance = 22f;
@@ -24,7 +28,9 @@ namespace Enemy
 
         private static EnemyAIScheduler _instance;
         private readonly List<EnemyBrain> _brains = new List<EnemyBrain>();
+        private readonly List<EnemyBrain> _chaseSlotCandidates = new List<EnemyBrain>();
         private int _cursor;
+        private float _nextChaseSlotRefreshTime;
 
         public static EnemyAIScheduler Instance
         {
@@ -60,6 +66,7 @@ namespace Enemy
 
         private void Update()
         {
+            TickChaseSlots();
             TickBrains();
         }
 
@@ -149,6 +156,79 @@ namespace Enemy
                 brain.TickDecision();
                 tickedCount++;
             }
+        }
+
+        private void TickChaseSlots()
+        {
+            if (_brains.Count == 0 || Time.time < _nextChaseSlotRefreshTime)
+            {
+                return;
+            }
+
+            _nextChaseSlotRefreshTime = Time.time + Mathf.Max(0.05f, chaseSlotRefreshInterval);
+            _chaseSlotCandidates.Clear();
+
+            for (int i = 0; i < _brains.Count; i++)
+            {
+                EnemyBrain brain = _brains[i];
+                if (brain == null || !brain.IsActive || brain.Blackboard == null || brain.Blackboard.isDead)
+                {
+                    continue;
+                }
+
+                _chaseSlotCandidates.Add(brain);
+            }
+
+            int maxChaseSlots = ResolveMaxChaseSlots();
+            _chaseSlotCandidates.Sort(CompareChaseSlotCandidate);
+
+            for (int i = 0; i < _chaseSlotCandidates.Count; i++)
+            {
+                bool hasSlot = i < maxChaseSlots;
+                _chaseSlotCandidates[i].SetChaseSlot(hasSlot, hasSlot ? i : -1);
+            }
+        }
+
+        private int ResolveMaxChaseSlots()
+        {
+            int result = Mathf.Max(0, fallbackMaxChaseEnemyCount);
+            bool hasRuntimeLimit = false;
+
+            for (int i = 0; i < _chaseSlotCandidates.Count; i++)
+            {
+                EnemyBlackboard blackboard = _chaseSlotCandidates[i].Blackboard;
+                if (blackboard == null || blackboard.maxChaseEnemyCount <= 0)
+                {
+                    continue;
+                }
+
+                result = hasRuntimeLimit
+                    ? Mathf.Min(result, blackboard.maxChaseEnemyCount)
+                    : blackboard.maxChaseEnemyCount;
+                hasRuntimeLimit = true;
+            }
+
+            return Mathf.Clamp(result, 0, _chaseSlotCandidates.Count);
+        }
+
+        private static int CompareChaseSlotCandidate(EnemyBrain left, EnemyBrain right)
+        {
+            if (left == right)
+            {
+                return 0;
+            }
+
+            if (left == null)
+            {
+                return 1;
+            }
+
+            if (right == null)
+            {
+                return -1;
+            }
+
+            return left.Blackboard.sqrDistanceToTarget.CompareTo(right.Blackboard.sqrDistanceToTarget);
         }
 
         private EnemyPerformanceTier ResolveTier(EnemyBrain brain)
