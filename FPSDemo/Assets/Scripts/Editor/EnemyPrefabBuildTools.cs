@@ -6,32 +6,70 @@ using UnityEngine.AI;
 
 public static class EnemyPrefabBuildTools
 {
-    private const string SourcePrefabPath = "Assets/Knife/Zombie Collection/Zombie Skeleton/Prefabs/Zombie Skeleton OneHanded.prefab";
     private const string OutputFolderPath = "Assets/Art/ABRes/Enemies/Prefabs";
-    private const string OutputPrefabPath = OutputFolderPath + "/Enemy_ZombieSkeleton_LOD2.prefab";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
+
+    private static readonly EnemyPrefabDefinition SkeletonDefinition = new EnemyPrefabDefinition(
+        "Assets/Knife/Zombie Collection/Zombie Skeleton/Prefabs/Zombie Skeleton OneHanded.prefab",
+        "Enemy_ZombieSkeleton_LOD2",
+        1001,
+        "Zombie Skeleton OneHanded",
+        "ZombieSkeletonOneHanded",
+        "ZombieSkeleton_OneHanded",
+        100f,
+        2.2f,
+        10f,
+        1.2f,
+        1);
+
+    private static readonly EnemyPrefabDefinition[] CommonEnemyDefinitions =
+    {
+        SkeletonDefinition,
+        new EnemyPrefabDefinition(
+            "Assets/Knife/Zombie Collection/Zombie Nerd/Prefabs/Zombie Nerd OneHanded.prefab",
+            "Enemy_ZombieNerd_LOD2",
+            1002,
+            "Zombie Nerd OneHanded",
+            "ZombieNerdOneHanded",
+            "ZombieNerd_OneHanded",
+            80f,
+            2.5f,
+            8f,
+            1.05f,
+            1),
+        new EnemyPrefabDefinition(
+            "Assets/Knife/Zombie Collection/Zombie Old Crone/Prefabs/ZombieOldCrone OneHanded.prefab",
+            "Enemy_ZombieOldCrone_LOD2",
+            1003,
+            "Zombie Old Crone OneHanded",
+            "ZombieOldCroneOneHanded",
+            "ZombieOldCrone_OneHanded",
+            140f,
+            1.8f,
+            14f,
+            1.35f,
+            2)
+    };
 
     [MenuItem("FPSDemo/Enemy/生成低模骷髅僵尸 Prefab")]
     public static void GenerateLowLodZombieSkeleton()
     {
-        EnsureFolder("Assets/Art", "ABRes");
-        EnsureFolder("Assets/Art/ABRes", "Enemies");
-        EnsureFolder("Assets/Art/ABRes/Enemies", "Prefabs");
+        EnsureOutputFolder();
+        GenerateLowLodEnemyPrefab(SkeletonDefinition);
 
-        GameObject root = PrefabUtility.LoadPrefabContents(SourcePrefabPath);
-        try
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+    }
+
+    [MenuItem("FPSDemo/Enemy/生成普通敌人低模 Prefabs")]
+    public static void GenerateCommonLowLodEnemyPrefabs()
+    {
+        EnsureOutputFolder();
+
+        for (int i = 0; i < CommonEnemyDefinitions.Length; i++)
         {
-            root.name = "Enemy_ZombieSkeleton_LOD2";
-            RemoveHighLodRenderers(root);
-            ConfigureRootComponents(root);
-            EnsureHitBoxes(root);
-            PrefabUtility.SaveAsPrefabAsset(root, OutputPrefabPath);
-            SetAssetBundleName(OutputPrefabPath, EnemyPrefabBundleName);
-        }
-        finally
-        {
-            PrefabUtility.UnloadPrefabContents(root);
+            GenerateLowLodEnemyPrefab(CommonEnemyDefinitions[i]);
         }
 
         AssetDatabase.SaveAssets();
@@ -41,10 +79,10 @@ public static class EnemyPrefabBuildTools
     [MenuItem("FPSDemo/Enemy/生成敌人测试场景配置")]
     public static void SetupEnemyPrototypeInSampleScene()
     {
-        GenerateLowLodZombieSkeleton();
+        GenerateCommonLowLodEnemyPrefabs();
 
-        GameObject enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(OutputPrefabPath);
-        if (enemyPrefab == null)
+        GameObject[] enemyPrefabs = LoadGeneratedEnemyPrefabs();
+        if (enemyPrefabs.Length == 0)
         {
             Debug.LogError("低模敌人 Prefab 生成失败");
             return;
@@ -82,11 +120,65 @@ public static class EnemyPrefabBuildTools
         }
 
         Transform player = GameObject.Find("Player")?.transform;
-        ConfigureSpawnManager(spawnManager, pool, player, enemyPrefab);
+        ConfigureSpawnManager(spawnManager, pool, player, enemyPrefabs);
 
         EditorSceneManager.MarkSceneDirty(spawnManager.gameObject.scene);
         EditorSceneManager.SaveOpenScenes();
         AssetDatabase.SaveAssets();
+    }
+
+    private static void GenerateLowLodEnemyPrefab(EnemyPrefabDefinition definition)
+    {
+        if (definition == null)
+        {
+            return;
+        }
+
+        GameObject root = PrefabUtility.LoadPrefabContents(definition.SourcePrefabPath);
+        try
+        {
+            root.name = definition.OutputPrefabName;
+            RemoveHighLodRenderers(root);
+            ConfigureRootComponents(root, definition);
+            EnsureHitBoxes(root);
+            PrefabUtility.SaveAsPrefabAsset(root, definition.OutputPrefabPath);
+            SetAssetBundleName(definition.OutputPrefabPath, EnemyPrefabBundleName);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    private static GameObject[] LoadGeneratedEnemyPrefabs()
+    {
+        GameObject[] prefabs = new GameObject[CommonEnemyDefinitions.Length];
+        int count = 0;
+        for (int i = 0; i < CommonEnemyDefinitions.Length; i++)
+        {
+            EnemyPrefabDefinition definition = CommonEnemyDefinitions[i];
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(definition.OutputPrefabPath);
+            if (prefab == null)
+            {
+                continue;
+            }
+
+            prefabs[count] = prefab;
+            count++;
+        }
+
+        if (count == prefabs.Length)
+        {
+            return prefabs;
+        }
+
+        GameObject[] compactPrefabs = new GameObject[count];
+        for (int i = 0; i < count; i++)
+        {
+            compactPrefabs[i] = prefabs[i];
+        }
+
+        return compactPrefabs;
     }
 
     private static void RemoveHighLodRenderers(GameObject root)
@@ -114,7 +206,7 @@ public static class EnemyPrefabBuildTools
         }
     }
 
-    private static void ConfigureRootComponents(GameObject root)
+    private static void ConfigureRootComponents(GameObject root, EnemyPrefabDefinition definition)
     {
         Animator animator = root.GetComponent<Animator>();
         if (animator != null)
@@ -149,9 +241,9 @@ public static class EnemyPrefabBuildTools
         GameObject animationEventObject = animator != null ? animator.gameObject : root;
         EnemyAnimationEventReceiver animationEventReceiver = GetOrAdd<EnemyAnimationEventReceiver>(animationEventObject);
 
-        SetInt(controller, "enemyId", 1001);
-        SetString(controller, "enemyName", "Zombie Skeleton");
-        SetInt(controller, "goldReward", 1);
+        SetInt(controller, "enemyId", definition.EnemyId);
+        SetString(controller, "enemyName", definition.EnemyName);
+        SetInt(controller, "goldReward", definition.GoldReward);
         SetObject(controller, "health", health);
         SetObject(controller, "motor", motor);
         SetObject(controller, "attack", attack);
@@ -159,12 +251,19 @@ public static class EnemyPrefabBuildTools
         SetObject(controller, "brain", brain);
         SetObject(controller, "stateMachine", stateMachine);
 
-        SetFloat(health, "maxHealth", 100f);
+        SetFloat(health, "maxHealth", definition.MaxHealth);
         SetObject(health, "controller", controller);
         SetObject(health, "view", view);
 
         SetObject(view, "animator", animator);
         SetBool(view, "useRootMotion", true);
+        SetString(view, "idleStateName", definition.AnimationPrefix + "_Idle");
+        SetString(view, "walkStateName", definition.AnimationPrefix + "_Walk");
+        SetString(view, "runStateName", definition.AnimationPrefix + "_Run");
+        SetString(view, "linkTraverseStateName", definition.AnimationPrefix + "_Dodge");
+        SetString(view, "attackStateName", definition.AnimationPrefix + "_Attack_1");
+        SetString(view, "damageStateName", definition.AnimationPrefix + "_Damage");
+        SetString(view, "deathStateName", definition.AnimationPrefix + "_Death");
         SetFloat(view, "locomotionTransition", 0.18f);
         SetFloat(view, "attackTransition", 0.1f);
         SetFloat(view, "hitTransition", 0.14f);
@@ -247,7 +346,7 @@ public static class EnemyPrefabBuildTools
         EnemySpawnManager spawnManager,
         EnemyPool pool,
         Transform player,
-        GameObject enemyPrefab)
+        GameObject[] enemyPrefabs)
     {
         SerializedObject serializedObject = new SerializedObject(spawnManager);
         serializedObject.FindProperty("autoSpawn").boolValue = true;
@@ -262,25 +361,48 @@ public static class EnemyPrefabBuildTools
         serializedObject.FindProperty("loadPrefabsFromAssetBundle").boolValue = true;
         serializedObject.FindProperty("enemyPrefabAssetBundleName").stringValue = EnemyPrefabBundleName;
 
+        SerializedProperty bindings = serializedObject.FindProperty("prefabBindings");
+        bindings.arraySize = enemyPrefabs.Length;
+        for (int i = 0; i < enemyPrefabs.Length; i++)
+        {
+            EnemyPrefabDefinition definition = CommonEnemyDefinitions[i];
+            SerializedProperty binding = bindings.GetArrayElementAtIndex(i);
+            binding.FindPropertyRelative("prefabKey").stringValue = definition.PrefabKey;
+            binding.FindPropertyRelative("prefabResourceKey").stringValue = definition.OutputPrefabName;
+            binding.FindPropertyRelative("prefab").objectReferenceValue = enemyPrefabs[i];
+        }
+
         SerializedProperty definitions = serializedObject.FindProperty("spawnDefinitions");
-        definitions.arraySize = 1;
-        SerializedProperty definition = definitions.GetArrayElementAtIndex(0);
-        definition.FindPropertyRelative("enemyId").intValue = 1001;
-        definition.FindPropertyRelative("enemyName").stringValue = "Zombie Skeleton";
-        definition.FindPropertyRelative("prefabKey").stringValue = "ZombieSkeletonOneHanded";
-        definition.FindPropertyRelative("prefabResourceKey").stringValue = "Enemy_ZombieSkeleton_LOD2";
-        definition.FindPropertyRelative("prefab").objectReferenceValue = enemyPrefab;
-        definition.FindPropertyRelative("weight").floatValue = 100f;
-        definition.FindPropertyRelative("goldReward").intValue = 1;
-        definition.FindPropertyRelative("maxHealth").floatValue = 100f;
-        definition.FindPropertyRelative("moveSpeed").floatValue = 2.2f;
-        definition.FindPropertyRelative("angularSpeed").floatValue = 360f;
-        definition.FindPropertyRelative("acceleration").floatValue = 12f;
-        definition.FindPropertyRelative("attackDamage").floatValue = 10f;
-        definition.FindPropertyRelative("attackDistance").floatValue = 1.4f;
-        definition.FindPropertyRelative("attackInterval").floatValue = 1.2f;
-        definition.FindPropertyRelative("attackHitDelay").floatValue = 0.35f;
+        definitions.arraySize = enemyPrefabs.Length;
+        for (int i = 0; i < enemyPrefabs.Length; i++)
+        {
+            EnemyPrefabDefinition enemyDefinition = CommonEnemyDefinitions[i];
+            SerializedProperty definition = definitions.GetArrayElementAtIndex(i);
+            definition.FindPropertyRelative("enemyId").intValue = enemyDefinition.EnemyId;
+            definition.FindPropertyRelative("enemyName").stringValue = enemyDefinition.EnemyName;
+            definition.FindPropertyRelative("prefabKey").stringValue = enemyDefinition.PrefabKey;
+            definition.FindPropertyRelative("prefabResourceKey").stringValue = enemyDefinition.OutputPrefabName;
+            definition.FindPropertyRelative("prefab").objectReferenceValue = enemyPrefabs[i];
+            definition.FindPropertyRelative("weight").floatValue = 100f;
+            definition.FindPropertyRelative("goldReward").intValue = enemyDefinition.GoldReward;
+            definition.FindPropertyRelative("maxHealth").floatValue = enemyDefinition.MaxHealth;
+            definition.FindPropertyRelative("moveSpeed").floatValue = enemyDefinition.MoveSpeed;
+            definition.FindPropertyRelative("angularSpeed").floatValue = 360f;
+            definition.FindPropertyRelative("acceleration").floatValue = 12f;
+            definition.FindPropertyRelative("attackDamage").floatValue = enemyDefinition.AttackDamage;
+            definition.FindPropertyRelative("attackDistance").floatValue = 1.4f;
+            definition.FindPropertyRelative("attackInterval").floatValue = enemyDefinition.AttackInterval;
+            definition.FindPropertyRelative("attackHitDelay").floatValue = 0.35f;
+        }
+
         serializedObject.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void EnsureOutputFolder()
+    {
+        EnsureFolder("Assets/Art", "ABRes");
+        EnsureFolder("Assets/Art/ABRes", "Enemies");
+        EnsureFolder("Assets/Art/ABRes/Enemies", "Prefabs");
     }
 
     private static T GetOrAdd<T>(GameObject gameObject) where T : Component
@@ -347,5 +469,48 @@ public static class EnemyPrefabBuildTools
         SerializedObject serializedObject = new SerializedObject(target);
         serializedObject.FindProperty(propertyName).enumValueIndex = value;
         serializedObject.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private sealed class EnemyPrefabDefinition
+    {
+        public readonly string SourcePrefabPath;
+        public readonly string OutputPrefabName;
+        public readonly string OutputPrefabPath;
+        public readonly int EnemyId;
+        public readonly string EnemyName;
+        public readonly string PrefabKey;
+        public readonly string AnimationPrefix;
+        public readonly float MaxHealth;
+        public readonly float MoveSpeed;
+        public readonly float AttackDamage;
+        public readonly float AttackInterval;
+        public readonly int GoldReward;
+
+        public EnemyPrefabDefinition(
+            string sourcePrefabPath,
+            string outputPrefabName,
+            int enemyId,
+            string enemyName,
+            string prefabKey,
+            string animationPrefix,
+            float maxHealth,
+            float moveSpeed,
+            float attackDamage,
+            float attackInterval,
+            int goldReward)
+        {
+            SourcePrefabPath = sourcePrefabPath;
+            OutputPrefabName = outputPrefabName;
+            OutputPrefabPath = OutputFolderPath + "/" + outputPrefabName + ".prefab";
+            EnemyId = enemyId;
+            EnemyName = enemyName;
+            PrefabKey = prefabKey;
+            AnimationPrefix = animationPrefix;
+            MaxHealth = maxHealth;
+            MoveSpeed = moveSpeed;
+            AttackDamage = attackDamage;
+            AttackInterval = attackInterval;
+            GoldReward = goldReward;
+        }
     }
 }

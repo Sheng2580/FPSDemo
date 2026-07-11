@@ -10,44 +10,44 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d71f7e0ff26f4262a8333ba1963f1abc, type: 3}
-  m_Name: FastZombieEnemyConfig
+  m_Name: ZombieNerdEnemyConfig
   m_EditorClassIdentifier: 
   config:
     enemyId: 1002
-    enemyName: Fast Zombie
+    enemyName: Zombie Nerd OneHanded
     prefabKey: ZombieNerdOneHanded
-    prefabResourceKey: Enemy_ZombieSkeleton_LOD2
+    prefabResourceKey: Enemy_ZombieNerd_LOD2
     behaviorTreeKey: ZombieMelee
     aiProfileKey: FastZombieAI
     bodyPartTemplateKey: ZombieHumanoidDefault
     dropPoolKey: ZombieBasicDrop
-    maxHealth: 70
-    moveSpeed: 3.2
+    maxHealth: 90
+    moveSpeed: 2.45
     angularSpeed: 420
     acceleration: 16
-    attackDamage: 8
+    attackDamage: 9
     attackDistance: 1.35
-    attackInterval: 0.95
-    attackHitDelay: 0.28
-    detectionRange: 34
+    attackInterval: 1.1
+    attackHitDelay: 0.32
+    detectionRange: 32
     goldReward: 2
     blessingEnergyReward: 1
     experienceReward: 1
-    hitStunDuration: 0.07
-    hitReactionCooldown: 0.16
-    hitKnockbackDistance: 0.06
-    hitKnockbackDuration: 0.05
-    idleStateName: ZombieSkeleton_OneHanded_Idle
-    walkStateName: ZombieSkeleton_OneHanded_Walk
-    runStateName: ZombieSkeleton_OneHanded_Run
-    attackStateName: ZombieSkeleton_OneHanded_Attack_1
-    damageStateName: ZombieSkeleton_OneHanded_Damage
-    deathStateName: ZombieSkeleton_OneHanded_Death
-    locomotionTransition: 0.16
-    attackTransition: 0.09
-    hitTransition: 0.12
-    deathTransition: 0.16
-    recoverTransition: 0.14
+    hitStunDuration: 0.08
+    hitReactionCooldown: 0.18
+    hitKnockbackDistance: 0.07
+    hitKnockbackDuration: 0.055
+    idleStateName: ZombieNerd_OneHanded_Idle
+    walkStateName: ZombieNerd_OneHanded_Walk
+    runStateName: ZombieNerd_OneHanded_Run
+    attackStateName: ZombieNerd_OneHanded_Attack_1
+    damageStateName: ZombieNerd_OneHanded_Damage
+    deathStateName: ZombieNerd_OneHanded_Death
+    locomotionTransition: 0.17
+    attackTransition: 0.1
+    hitTransition: 0.13
+    deathTransition: 0.17
+    recoverTransition: 0.16
     headDamageMultiplier: 2
     bodyDamageMultiplier: 1
     armDamageMultiplier: 0.75

@@ -977,6 +977,7 @@ GameObject:
   - component: {fileID: 8786818420874772762}
   - component: {fileID: 4833866127085456925}
   - component: {fileID: 5034500097071213530}
+  - component: {fileID: 1295462005585997444}
   m_Layer: 0
   m_Name: Enemy_ZombieSkeleton_LOD2
   m_TagString: Untagged
@@ -1019,7 +1020,7 @@ Animator:
   m_GameObject: {fileID: 3722046388269433056}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: 01bfdd949cadcb54d87e5602590e2cce, type: 3}
-  m_Controller: {fileID: 9100000, guid: 18f6315ba564e47fc9d78401d1d307aa, type: 2}
+  m_Controller: {fileID: 9100000, guid: 94e9fa10ee605af41bfbd77df4c8ae6c, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 1
@@ -1091,7 +1092,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyId: 1001
-  enemyName: Zombie Skeleton
+  enemyName: Zombie Skeleton OneHanded
   goldReward: 1
   health: {fileID: 5427489462127059733}
   motor: {fileID: 4833866127085456925}
@@ -1171,6 +1172,7 @@ MonoBehaviour:
   idleStateName: ZombieSkeleton_OneHanded_Idle
   walkStateName: ZombieSkeleton_OneHanded_Walk
   runStateName: ZombieSkeleton_OneHanded_Run
+  linkTraverseStateName: ZombieSkeleton_OneHanded_Dodge
   attackStateName: ZombieSkeleton_OneHanded_Attack_1
   damageStateName: ZombieSkeleton_OneHanded_Damage
   deathStateName: ZombieSkeleton_OneHanded_Death
@@ -1198,10 +1200,28 @@ MonoBehaviour:
   farUpdateInterval: 0.75
   middleDistance: 8
   farDistance: 18
+  chaseTargetScatterRadius: 2.4
+  nearTargetScatterRadius: 0.85
+  targetScatterRefreshMinInterval: 1.4
+  targetScatterRefreshMaxInterval: 3.2
+  avoidanceDirectionWeight: 0.7
+  waitAroundRadius: 5.5
+  waitAroundRadiusJitter: 1.4
+  waitAroundRefreshMinInterval: 1.6
+  waitAroundRefreshMaxInterval: 3.8
+  waitDestinationReachDistance: 0.65
   useRootMotion: 1
   fallbackMoveWhenRootMotionDisabled: 1
   rootMotionSpeedMultiplier: 1
   gravity: -20
+  offMeshLinkTraverseDuration: 0.55
+  offMeshLinkArcHeight: 1.25
+  offMeshLinkEndSampleRadius: 1.5
+  debugOffMeshLink: 0
+  constrainToNavMesh: 1
+  navMeshClampDistance: 0.9
+  navMeshClampMinInterval: 0.08
+  navMeshClampHorizontalOffset: 0.28
   view: {fileID: 8786818420874772762}
 --- !u!114 &5034500097071213530
 MonoBehaviour:
@@ -1220,7 +1240,21 @@ MonoBehaviour:
   attackInterval: 1.2
   attackHitDelay: 0.35
   hitDistancePadding: 0.35
+  useAnimationHitWindow: 1
   view: {fileID: 8786818420874772762}
+--- !u!114 &1295462005585997444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3722046388269433056}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1a7cc751dfe94c18a198c31b45acc4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  attack: {fileID: 5034500097071213530}
 --- !u!1 &3800022827495867755
 GameObject:
   m_ObjectHideFlags: 0

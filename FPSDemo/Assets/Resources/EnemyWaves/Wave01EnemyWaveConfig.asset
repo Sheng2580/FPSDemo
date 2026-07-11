@@ -40,20 +40,72 @@ MonoBehaviour:
       weightGrowthPerDifficultyTier: 0
       maxWeight: 100
       weight: 100
-      maxAliveCount: 10
+      maxAliveCount: 8
       healthMultiplier: 1
-      healthMultiplierGrowthPerWave: 0.06
+      healthMultiplierGrowthPerWave: 0.04
       healthMultiplierGrowthPerDifficultyTier: 0
-      maxHealthMultiplier: 1.2
+      maxHealthMultiplier: 1.15
       damageMultiplier: 1
-      damageMultiplierGrowthPerWave: 0.03
+      damageMultiplierGrowthPerWave: 0.02
       damageMultiplierGrowthPerDifficultyTier: 0
-      maxDamageMultiplier: 1.1
+      maxDamageMultiplier: 1.08
       moveSpeedMultiplier: 1
-      moveSpeedMultiplierGrowthPerWave: 0.02
+      moveSpeedMultiplierGrowthPerWave: 0.01
       moveSpeedMultiplierGrowthPerDifficultyTier: 0
-      maxMoveSpeedMultiplier: 1.05
+      maxMoveSpeedMultiplier: 1.03
       goldMultiplier: 1
-      goldMultiplierGrowthPerWave: 0.05
+      goldMultiplierGrowthPerWave: 0.03
       goldMultiplierGrowthPerDifficultyTier: 0
-      maxGoldMultiplier: 1.15
+      maxGoldMultiplier: 1.1
+    - enemyConfig: {fileID: 11400000, guid: ce16ab5c58114a31b68ac4d8691916ae, type: 2}
+      unlockWaveIndex: 1
+      minWaveIndex: 1
+      maxWaveIndex: 0
+      baseWeight: 100
+      weightGrowthPerWave: 0
+      weightGrowthPerDifficultyTier: 0
+      maxWeight: 100
+      weight: 100
+      maxAliveCount: 4
+      healthMultiplier: 1
+      healthMultiplierGrowthPerWave: 0.04
+      healthMultiplierGrowthPerDifficultyTier: 0
+      maxHealthMultiplier: 1.12
+      damageMultiplier: 1
+      damageMultiplierGrowthPerWave: 0.02
+      damageMultiplierGrowthPerDifficultyTier: 0
+      maxDamageMultiplier: 1.08
+      moveSpeedMultiplier: 1
+      moveSpeedMultiplierGrowthPerWave: 0.01
+      moveSpeedMultiplierGrowthPerDifficultyTier: 0
+      maxMoveSpeedMultiplier: 1.04
+      goldMultiplier: 1
+      goldMultiplierGrowthPerWave: 0.03
+      goldMultiplierGrowthPerDifficultyTier: 0
+      maxGoldMultiplier: 1.1
+    - enemyConfig: {fileID: 11400000, guid: c9962471d155432f90d016003c1a13cb, type: 2}
+      unlockWaveIndex: 1
+      minWaveIndex: 1
+      maxWaveIndex: 0
+      baseWeight: 100
+      weightGrowthPerWave: 0
+      weightGrowthPerDifficultyTier: 0
+      maxWeight: 100
+      weight: 100
+      maxAliveCount: 2
+      healthMultiplier: 1
+      healthMultiplierGrowthPerWave: 0.04
+      healthMultiplierGrowthPerDifficultyTier: 0
+      maxHealthMultiplier: 1.12
+      damageMultiplier: 1
+      damageMultiplierGrowthPerWave: 0.02
+      damageMultiplierGrowthPerDifficultyTier: 0
+      maxDamageMultiplier: 1.08
+      moveSpeedMultiplier: 1
+      moveSpeedMultiplierGrowthPerWave: 0
+      moveSpeedMultiplierGrowthPerDifficultyTier: 0
+      maxMoveSpeedMultiplier: 1
+      goldMultiplier: 1
+      goldMultiplierGrowthPerWave: 0.03
+      goldMultiplierGrowthPerDifficultyTier: 0
+      maxGoldMultiplier: 1.1

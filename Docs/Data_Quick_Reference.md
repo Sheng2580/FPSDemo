@@ -83,36 +83,33 @@
 
 | 敌人 | 来源文件 | enemyId | prefabResourceKey | behaviorTreeKey | aiProfileKey | maxHealth | moveSpeed | attackDamage | attackDistance | attackInterval | detectionRange | gold | blessingEnergy | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Zombie Skeleton | `NormalZombieEnemyConfig.asset` | 1001 | Enemy_ZombieSkeleton_LOD2 | ZombieMelee | NormalZombieAI | 100 | 2.2 | 10 | 1.4 | 1.2 | 30 | 1 | 1 | 当前真实 ABRes prefab |
-| Fast Zombie | `FastZombieEnemyConfig.asset` | 1002 | Enemy_ZombieSkeleton_LOD2 | ZombieMelee | FastZombieAI | 70 | 3.2 | 8 | 1.35 | 0.95 | 34 | 2 | 1 | 临时复用 Skeleton prefab，不同数值 |
-| Elite Zombie | `EliteZombieEnemyConfig.asset` | 1003 | Enemy_ZombieSkeleton_LOD2 | ZombieMelee | EliteZombieAI | 280 | 1.7 | 22 | 1.8 | 1.6 | 32 | 8 | 5 | 临时复用 Skeleton prefab，不同数值 |
+| Zombie Skeleton OneHanded | `NormalZombieEnemyConfig.asset` | 1001 | Enemy_ZombieSkeleton_LOD2 | ZombieMelee | NormalZombieAI | 100 | 2.2 | 10 | 1.4 | 1.2 | 30 | 1 | 1 | 基础杂兵，真实 ABRes prefab |
+| Zombie Nerd OneHanded | `FastZombieEnemyConfig.asset` | 1002 | Enemy_ZombieNerd_LOD2 | ZombieMelee | FastZombieAI | 90 | 2.45 | 9 | 1.35 | 1.1 | 32 | 2 | 1 | 普通杂兵，真实 ABRes prefab |
+| Zombie Old Crone OneHanded | `EliteZombieEnemyConfig.asset` | 1003 | Enemy_ZombieOldCrone_LOD2 | ZombieMelee | EliteZombieAI | 180 | 1.45 | 14 | 1.45 | 1.45 | 28 | 3 | 2 | 慢速厚血普通怪，真实 ABRes prefab |
 
 ## 敌人受击与动画数据
 
 | 敌人 | hitStunDuration | hitReactionCooldown | hitKnockbackDistance | hitKnockbackDuration | locomotionTransition | attackTransition | hitTransition | deathTransition | recoverTransition |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Zombie Skeleton | 0.09 | 0.2 | 0.08 | 0.06 | 0.18 | 0.1 | 0.14 | 0.18 | 0.18 |
-| Fast Zombie | 0.07 | 0.16 | 0.06 | 0.05 | 0.16 | 0.09 | 0.12 | 0.16 | 0.14 |
-| Elite Zombie | 0.12 | 0.28 | 0.12 | 0.08 | 0.2 | 0.12 | 0.16 | 0.22 | 0.2 |
+| Zombie Skeleton OneHanded | 0.09 | 0.2 | 0.08 | 0.06 | 0.18 | 0.1 | 0.14 | 0.18 | 0.18 |
+| Zombie Nerd OneHanded | 0.08 | 0.18 | 0.07 | 0.055 | 0.17 | 0.1 | 0.13 | 0.17 | 0.16 |
+| Zombie Old Crone OneHanded | 0.12 | 0.24 | 0.1 | 0.08 | 0.2 | 0.12 | 0.16 | 0.2 | 0.2 |
 
-动画状态名当前三类敌人都使用：
+动画状态名按真实 prefab 对应角色前缀维护：
 
-| 字段 | 值 |
-| --- | --- |
-| idleStateName | ZombieSkeleton_OneHanded_Idle |
-| walkStateName | ZombieSkeleton_OneHanded_Walk |
-| runStateName | ZombieSkeleton_OneHanded_Run |
-| attackStateName | ZombieSkeleton_OneHanded_Attack_1 |
-| damageStateName | ZombieSkeleton_OneHanded_Damage |
-| deathStateName | ZombieSkeleton_OneHanded_Death |
+| 敌人 | idleStateName | walkStateName | runStateName | attackStateName | damageStateName | deathStateName |
+| --- | --- | --- | --- | --- | --- | --- |
+| Zombie Skeleton OneHanded | ZombieSkeleton_OneHanded_Idle | ZombieSkeleton_OneHanded_Walk | ZombieSkeleton_OneHanded_Run | ZombieSkeleton_OneHanded_Attack_1 | ZombieSkeleton_OneHanded_Damage | ZombieSkeleton_OneHanded_Death |
+| Zombie Nerd OneHanded | ZombieNerd_OneHanded_Idle | ZombieNerd_OneHanded_Walk | ZombieNerd_OneHanded_Run | ZombieNerd_OneHanded_Attack_1 | ZombieNerd_OneHanded_Damage | ZombieNerd_OneHanded_Death |
+| Zombie Old Crone OneHanded | ZombieOldCrone_OneHanded_Idle | ZombieOldCrone_OneHanded_Walk | ZombieOldCrone_OneHanded_Run | ZombieOldCrone_OneHanded_Attack_1 | ZombieOldCrone_OneHanded_Damage | ZombieOldCrone_OneHanded_Death |
 
 ## 敌人部位倍率
 
 | 敌人 | Head | Body | Arm | Leg | 来源 | 用法 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Zombie Skeleton | 2 | 1 | 0.75 | 0.6 | `NormalZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
-| Fast Zombie | 2 | 1 | 0.75 | 0.6 | `FastZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
-| Elite Zombie | 1.6 | 1 | 0.75 | 0.6 | `EliteZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
+| Zombie Skeleton OneHanded | 2 | 1 | 0.75 | 0.6 | `NormalZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
+| Zombie Nerd OneHanded | 2 | 1 | 0.75 | 0.6 | `FastZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
+| Zombie Old Crone OneHanded | 2 | 1 | 0.75 | 0.6 | `EliteZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
 
 ## Enemy AI Profile
 
@@ -152,12 +149,15 @@
 
 | 模板 | 敌人 | unlock / min / max | baseWeight | weightGrowth/wave | weightGrowth/tier | maxWeight | maxAlive | base H/D/S/G | growth/wave H/D/S/G | growth/tier H/D/S/G | max H/D/S/G |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Wave01 | NormalZombie | 1 / 1 / 0 | 100 | 0 | 0 | 100 | 10 | 1 / 1 / 1 / 1 | 0.06 / 0.03 / 0.02 / 0.05 | 0 / 0 / 0 / 0 | 1.2 / 1.1 / 1.05 / 1.15 |
-| Wave02 | NormalZombie | 1 / 4 / 0 | 80 | -2 | 0 | 80 | 12 | 1.2 / 1.1 / 1 / 1.1 | 0.08 / 0.04 / 0.01 / 0.05 | 0 / 0 / 0 / 0 | 1.5 / 1.25 / 1.05 / 1.3 |
-| Wave02 | FastZombie | 4 / 4 / 0 | 25 | 4 | 0 | 45 | 4 | 1 / 1 / 1 / 1 | 0.06 / 0.04 / 0.01 / 0.05 | 0 / 0 / 0 / 0 | 1.3 / 1.2 / 1.08 / 1.25 |
-| Wave03 | NormalZombie | 1 / 7 / 0 | 60 | -3 | 0 | 60 | 16 | 1.5 / 1.25 / 1.05 / 1.25 | 0.08 / 0.04 / 0.01 / 0.05 | 0.1 / 0.05 / 0 / 0.05 | 2.2 / 1.7 / 1.15 / 1.8 |
-| Wave03 | FastZombie | 4 / 7 / 0 | 35 | 1 | 0 | 45 | 8 | 1.2 / 1.15 / 1.05 / 1.2 | 0.08 / 0.04 / 0.01 / 0.05 | 0.08 / 0.05 / 0 / 0.05 | 1.8 / 1.6 / 1.15 / 1.7 |
-| Wave03 | EliteZombie | 7 / 7 / 0 | 12 | 4 | 5 | 35 | 3 | 1 / 1 / 1 / 1 | 0.12 / 0.06 / 0.005 / 0.08 | 0.15 / 0.08 / 0 / 0.1 | 2.5 / 2 / 1.08 / 2 |
+| Wave01 | Zombie Skeleton OneHanded | 1 / 1 / 0 | 100 | 0 | 0 | 100 | 8 | 1 / 1 / 1 / 1 | 0.04 / 0.02 / 0.01 / 0.03 | 0 / 0 / 0 / 0 | 1.15 / 1.08 / 1.03 / 1.1 |
+| Wave01 | Zombie Nerd OneHanded | 1 / 1 / 0 | 100 | 0 | 0 | 100 | 4 | 1 / 1 / 1 / 1 | 0.04 / 0.02 / 0.01 / 0.03 | 0 / 0 / 0 / 0 | 1.12 / 1.08 / 1.04 / 1.1 |
+| Wave01 | Zombie Old Crone OneHanded | 1 / 1 / 0 | 100 | 0 | 0 | 100 | 2 | 1 / 1 / 1 / 1 | 0.04 / 0.02 / 0 / 0.03 | 0 / 0 / 0 / 0 | 1.12 / 1.08 / 1 / 1.1 |
+| Wave02 | Zombie Skeleton OneHanded | 1 / 4 / 0 | 70 | -2 | 0 | 70 | 12 | 1.1 / 1.05 / 1 / 1.1 | 0.05 / 0.03 / 0.01 / 0.05 | 0 / 0 / 0 / 0 | 1.35 / 1.2 / 1.05 / 1.3 |
+| Wave02 | Zombie Nerd OneHanded | 4 / 4 / 0 | 45 | 2 | 0 | 55 | 6 | 1 / 1 / 1 / 1 | 0.05 / 0.03 / 0.01 / 0.04 | 0 / 0 / 0 / 0 | 1.35 / 1.18 / 1.05 / 1.2 |
+| Wave02 | Zombie Old Crone OneHanded | 3 / 4 / 0 | 24 | 2 | 0 | 34 | 3 | 1 / 1 / 1 / 1 | 0.05 / 0.03 / 0 / 0.04 | 0 / 0 / 0 / 0 | 1.35 / 1.18 / 1 / 1.25 |
+| Wave03 | Zombie Skeleton OneHanded | 1 / 7 / 0 | 50 | -2 | 0 | 50 | 16 | 1.3 / 1.15 / 1.05 / 1.25 | 0.06 / 0.035 / 0.01 / 0.05 | 0.08 / 0.04 / 0 / 0.05 | 1.8 / 1.5 / 1.15 / 1.8 |
+| Wave03 | Zombie Nerd OneHanded | 4 / 7 / 0 | 48 | 1 | 0 | 58 | 9 | 1.25 / 1.12 / 1.05 / 1.2 | 0.06 / 0.035 / 0.01 / 0.05 | 0.08 / 0.04 / 0 / 0.05 | 1.8 / 1.5 / 1.15 / 1.7 |
+| Wave03 | Zombie Old Crone OneHanded | 3 / 7 / 0 | 34 | 2 | 3 | 50 | 5 | 1.25 / 1.12 / 1 / 1 | 0.06 / 0.035 / 0 / 0.08 | 0.1 / 0.04 / 0 / 0.1 | 2 / 1.5 / 1 / 2 |
 
 说明：`H/D/S/G` 分别表示 `healthMultiplier / damageMultiplier / moveSpeedMultiplier / goldMultiplier`。`maxWaveIndex = 0` 表示不自动退场；如果某类早期怪后续需要退出，可配置为具体波次。
 
@@ -165,11 +165,12 @@
 
 | 绝对波次 | 使用模板 | 可刷敌人和大致权重 |
 | --- | --- | --- |
-| 1 | Wave01 | Normal 100 |
-| 4 | Wave02 | Normal 80，Fast 25 |
-| 6 | Wave02 | Normal 76，Fast 33 |
-| 7 | Wave03 | Normal 60，Fast 35，Elite 12 |
-| 10 | Wave03 作为后期兜底 | Normal 51，Fast 38，Elite 29 |
+| 1 | Wave01 | Skeleton 100 |
+| 2 | Wave01 | Skeleton 100，Nerd 35 |
+| 3 | Wave01 | Skeleton 100，Nerd 40，Old Crone 12 |
+| 4 | Wave02 | Skeleton 70，Nerd 45，Old Crone 24 |
+| 7 | Wave03 | Skeleton 50，Nerd 48，Old Crone 34 |
+| 10 | Wave03 作为后期兜底 | Skeleton 44，Nerd 51，Old Crone 40 |
 
 ## ABRes 敌人 Prefab
 
@@ -177,12 +178,15 @@
 
 | prefabResourceKey | 文件 | 当前使用者 | 备注 |
 | --- | --- | --- | --- |
-| Enemy_ZombieSkeleton_LOD2 | `Enemy_ZombieSkeleton_LOD2.prefab` | Normal / Fast / Elite 三种数据敌人 | 当前唯一真实 ABRes 敌人 prefab |
+| Enemy_ZombieSkeleton_LOD2 | `Enemy_ZombieSkeleton_LOD2.prefab` | Zombie Skeleton OneHanded | 已在 `enemy_prefabs` 包 |
+| Enemy_ZombieNerd_LOD2 | `Enemy_ZombieNerd_LOD2.prefab` | Zombie Nerd OneHanded | 已在 `enemy_prefabs` 包，key 与文件名一致 |
+| Enemy_ZombieOldCrone_LOD2 | `Enemy_ZombieOldCrone_LOD2.prefab` | Zombie Old Crone OneHanded | 已在 `enemy_prefabs` 包，key 与文件名一致 |
 
 ## 当前临时约束
 
-- Fast / Elite 是不同数据敌人，但暂时复用 `Enemy_ZombieSkeleton_LOD2`。
-- 如果后续新增 `Enemy_ZombieNerd_LOD2.prefab` 或 `Enemy_ZombieBrute_LOD2.prefab` 到 ABRes，必须同步改本表和对应 EnemyConfig 资源。
+- 三种普通近战怪现在分别使用 `Enemy_ZombieSkeleton_LOD2`、`Enemy_ZombieNerd_LOD2`、`Enemy_ZombieOldCrone_LOD2`，数据层已按 ABRes prefab 文件名维护 `prefabResourceKey`。
+- 如果后续表现层重新生成或改名 prefab，必须同步更新 `EnemyConfig.prefabResourceKey` 和本快速表，保持 key 与 `Assets/Art/ABRes/Enemies/Prefabs` 文件名一致。
+- 火把怪灼烧、毒液远程怪、精英复杂技能本轮只保留为后续预留，不实现。
 - 所有武器表现 key 必须先存在于 `CombatFeedbackResources.asset`，再写入武器配置。
 - 本表是快速读取表，不替代源码和 Unity Inspector。最终运行值以资源文件和 `ApplyMissingDefaults()` 后的运行时数据为准。
 

@@ -35,20 +35,20 @@ MonoBehaviour:
       unlockWaveIndex: 1
       minWaveIndex: 4
       maxWaveIndex: 0
-      baseWeight: 80
+      baseWeight: 70
       weightGrowthPerWave: -2
       weightGrowthPerDifficultyTier: 0
-      maxWeight: 80
-      weight: 80
+      maxWeight: 70
+      weight: 70
       maxAliveCount: 12
-      healthMultiplier: 1.2
-      healthMultiplierGrowthPerWave: 0.08
+      healthMultiplier: 1.1
+      healthMultiplierGrowthPerWave: 0.05
       healthMultiplierGrowthPerDifficultyTier: 0
-      maxHealthMultiplier: 1.5
-      damageMultiplier: 1.1
-      damageMultiplierGrowthPerWave: 0.04
+      maxHealthMultiplier: 1.35
+      damageMultiplier: 1.05
+      damageMultiplierGrowthPerWave: 0.03
       damageMultiplierGrowthPerDifficultyTier: 0
-      maxDamageMultiplier: 1.25
+      maxDamageMultiplier: 1.2
       moveSpeedMultiplier: 1
       moveSpeedMultiplierGrowthPerWave: 0.01
       moveSpeedMultiplierGrowthPerDifficultyTier: 0
@@ -61,25 +61,51 @@ MonoBehaviour:
       unlockWaveIndex: 4
       minWaveIndex: 4
       maxWaveIndex: 0
-      baseWeight: 25
-      weightGrowthPerWave: 4
+      baseWeight: 45
+      weightGrowthPerWave: 2
       weightGrowthPerDifficultyTier: 0
-      maxWeight: 45
-      weight: 25
-      maxAliveCount: 4
+      maxWeight: 55
+      weight: 45
+      maxAliveCount: 6
       healthMultiplier: 1
-      healthMultiplierGrowthPerWave: 0.06
+      healthMultiplierGrowthPerWave: 0.05
       healthMultiplierGrowthPerDifficultyTier: 0
-      maxHealthMultiplier: 1.3
+      maxHealthMultiplier: 1.35
       damageMultiplier: 1
-      damageMultiplierGrowthPerWave: 0.04
+      damageMultiplierGrowthPerWave: 0.03
       damageMultiplierGrowthPerDifficultyTier: 0
-      maxDamageMultiplier: 1.2
+      maxDamageMultiplier: 1.18
       moveSpeedMultiplier: 1
       moveSpeedMultiplierGrowthPerWave: 0.01
       moveSpeedMultiplierGrowthPerDifficultyTier: 0
-      maxMoveSpeedMultiplier: 1.08
+      maxMoveSpeedMultiplier: 1.05
       goldMultiplier: 1
-      goldMultiplierGrowthPerWave: 0.05
+      goldMultiplierGrowthPerWave: 0.04
+      goldMultiplierGrowthPerDifficultyTier: 0
+      maxGoldMultiplier: 1.2
+    - enemyConfig: {fileID: 11400000, guid: c9962471d155432f90d016003c1a13cb, type: 2}
+      unlockWaveIndex: 3
+      minWaveIndex: 4
+      maxWaveIndex: 0
+      baseWeight: 24
+      weightGrowthPerWave: 2
+      weightGrowthPerDifficultyTier: 0
+      maxWeight: 34
+      weight: 24
+      maxAliveCount: 3
+      healthMultiplier: 1
+      healthMultiplierGrowthPerWave: 0.05
+      healthMultiplierGrowthPerDifficultyTier: 0
+      maxHealthMultiplier: 1.35
+      damageMultiplier: 1
+      damageMultiplierGrowthPerWave: 0.03
+      damageMultiplierGrowthPerDifficultyTier: 0
+      maxDamageMultiplier: 1.18
+      moveSpeedMultiplier: 1
+      moveSpeedMultiplierGrowthPerWave: 0
+      moveSpeedMultiplierGrowthPerDifficultyTier: 0
+      maxMoveSpeedMultiplier: 1
+      goldMultiplier: 1
+      goldMultiplierGrowthPerWave: 0.04
       goldMultiplierGrowthPerDifficultyTier: 0
       maxGoldMultiplier: 1.25

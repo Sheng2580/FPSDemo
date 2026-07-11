@@ -55,7 +55,7 @@ namespace Enemy.Data
             return new EnemyConfig
             {
                 enemyId = 1001,
-                enemyName = "Zombie Skeleton",
+                enemyName = "Zombie Skeleton OneHanded",
                 prefabKey = "ZombieSkeletonOneHanded",
                 prefabResourceKey = "Enemy_ZombieSkeleton_LOD2",
                 behaviorTreeKey = "ZombieMelee",
@@ -98,50 +98,79 @@ namespace Enemy.Data
 
         public static EnemyConfig CreateFastZombie()
         {
-            EnemyConfig config = CreateNormalZombie();
-            config.enemyId = 1002;
-            config.enemyName = "Fast Zombie";
-            config.prefabKey = "ZombieNerdOneHanded";
-            config.prefabResourceKey = "Enemy_ZombieSkeleton_LOD2";
-            config.aiProfileKey = "FastZombieAI";
-            config.maxHealth = 70f;
-            config.moveSpeed = 3.2f;
-            config.attackDamage = 8f;
-            config.attackInterval = 0.95f;
-            config.goldReward = 2;
-            config.blessingEnergyReward = 1;
-            config.hitStunDuration = 0.07f;
-            config.hitReactionCooldown = 0.16f;
-            config.hitKnockbackDistance = 0.06f;
-            config.hitKnockbackDuration = 0.05f;
-            return config;
+            return CreateZombieNerdOneHanded();
         }
 
         public static EnemyConfig CreateEliteZombie()
         {
+            return CreateZombieOldCroneOneHanded();
+        }
+
+        public static EnemyConfig CreateZombieNerdOneHanded()
+        {
+            EnemyConfig config = CreateNormalZombie();
+            config.enemyId = 1002;
+            config.enemyName = "Zombie Nerd OneHanded";
+            config.prefabKey = "ZombieNerdOneHanded";
+            config.prefabResourceKey = "Enemy_ZombieNerd_LOD2";
+            config.maxHealth = 90f;
+            config.moveSpeed = 2.45f;
+            config.attackDamage = 9f;
+            config.attackDistance = 1.35f;
+            config.attackInterval = 1.1f;
+            config.attackHitDelay = 0.32f;
+            config.detectionRange = 32f;
+            config.goldReward = 2;
+            config.blessingEnergyReward = 1;
+            config.hitStunDuration = 0.08f;
+            config.hitReactionCooldown = 0.18f;
+            config.hitKnockbackDistance = 0.07f;
+            config.hitKnockbackDuration = 0.055f;
+            config.idleStateName = "ZombieNerd_OneHanded_Idle";
+            config.walkStateName = "ZombieNerd_OneHanded_Walk";
+            config.runStateName = "ZombieNerd_OneHanded_Run";
+            config.attackStateName = "ZombieNerd_OneHanded_Attack_1";
+            config.damageStateName = "ZombieNerd_OneHanded_Damage";
+            config.deathStateName = "ZombieNerd_OneHanded_Death";
+            config.locomotionTransition = 0.17f;
+            config.attackTransition = 0.1f;
+            config.hitTransition = 0.13f;
+            config.deathTransition = 0.17f;
+            config.recoverTransition = 0.16f;
+            return config;
+        }
+
+        public static EnemyConfig CreateZombieOldCroneOneHanded()
+        {
             EnemyConfig config = CreateNormalZombie();
             config.enemyId = 1003;
-            config.enemyName = "Elite Zombie";
-            config.prefabKey = "ZombieBruteOneHanded";
-            config.prefabResourceKey = "Enemy_ZombieSkeleton_LOD2";
-            config.aiProfileKey = "EliteZombieAI";
-            config.dropPoolKey = "ZombieEliteDrop";
-            config.maxHealth = 280f;
-            config.moveSpeed = 1.7f;
-            config.attackDamage = 22f;
-            config.attackDistance = 1.8f;
-            config.attackInterval = 1.6f;
-            config.goldReward = 8;
-            config.blessingEnergyReward = 5;
-            config.experienceReward = 4;
+            config.enemyName = "Zombie Old Crone OneHanded";
+            config.prefabKey = "ZombieOldCroneOneHanded";
+            config.prefabResourceKey = "Enemy_ZombieOldCrone_LOD2";
+            config.maxHealth = 180f;
+            config.moveSpeed = 1.45f;
+            config.attackDamage = 14f;
+            config.attackDistance = 1.45f;
+            config.attackInterval = 1.45f;
+            config.attackHitDelay = 0.42f;
+            config.detectionRange = 28f;
+            config.goldReward = 3;
+            config.blessingEnergyReward = 2;
+            config.experienceReward = 2;
             config.hitStunDuration = 0.12f;
-            config.hitReactionCooldown = 0.28f;
-            config.hitKnockbackDistance = 0.12f;
+            config.hitReactionCooldown = 0.24f;
+            config.hitKnockbackDistance = 0.1f;
             config.hitKnockbackDuration = 0.08f;
+            config.idleStateName = "ZombieOldCrone_OneHanded_Idle";
+            config.walkStateName = "ZombieOldCrone_OneHanded_Walk";
+            config.runStateName = "ZombieOldCrone_OneHanded_Run";
+            config.attackStateName = "ZombieOldCrone_OneHanded_Attack_1";
+            config.damageStateName = "ZombieOldCrone_OneHanded_Damage";
+            config.deathStateName = "ZombieOldCrone_OneHanded_Death";
             config.attackTransition = 0.12f;
             config.hitTransition = 0.16f;
-            config.deathTransition = 0.22f;
-            config.headDamageMultiplier = 1.6f;
+            config.deathTransition = 0.2f;
+            config.recoverTransition = 0.2f;
             return config;
         }
 

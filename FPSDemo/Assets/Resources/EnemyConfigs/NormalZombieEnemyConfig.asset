@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config:
     enemyId: 1001
-    enemyName: Zombie Skeleton
+    enemyName: Zombie Skeleton OneHanded
     prefabKey: ZombieSkeletonOneHanded
     prefabResourceKey: Enemy_ZombieSkeleton_LOD2
     behaviorTreeKey: ZombieMelee
