@@ -18,6 +18,12 @@ namespace Enemy.Data
         public int maxNearEnemyCount = 12;
         public int maxActiveAgentCount = 12;
         public int maxAttackersCount = 3;
+        public int difficultyTierIndex = 1;
+        public int wavesPerDifficultyTier = 3;
+        public int waveTotalSpawnCount = 12;
+        public int waveTotalSpawnGrowth = 3;
+        public float waveClearDelay = 5f;
+        public bool waitForAvailableSpawnSlot = true;
         public List<EnemySpawnEntry> entries = new List<EnemySpawnEntry>();
 
         public bool IsInTime(float elapsedTime)
@@ -35,6 +41,11 @@ namespace Enemy.Data
             maxNearEnemyCount = Mathf.Clamp(maxNearEnemyCount, 1, sceneMaxEnemyCount);
             maxActiveAgentCount = Mathf.Clamp(maxActiveAgentCount, 0, sceneMaxEnemyCount);
             maxAttackersCount = Mathf.Clamp(maxAttackersCount, 1, sceneMaxEnemyCount);
+            difficultyTierIndex = Mathf.Max(1, difficultyTierIndex);
+            wavesPerDifficultyTier = Mathf.Max(1, wavesPerDifficultyTier);
+            waveTotalSpawnCount = Mathf.Max(1, waveTotalSpawnCount);
+            waveTotalSpawnGrowth = Mathf.Max(0, waveTotalSpawnGrowth);
+            waveClearDelay = Mathf.Max(0f, waveClearDelay);
 
             if (entries == null)
             {
@@ -68,11 +79,159 @@ namespace Enemy.Data
             return totalWeight;
         }
 
+        public float GetTotalAvailableWeight(int absoluteWaveIndex)
+        {
+            if (entries == null)
+            {
+                return 0f;
+            }
+
+            float totalWeight = 0f;
+            int difficultyTier = GetDifficultyTierForWave(absoluteWaveIndex);
+            int difficultyTierGrowthStep = GetDifficultyTierGrowthStep(absoluteWaveIndex);
+            for (int i = 0; i < entries.Count; i++)
+            {
+                EnemySpawnEntry entry = entries[i];
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                EnemySpawnEntry resolvedEntry = entry.CreateResolvedForWave(absoluteWaveIndex, difficultyTier, difficultyTierGrowthStep);
+                if (resolvedEntry.IsValid)
+                {
+                    totalWeight += Mathf.Max(0f, resolvedEntry.weight);
+                }
+            }
+
+            return totalWeight;
+        }
+
+        public List<EnemySpawnEntry> GetResolvedSpawnEntriesForWave(int absoluteWaveIndex)
+        {
+            ApplyMissingDefaults();
+            List<EnemySpawnEntry> resolvedEntries = new List<EnemySpawnEntry>();
+            if (entries == null)
+            {
+                return resolvedEntries;
+            }
+
+            int difficultyTier = GetDifficultyTierForWave(absoluteWaveIndex);
+            int difficultyTierGrowthStep = GetDifficultyTierGrowthStep(absoluteWaveIndex);
+            for (int i = 0; i < entries.Count; i++)
+            {
+                EnemySpawnEntry entry = entries[i];
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                EnemySpawnEntry resolvedEntry = entry.CreateResolvedForWave(absoluteWaveIndex, difficultyTier, difficultyTierGrowthStep);
+                if (resolvedEntry.IsValid)
+                {
+                    resolvedEntries.Add(resolvedEntry);
+                }
+            }
+
+            return resolvedEntries;
+        }
+
+        public bool TryGetSpawnEntryForWave(
+            int absoluteWaveIndex,
+            float weightRoll01,
+            out EnemySpawnEntry resolvedEntry)
+        {
+            resolvedEntry = null;
+            List<EnemySpawnEntry> resolvedEntries = GetResolvedSpawnEntriesForWave(absoluteWaveIndex);
+            if (resolvedEntries.Count == 0)
+            {
+                return false;
+            }
+
+            float totalWeight = 0f;
+            for (int i = 0; i < resolvedEntries.Count; i++)
+            {
+                totalWeight += Mathf.Max(0f, resolvedEntries[i].weight);
+            }
+
+            if (totalWeight <= 0f)
+            {
+                return false;
+            }
+
+            float targetWeight = Mathf.Clamp01(weightRoll01) * totalWeight;
+            float currentWeight = 0f;
+            EnemySpawnEntry fallback = null;
+
+            for (int i = 0; i < resolvedEntries.Count; i++)
+            {
+                EnemySpawnEntry entry = resolvedEntries[i];
+                fallback = entry;
+                currentWeight += Mathf.Max(0f, entry.weight);
+                if (targetWeight <= currentWeight)
+                {
+                    resolvedEntry = entry;
+                    return true;
+                }
+            }
+
+            resolvedEntry = fallback;
+            return resolvedEntry != null;
+        }
+
         public int GetSpawnCountForTime(float elapsedTime)
         {
             float timeInWave = Mathf.Max(0f, elapsedTime - startTime);
             int grownCount = spawnCountPerBatch + Mathf.FloorToInt(timeInWave / 60f * spawnCountGrowthPerMinute);
             return Mathf.Clamp(grownCount, 1, Mathf.Max(1, maxSpawnCountPerBatch));
+        }
+
+        public int GetSpawnCountForWaveElapsed(float waveElapsedTime)
+        {
+            int grownCount = spawnCountPerBatch + Mathf.FloorToInt(Mathf.Max(0f, waveElapsedTime) / 60f * spawnCountGrowthPerMinute);
+            return Mathf.Clamp(grownCount, 1, Mathf.Max(1, maxSpawnCountPerBatch));
+        }
+
+        public int GetTotalSpawnCountForDifficultyWave(int difficultyWaveIndex)
+        {
+            int safeWaveIndex = Mathf.Max(1, difficultyWaveIndex);
+            return Mathf.Max(1, waveTotalSpawnCount + (safeWaveIndex - 1) * waveTotalSpawnGrowth);
+        }
+
+        public int GetDifficultyTierForWave(int absoluteWaveIndex)
+        {
+            int safeWaveIndex = Mathf.Max(1, absoluteWaveIndex);
+            int safeTierSpan = Mathf.Max(1, wavesPerDifficultyTier);
+            return Mathf.Max(1, Mathf.CeilToInt(safeWaveIndex / (float)safeTierSpan));
+        }
+
+        public int GetWaveIndexInDifficultyTier(int absoluteWaveIndex)
+        {
+            int safeWaveIndex = Mathf.Max(1, absoluteWaveIndex);
+            int safeTierSpan = Mathf.Max(1, wavesPerDifficultyTier);
+            int firstWaveIndex = GetFirstWaveIndexInDifficultyTier();
+            return Mathf.Max(1, safeWaveIndex - firstWaveIndex + 1);
+        }
+
+        public int GetFirstWaveIndexInDifficultyTier()
+        {
+            int safeTierSpan = Mathf.Max(1, wavesPerDifficultyTier);
+            return (Mathf.Max(1, difficultyTierIndex) - 1) * safeTierSpan + 1;
+        }
+
+        public bool IsDifficultyTierMatch(int absoluteWaveIndex)
+        {
+            return difficultyTierIndex == GetDifficultyTierForWave(absoluteWaveIndex);
+        }
+
+        public int GetDifficultyTierGrowthStep(int absoluteWaveIndex)
+        {
+            return Mathf.Max(0, GetDifficultyTierForWave(absoluteWaveIndex) - Mathf.Max(1, difficultyTierIndex));
+        }
+
+        public int GetTotalSpawnCountForWave(int absoluteWaveIndex)
+        {
+            return GetTotalSpawnCountForDifficultyWave(GetWaveIndexInDifficultyTier(absoluteWaveIndex));
         }
     }
 }

@@ -47,6 +47,7 @@ namespace Weapon
         public WeaponConfig Config => _config;
         public WeaponRuntimeData RuntimeData { get; private set; }
         public WeaponStateType CurrentStateType => _currentStateType;
+        public WeaponStateType PreviousStateType { get; private set; }
         public bool FireInput => _fireInput;
         public bool ReloadInput => _reloadInput;
         public bool AimInput => _aimInput;
@@ -105,6 +106,7 @@ namespace Weapon
                 return;
             }
 
+            PreviousStateType = _currentStateType;
             _currentState?.Exit();
             _currentState = newState;
             _currentStateType = stateType;

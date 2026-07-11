@@ -24,11 +24,36 @@ MonoBehaviour:
     maxNearEnemyCount: 8
     maxActiveAgentCount: 10
     maxAttackersCount: 2
+    difficultyTierIndex: 1
+    wavesPerDifficultyTier: 3
+    waveTotalSpawnCount: 12
+    waveTotalSpawnGrowth: 3
+    waveClearDelay: 5
+    waitForAvailableSpawnSlot: 1
     entries:
     - enemyConfig: {fileID: 11400000, guid: d2fa9a896a5c46c99e18a9b0ecfdc2e2, type: 2}
+      unlockWaveIndex: 1
+      minWaveIndex: 1
+      maxWaveIndex: 0
+      baseWeight: 100
+      weightGrowthPerWave: 0
+      weightGrowthPerDifficultyTier: 0
+      maxWeight: 100
       weight: 100
       maxAliveCount: 10
       healthMultiplier: 1
+      healthMultiplierGrowthPerWave: 0.06
+      healthMultiplierGrowthPerDifficultyTier: 0
+      maxHealthMultiplier: 1.2
       damageMultiplier: 1
+      damageMultiplierGrowthPerWave: 0.03
+      damageMultiplierGrowthPerDifficultyTier: 0
+      maxDamageMultiplier: 1.1
       moveSpeedMultiplier: 1
+      moveSpeedMultiplierGrowthPerWave: 0.02
+      moveSpeedMultiplierGrowthPerDifficultyTier: 0
+      maxMoveSpeedMultiplier: 1.05
       goldMultiplier: 1
+      goldMultiplierGrowthPerWave: 0.05
+      goldMultiplierGrowthPerDifficultyTier: 0
+      maxGoldMultiplier: 1.15

@@ -24,18 +24,62 @@ MonoBehaviour:
     maxNearEnemyCount: 12
     maxActiveAgentCount: 14
     maxAttackersCount: 3
+    difficultyTierIndex: 2
+    wavesPerDifficultyTier: 3
+    waveTotalSpawnCount: 20
+    waveTotalSpawnGrowth: 4
+    waveClearDelay: 5
+    waitForAvailableSpawnSlot: 1
     entries:
     - enemyConfig: {fileID: 11400000, guid: d2fa9a896a5c46c99e18a9b0ecfdc2e2, type: 2}
+      unlockWaveIndex: 1
+      minWaveIndex: 4
+      maxWaveIndex: 0
+      baseWeight: 80
+      weightGrowthPerWave: -2
+      weightGrowthPerDifficultyTier: 0
+      maxWeight: 80
       weight: 80
       maxAliveCount: 12
       healthMultiplier: 1.2
+      healthMultiplierGrowthPerWave: 0.08
+      healthMultiplierGrowthPerDifficultyTier: 0
+      maxHealthMultiplier: 1.5
       damageMultiplier: 1.1
+      damageMultiplierGrowthPerWave: 0.04
+      damageMultiplierGrowthPerDifficultyTier: 0
+      maxDamageMultiplier: 1.25
       moveSpeedMultiplier: 1
+      moveSpeedMultiplierGrowthPerWave: 0.01
+      moveSpeedMultiplierGrowthPerDifficultyTier: 0
+      maxMoveSpeedMultiplier: 1.05
       goldMultiplier: 1.1
+      goldMultiplierGrowthPerWave: 0.05
+      goldMultiplierGrowthPerDifficultyTier: 0
+      maxGoldMultiplier: 1.3
     - enemyConfig: {fileID: 11400000, guid: ce16ab5c58114a31b68ac4d8691916ae, type: 2}
-      weight: 20
+      unlockWaveIndex: 4
+      minWaveIndex: 4
+      maxWaveIndex: 0
+      baseWeight: 25
+      weightGrowthPerWave: 4
+      weightGrowthPerDifficultyTier: 0
+      maxWeight: 45
+      weight: 25
       maxAliveCount: 4
       healthMultiplier: 1
+      healthMultiplierGrowthPerWave: 0.06
+      healthMultiplierGrowthPerDifficultyTier: 0
+      maxHealthMultiplier: 1.3
       damageMultiplier: 1
+      damageMultiplierGrowthPerWave: 0.04
+      damageMultiplierGrowthPerDifficultyTier: 0
+      maxDamageMultiplier: 1.2
       moveSpeedMultiplier: 1
+      moveSpeedMultiplierGrowthPerWave: 0.01
+      moveSpeedMultiplierGrowthPerDifficultyTier: 0
+      maxMoveSpeedMultiplier: 1.08
       goldMultiplier: 1
+      goldMultiplierGrowthPerWave: 0.05
+      goldMultiplierGrowthPerDifficultyTier: 0
+      maxGoldMultiplier: 1.25

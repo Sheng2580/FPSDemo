@@ -12,6 +12,7 @@ namespace Enemy
         [SerializeField] private string idleStateName = "ZombieSkeleton_OneHanded_Idle";
         [SerializeField] private string walkStateName = "ZombieSkeleton_OneHanded_Walk";
         [SerializeField] private string runStateName = "ZombieSkeleton_OneHanded_Run";
+        [SerializeField] private string linkTraverseStateName = "ZombieSkeleton_OneHanded_Dodge";
         [SerializeField] private string attackStateName = "ZombieSkeleton_OneHanded_Attack_1";
         [SerializeField] private string damageStateName = "ZombieSkeleton_OneHanded_Damage";
         [SerializeField] private string deathStateName = "ZombieSkeleton_OneHanded_Death";
@@ -26,6 +27,7 @@ namespace Enemy
         public string IdleStateName => idleStateName;
         public string WalkStateName => walkStateName;
         public string RunStateName => runStateName;
+        public string LinkTraverseStateName => linkTraverseStateName;
         public string AttackStateName => attackStateName;
         public string DamageStateName => damageStateName;
         public string DeathStateName => deathStateName;

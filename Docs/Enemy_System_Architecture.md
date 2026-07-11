@@ -343,15 +343,53 @@ flowchart LR
     ClearDelay --> NextWave["NextWave\n进入下一波"]
 ```
 
-控制层需要的数据字段：
+当前数据层已提供的正式波次字段：
 
-- `waveTotalSpawnCount`：本波总生成数量
-- `clearDelay`：清波后的等待时间
-- `softlockTimeout`：单只怪长时间不可达时的兜底时间
-- `stuckTeleportRadius`：卡住后重新投放到玩家外围的半径
-- `allowRecycleWhenUnreachable`：不可达时是否允许直接回池并计入清波
+- `difficultyTierIndex`：这份 Wave 资源对应第几个难度档
+- `wavesPerDifficultyTier`：每几个正式波次复用同一份难度配置，当前资源统一为 3
+- `waveTotalSpawnCount`：本难度档第一波总生成数量
+- `waveTotalSpawnGrowth`：同一难度档内每推进 1 波增加的总生成数量
+- `waveClearDelay`：清波后的等待时间，当前资源统一为 5 秒
+- `waitForAvailableSpawnSlot`：达到 `sceneMaxEnemyCount` 时等待敌人死亡回池后继续补刷
+- `sceneMaxEnemyCount`：当前波次场上敌人总数量上限
+- `maxActiveAgentCount`：当前波次最大追击 / 活跃 Agent 数量
+- `maxAttackersCount`：当前波次同时攻击玩家数量上限
 
-当前数据层已有 `sceneMaxEnemyCount`、`maxActiveAgentCount`、`maxAttackersCount`，但还缺少本波总数量和清波条件，所以当前代码仍保留时间波次和测试刷怪。
+后续控制层可以按 `EnemyWaveConfig.GetTotalSpawnCountForWave(absoluteWaveIndex)` 计算第 N 波总刷怪数。卡住兜底字段 `softlockTimeout`、`stuckTeleportRadius`、`allowRecycleWhenUnreachable` 暂未进入数据资源，等移动/传送兜底执行方案稳定后再补。
+
+### 13.1.1 候选敌人和权重算法
+
+波次不再要求策划逐波手填“这一波刷哪些怪”。`EnemyWaveConfig.entries` 现在表示当前难度模板下的候选敌人列表，数据层根据正式波次号生成最终刷新池。
+
+控制层只需要传入：
+
+- `absoluteWaveIndex`：当前是整局第几波
+- `waveElapsedTime`：当前波已经进行多久
+- `weightRoll01`：0 到 1 的随机权重采样值
+
+数据层负责：
+
+- 用 `unlockWaveIndex / minWaveIndex / maxWaveIndex` 筛掉当前波不能出现的敌人
+- 用 `baseWeight + waveGrowth + difficultyTierGrowth` 计算最终权重，并受 `maxWeight` 限制
+- 用倍率成长字段计算最终 `healthMultiplier / damageMultiplier / moveSpeedMultiplier / goldMultiplier`
+- 输出已经计算好的 `EnemySpawnEntry` 或 `EnemyRuntimeStats`
+
+可用入口：
+
+- `EnemyWaveConfig.GetResolvedSpawnEntriesForWave(absoluteWaveIndex)`
+- `EnemyWaveConfig.TryGetSpawnEntryForWave(absoluteWaveIndex, weightRoll01, out entry)`
+- `EnemyWaveConfig.GetFirstWaveIndexInDifficultyTier()`
+- `EnemyRuntimeStats.TryCreateFromWave(wave, absoluteWaveIndex, waveElapsedTime, weightRoll01, out runtimeStats)`
+
+调试信息会进入 `EnemyRuntimeStats`：
+
+- `absoluteWaveIndex`
+- `waveElapsedTime`
+- `difficultyTierIndex`
+- `difficultyTierGrowthStep`
+- `candidateUnlockWaveIndex`
+- `candidateFinalWeight`
+- `resolvedHealthMultiplier / resolvedDamageMultiplier / resolvedMoveSpeedMultiplier / resolvedGoldMultiplier`
 
 ### 13.2 追击名额和绕圈等待
 

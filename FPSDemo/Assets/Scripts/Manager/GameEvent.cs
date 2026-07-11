@@ -1,5 +1,6 @@
 using Combat;
 using Enemy;
+using Enemy.Data;
 using UnityEngine;
 using Weapon;
 using Weapon.Data;
@@ -28,6 +29,10 @@ public enum GameEvent
     EnemyDamaged,
     EnemyDied,
     EnemyReturnedToPool,
+    EnemyWavePreparing,
+    EnemyWaveStarted,
+    EnemyWaveProgressChanged,
+    EnemyWaveCleared,
     WeaponFired,
     WeaponHit,
     DamageResolved
@@ -166,6 +171,35 @@ public readonly struct EnemyReturnedToPoolEventData
     {
         this.enemy = enemy;
         enemyId = enemy != null ? enemy.EnemyId : 0;
+    }
+}
+
+public readonly struct EnemyWaveEventData
+{
+    public readonly int waveIndex;
+    public readonly int difficultyTierIndex;
+    public readonly int targetSpawnCount;
+    public readonly int spawnedCount;
+    public readonly int activeEnemyCount;
+    public readonly float delay;
+    public readonly EnemyWaveConfig waveConfig;
+
+    public EnemyWaveEventData(
+        int waveIndex,
+        int difficultyTierIndex,
+        int targetSpawnCount,
+        int spawnedCount,
+        int activeEnemyCount,
+        float delay,
+        EnemyWaveConfig waveConfig)
+    {
+        this.waveIndex = Mathf.Max(1, waveIndex);
+        this.difficultyTierIndex = Mathf.Max(1, difficultyTierIndex);
+        this.targetSpawnCount = Mathf.Max(0, targetSpawnCount);
+        this.spawnedCount = Mathf.Max(0, spawnedCount);
+        this.activeEnemyCount = Mathf.Max(0, activeEnemyCount);
+        this.delay = Mathf.Max(0f, delay);
+        this.waveConfig = waveConfig;
     }
 }
 

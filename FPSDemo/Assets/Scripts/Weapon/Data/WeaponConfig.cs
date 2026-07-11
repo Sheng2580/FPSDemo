@@ -29,7 +29,8 @@ namespace Weapon.Data
         Stone,
         Metal,
         Wood,
-        Flesh
+        Flesh,
+        Glass
     }
 
     [Serializable]
@@ -52,6 +53,11 @@ namespace Weapon.Data
             if (string.IsNullOrEmpty(impactEffectKey))
             {
                 impactEffectKey = WeaponConfig.GetDefaultImpactEffectKey(surfaceType);
+            }
+
+            if (string.IsNullOrEmpty(impactAudioKey))
+            {
+                impactAudioKey = WeaponConfig.GetDefaultImpactAudioKey(surfaceType);
             }
 
             if (decalLifeTime <= 0f)
@@ -85,11 +91,18 @@ namespace Weapon.Data
         public const float DefaultAssaultRifleCrosshairSpreadScale = 0.55f;
         public const float DefaultAssaultRifleCrosshairFireKickAmount = 0.55f;
         public const float DefaultAssaultRifleCrosshairFireKickDecaySpeed = 10.5f;
-        public const string DefaultMuzzleFlashEffectKey = "Muzzle Flash";
-        public const string DefaultMuzzleSmokeEffectKey = "Muzzle Smoke";
+        public const string DefaultMuzzleFlashEffectKey = "KriptoFX Pistol Muzzle Flash";
+        public const string DefaultPistolMuzzleFlashEffectKey = "KriptoFX Pistol Muzzle Flash";
+        public const string DefaultAssaultRifleMuzzleFlashEffectKey = "KriptoFX Assault Rifle Muzzle Flash";
+        public const string DefaultMuzzleSmokeEffectKey = "None";
         public const string DefaultImpactEffectKey = "Stone Impact";
         public const string DefaultPistolFireAudioKey = "Pistol_1 Fire";
         public const string DefaultAssaultRifleFireAudioKey = "Assault Rifle_1 Fire";
+        public const string DefaultConcreteImpactAudioKey = "Impact Concrete";
+        public const string DefaultMetalImpactAudioKey = "Impact Metal";
+        public const string DefaultWoodImpactAudioKey = "Impact Wood";
+        public const string DefaultFleshImpactAudioKey = "Impact Flesh";
+        public const string DefaultGlassImpactAudioKey = "Impact Glass";
         public const float DefaultFireVolume = 1f;
         public const float DefaultFirePitchRandom = 0.04f;
         public const float DefaultFireAudioCooldown = 0.03f;
@@ -204,7 +217,7 @@ namespace Weapon.Data
                 hitLayerMask = Physics.DefaultRaycastLayers,
                 tracerPrefabKey = string.Empty,
                 impactEffectKey = DefaultImpactEffectKey,
-                muzzleFlashEffectKey = DefaultMuzzleFlashEffectKey,
+                muzzleFlashEffectKey = DefaultPistolMuzzleFlashEffectKey,
                 muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
                 fireAudioKey = DefaultPistolFireAudioKey,
                 fireVolume = DefaultFireVolume,
@@ -272,7 +285,7 @@ namespace Weapon.Data
                 hitLayerMask = Physics.DefaultRaycastLayers,
                 tracerPrefabKey = string.Empty,
                 impactEffectKey = DefaultImpactEffectKey,
-                muzzleFlashEffectKey = DefaultMuzzleFlashEffectKey,
+                muzzleFlashEffectKey = DefaultAssaultRifleMuzzleFlashEffectKey,
                 muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
                 fireAudioKey = DefaultAssaultRifleFireAudioKey,
                 fireVolume = DefaultFireVolume,
@@ -376,7 +389,7 @@ namespace Weapon.Data
         {
             if (string.IsNullOrEmpty(muzzleFlashEffectKey))
             {
-                muzzleFlashEffectKey = DefaultMuzzleFlashEffectKey;
+                muzzleFlashEffectKey = ResolveDefaultMuzzleFlashEffectKey();
             }
 
             if (string.IsNullOrEmpty(muzzleSmokeEffectKey))
@@ -441,6 +454,16 @@ namespace Weapon.Data
             }
 
             return DefaultPistolFireAudioKey;
+        }
+
+        private string ResolveDefaultMuzzleFlashEffectKey()
+        {
+            if (weaponId == 2 || fireMode == WeaponFireMode.FullAuto)
+            {
+                return DefaultAssaultRifleMuzzleFlashEffectKey;
+            }
+
+            return DefaultPistolMuzzleFlashEffectKey;
         }
 
         private void ApplyMissingCrosshairDefaults()
@@ -519,7 +542,8 @@ namespace Weapon.Data
                 CreateHitSurfaceFeedback(HitSurfaceType.Stone),
                 CreateHitSurfaceFeedback(HitSurfaceType.Metal),
                 CreateHitSurfaceFeedback(HitSurfaceType.Wood),
-                CreateHitSurfaceFeedback(HitSurfaceType.Flesh)
+                CreateHitSurfaceFeedback(HitSurfaceType.Flesh),
+                CreateHitSurfaceFeedback(HitSurfaceType.Glass)
             };
         }
 
@@ -529,7 +553,7 @@ namespace Weapon.Data
             {
                 surfaceType = surfaceType,
                 impactEffectKey = GetDefaultImpactEffectKey(surfaceType),
-                impactAudioKey = string.Empty,
+                impactAudioKey = GetDefaultImpactAudioKey(surfaceType),
                 decalKey = string.Empty,
                 decalLifeTime = DefaultDecalLifeTime,
                 decalScale = DefaultDecalScale
@@ -546,10 +570,31 @@ namespace Weapon.Data
                     return "Wood Impact";
                 case HitSurfaceType.Flesh:
                     return "Blood Impact";
+                case HitSurfaceType.Glass:
+                    return DefaultImpactEffectKey;
                 case HitSurfaceType.Stone:
                 case HitSurfaceType.Default:
                 default:
                     return DefaultImpactEffectKey;
+            }
+        }
+
+        public static string GetDefaultImpactAudioKey(HitSurfaceType surfaceType)
+        {
+            switch (surfaceType)
+            {
+                case HitSurfaceType.Metal:
+                    return DefaultMetalImpactAudioKey;
+                case HitSurfaceType.Wood:
+                    return DefaultWoodImpactAudioKey;
+                case HitSurfaceType.Flesh:
+                    return DefaultFleshImpactAudioKey;
+                case HitSurfaceType.Glass:
+                    return DefaultGlassImpactAudioKey;
+                case HitSurfaceType.Stone:
+                case HitSurfaceType.Default:
+                default:
+                    return DefaultConcreteImpactAudioKey;
             }
         }
     }

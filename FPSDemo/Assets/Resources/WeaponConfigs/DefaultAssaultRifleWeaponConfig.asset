@@ -36,43 +36,49 @@ MonoBehaviour:
       serializedVersion: 2
       m_Bits: 115
     tracerPrefabKey: ""
-    impactEffectKey: Stone Impact
-    muzzleFlashEffectKey: Muzzle Flash
-    muzzleSmokeEffectKey: Muzzle Smoke
+    impactEffectKey: KriptoFX Concrete Impact
+    muzzleFlashEffectKey: KriptoFX Assault Rifle Muzzle Flash
+    muzzleSmokeEffectKey: None
     fireAudioKey: Assault Rifle_1 Fire
     fireVolume: 1
     firePitchRandom: 0.04
     fireAudioCooldown: 0.03
     fireFeedbackIntensity: 1
-    defaultImpactEffectKey: Stone Impact
+    defaultImpactEffectKey: KriptoFX Concrete Impact
     hitSurfaceFeedbacks:
     - surfaceType: 0
-      impactEffectKey: Stone Impact
-      impactAudioKey: ""
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: Impact Concrete
       decalKey: ""
       decalLifeTime: 8
       decalScale: 1
     - surfaceType: 1
-      impactEffectKey: Stone Impact
-      impactAudioKey: ""
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: Impact Concrete
       decalKey: ""
       decalLifeTime: 8
       decalScale: 1
     - surfaceType: 2
-      impactEffectKey: Metal Impact
-      impactAudioKey: ""
+      impactEffectKey: KriptoFX Metal Impact
+      impactAudioKey: Impact Metal
       decalKey: ""
       decalLifeTime: 8
       decalScale: 1
     - surfaceType: 3
-      impactEffectKey: Wood Impact
-      impactAudioKey: ""
+      impactEffectKey: KriptoFX Wood Impact
+      impactAudioKey: Impact Wood
       decalKey: ""
       decalLifeTime: 8
       decalScale: 1
     - surfaceType: 4
       impactEffectKey: Blood Impact
-      impactAudioKey: ""
+      impactAudioKey: Impact Flesh
+      decalKey: ""
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 5
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: Impact Glass
       decalKey: ""
       decalLifeTime: 8
       decalScale: 1

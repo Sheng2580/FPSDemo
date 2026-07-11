@@ -18,10 +18,11 @@ namespace Weapon.State
                 return;
             }
 
-            _timer = controller.Config.reloadTime;
+            float reloadTime = Mathf.Max(0.01f, controller.Config.reloadTime);
+            _timer = reloadTime;
             controller.RuntimeData.isReloading = true;
             controller.CurrentWeaponView?.SetReloading(true);
-            controller.CurrentWeaponView?.PlayReload();
+            controller.CurrentWeaponView?.PlayReload(reloadTime);
         }
 
         public override void Update()
@@ -41,6 +42,8 @@ namespace Weapon.State
 
         public override void Exit()
         {
+            controller.CurrentWeaponView?.ResetAnimationSpeed();
+
             if (!controller.RuntimeData.isReloading)
             {
                 return;

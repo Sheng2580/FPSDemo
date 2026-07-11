@@ -52,12 +52,30 @@ namespace Enemy.Data
         public float legDamageMultiplier;
 
         public int waveIndex;
+        public int absoluteWaveIndex;
+        public float waveElapsedTime;
         public int entryMaxAliveCount;
         public int spawnCountForBatch;
         public int sceneMaxEnemyCount;
         public int maxNearEnemyCount;
         public int maxActiveAgentCount;
         public int maxAttackersCount;
+        public int difficultyTierIndex;
+        public int difficultyTierGrowthStep;
+        public int wavesPerDifficultyTier;
+        public int waveTotalSpawnCount;
+        public int waveTotalSpawnGrowth;
+        public float waveClearDelay;
+        public bool waitForAvailableSpawnSlot;
+        public int candidateUnlockWaveIndex;
+        public int candidateMinWaveIndex;
+        public int candidateMaxWaveIndex;
+        public float candidateBaseWeight;
+        public float candidateFinalWeight;
+        public float resolvedHealthMultiplier;
+        public float resolvedDamageMultiplier;
+        public float resolvedMoveSpeedMultiplier;
+        public float resolvedGoldMultiplier;
 
         public static EnemyRuntimeStats Create(EnemyConfig config, EnemySpawnEntry entry)
         {
@@ -66,11 +84,26 @@ namespace Enemy.Data
 
         public static EnemyRuntimeStats Create(EnemyConfig config, EnemySpawnEntry entry, EnemyWaveConfig wave, float elapsedTime)
         {
+            int resolvedAbsoluteWaveIndex = wave != null ? wave.GetFirstWaveIndexInDifficultyTier() : 0;
+            float resolvedWaveElapsedTime = wave != null ? Mathf.Max(0f, elapsedTime - wave.startTime) : 0f;
+            return Create(config, entry, wave, elapsedTime, resolvedAbsoluteWaveIndex, resolvedWaveElapsedTime);
+        }
+
+        public static EnemyRuntimeStats Create(
+            EnemyConfig config,
+            EnemySpawnEntry entry,
+            EnemyWaveConfig wave,
+            float elapsedTime,
+            int absoluteWaveIndex,
+            float waveElapsedTime)
+        {
             config ??= EnemyConfig.CreateNormalZombie();
             config.ApplyMissingDefaults();
 
             entry ??= new EnemySpawnEntry();
             entry.ApplyMissingDefaults();
+            int safeAbsoluteWaveIndex = Mathf.Max(0, absoluteWaveIndex);
+            float safeWaveElapsedTime = Mathf.Max(0f, waveElapsedTime);
 
             return new EnemyRuntimeStats
             {
@@ -114,12 +147,30 @@ namespace Enemy.Data
                 armDamageMultiplier = Mathf.Max(0f, config.armDamageMultiplier),
                 legDamageMultiplier = Mathf.Max(0f, config.legDamageMultiplier),
                 waveIndex = wave != null ? wave.waveIndex : 0,
+                absoluteWaveIndex = safeAbsoluteWaveIndex,
+                waveElapsedTime = safeWaveElapsedTime,
                 entryMaxAliveCount = Mathf.Max(1, entry.maxAliveCount),
-                spawnCountForBatch = wave != null ? wave.GetSpawnCountForTime(elapsedTime) : 1,
+                spawnCountForBatch = wave != null ? wave.GetSpawnCountForWaveElapsed(safeWaveElapsedTime) : 1,
                 sceneMaxEnemyCount = wave != null ? Mathf.Max(1, wave.sceneMaxEnemyCount) : Mathf.Max(1, entry.maxAliveCount),
                 maxNearEnemyCount = wave != null ? Mathf.Max(1, wave.maxNearEnemyCount) : 1,
                 maxActiveAgentCount = wave != null ? Mathf.Max(0, wave.maxActiveAgentCount) : 1,
-                maxAttackersCount = wave != null ? Mathf.Max(1, wave.maxAttackersCount) : 1
+                maxAttackersCount = wave != null ? Mathf.Max(1, wave.maxAttackersCount) : 1,
+                difficultyTierIndex = wave != null ? wave.GetDifficultyTierForWave(safeAbsoluteWaveIndex) : 1,
+                difficultyTierGrowthStep = wave != null ? wave.GetDifficultyTierGrowthStep(safeAbsoluteWaveIndex) : 0,
+                wavesPerDifficultyTier = wave != null ? Mathf.Max(1, wave.wavesPerDifficultyTier) : 1,
+                waveTotalSpawnCount = wave != null ? wave.GetTotalSpawnCountForWave(safeAbsoluteWaveIndex) : 1,
+                waveTotalSpawnGrowth = wave != null ? Mathf.Max(0, wave.waveTotalSpawnGrowth) : 0,
+                waveClearDelay = wave != null ? Mathf.Max(0f, wave.waveClearDelay) : 5f,
+                waitForAvailableSpawnSlot = wave == null || wave.waitForAvailableSpawnSlot,
+                candidateUnlockWaveIndex = Mathf.Max(1, entry.unlockWaveIndex),
+                candidateMinWaveIndex = Mathf.Max(1, entry.minWaveIndex),
+                candidateMaxWaveIndex = Mathf.Max(0, entry.maxWaveIndex),
+                candidateBaseWeight = Mathf.Max(0f, entry.baseWeight),
+                candidateFinalWeight = Mathf.Max(0f, entry.weight),
+                resolvedHealthMultiplier = Mathf.Max(0.01f, entry.healthMultiplier),
+                resolvedDamageMultiplier = Mathf.Max(0.01f, entry.damageMultiplier),
+                resolvedMoveSpeedMultiplier = Mathf.Max(0.01f, entry.moveSpeedMultiplier),
+                resolvedGoldMultiplier = Mathf.Max(0f, entry.goldMultiplier)
             };
         }
 
@@ -144,17 +195,66 @@ namespace Enemy.Data
             }
 
             wave.ApplyMissingDefaults();
-            EnemySpawnEntry entry = SelectEntry(wave, weightRoll01);
-            if (entry == null)
+            int absoluteWaveIndex = wave.GetFirstWaveIndexInDifficultyTier();
+            float waveElapsedTime = Mathf.Max(0f, elapsedTime - wave.startTime);
+            return TryCreateFromWave(wave, absoluteWaveIndex, waveElapsedTime, weightRoll01, out runtimeStats);
+        }
+
+        public static bool TryCreateFromWave(
+            EnemyWaveConfig wave,
+            int absoluteWaveIndex,
+            float waveElapsedTime,
+            out EnemyRuntimeStats runtimeStats)
+        {
+            return TryCreateFromWave(wave, absoluteWaveIndex, waveElapsedTime, UnityEngine.Random.value, out runtimeStats);
+        }
+
+        public static bool TryCreateFromWave(
+            EnemyWaveConfig wave,
+            int absoluteWaveIndex,
+            float waveElapsedTime,
+            float weightRoll01,
+            out EnemyRuntimeStats runtimeStats)
+        {
+            runtimeStats = null;
+            if (wave == null)
             {
                 return false;
             }
 
-            runtimeStats = CreateFromEntry(entry, wave, elapsedTime);
+            wave.ApplyMissingDefaults();
+            if (!wave.TryGetSpawnEntryForWave(absoluteWaveIndex, weightRoll01, out EnemySpawnEntry entry))
+            {
+                return false;
+            }
+
+            runtimeStats = CreateFromEntry(entry, wave, absoluteWaveIndex, waveElapsedTime);
             return runtimeStats != null;
         }
 
         public static EnemyRuntimeStats CreateFromEntry(EnemySpawnEntry entry, EnemyWaveConfig wave, float elapsedTime)
+        {
+            int absoluteWaveIndex = wave != null ? wave.GetFirstWaveIndexInDifficultyTier() : 0;
+            float waveElapsedTime = wave != null ? Mathf.Max(0f, elapsedTime - wave.startTime) : 0f;
+            return CreateFromEntry(entry, wave, elapsedTime, absoluteWaveIndex, waveElapsedTime);
+        }
+
+        public static EnemyRuntimeStats CreateFromEntry(
+            EnemySpawnEntry entry,
+            EnemyWaveConfig wave,
+            int absoluteWaveIndex,
+            float waveElapsedTime)
+        {
+            float elapsedTime = wave != null ? wave.startTime + Mathf.Max(0f, waveElapsedTime) : 0f;
+            return CreateFromEntry(entry, wave, elapsedTime, absoluteWaveIndex, waveElapsedTime);
+        }
+
+        private static EnemyRuntimeStats CreateFromEntry(
+            EnemySpawnEntry entry,
+            EnemyWaveConfig wave,
+            float elapsedTime,
+            int absoluteWaveIndex,
+            float waveElapsedTime)
         {
             if (entry == null || entry.enemyConfig == null)
             {
@@ -162,38 +262,8 @@ namespace Enemy.Data
             }
 
             EnemyConfig config = entry.enemyConfig.CreateRuntimeConfig();
-            return Create(config, entry, wave, elapsedTime);
+            return Create(config, entry, wave, elapsedTime, absoluteWaveIndex, waveElapsedTime);
         }
 
-        private static EnemySpawnEntry SelectEntry(EnemyWaveConfig wave, float weightRoll01)
-        {
-            float totalWeight = wave.GetTotalAvailableWeight();
-            if (totalWeight <= 0f || wave.entries == null)
-            {
-                return null;
-            }
-
-            float targetWeight = Mathf.Clamp01(weightRoll01) * totalWeight;
-            float currentWeight = 0f;
-            EnemySpawnEntry fallback = null;
-
-            for (int i = 0; i < wave.entries.Count; i++)
-            {
-                EnemySpawnEntry entry = wave.entries[i];
-                if (entry == null || !entry.IsValid)
-                {
-                    continue;
-                }
-
-                fallback = entry;
-                currentWeight += Mathf.Max(0f, entry.weight);
-                if (targetWeight <= currentWeight)
-                {
-                    return entry;
-                }
-            }
-
-            return fallback;
-        }
     }
 }

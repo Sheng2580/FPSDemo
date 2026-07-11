@@ -14,12 +14,21 @@ namespace Combat
     {
         private const string DefaultResourceLibraryBundleName = CombatFeedbackResourceLibrary.DefaultAssetBundleName;
         private const string DefaultResourceLibraryAssetName = "CombatFeedbackResources";
+        private const string DisabledResourceKey = "None";
+        private const string SmokeParticleName = "Smoke";
+        private const string DistortionObjectName = "Distortion";
+        private const string MuzzleFlashKeyToken = "Muzzle Flash";
+        private const int MobileSmokeMaxParticles = 24;
+        private const int MobileEffectMaxParticles = 64;
+        private const float MobileSmokeEmissionMultiplier = 0.45f;
+        private const float MobileSmokeLifetimeMultiplier = 0.65f;
 #if UNITY_EDITOR
         private const string EditorResourceLibraryPath = "Assets/Art/ABRes/CombatFeedback/CombatFeedbackResources.asset";
 #endif
 
         private class PlayingEffect
         {
+            public string key;
             public GameObject prefab;
             public GameObject instance;
             public ParticleSystem[] particleSystems;
@@ -54,6 +63,12 @@ namespace Combat
         [SerializeField] private float fireAudioSpatialBlend = 0.15f;
         [SerializeField] private float impactAudioSpatialBlend = 1f;
 
+        [Header("性能保护")]
+        [SerializeField] private float muzzleEffectFallbackLifeTime = 0.9f;
+        [SerializeField] private float muzzleSmokeMinInterval = 0.09f;
+        [SerializeField] private int maxPlayingMuzzleEffectsPerKey = 8;
+        [SerializeField] private int maxPlayingEffectsPerKey = 24;
+
         [Header("调试")]
         [SerializeField] private bool debugFeedback = true;
 #if UNITY_EDITOR
@@ -64,7 +79,12 @@ namespace Combat
         private readonly List<PlayingEffect> _playingEffects = new List<PlayingEffect>();
         private readonly List<AudioSource> _audioSources = new List<AudioSource>();
         private readonly Dictionary<string, float> _nextAudioTimes = new Dictionary<string, float>();
+        private readonly Dictionary<string, float> _nextSmokeTimes = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _missingResourceWarnings = new HashSet<string>();
+        private readonly HashSet<string> _effectPlaybackLogs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _effectLoadLogs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _weaponFireDebugLogs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _smokeThrottleLogs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, GameObject> _loadedEffectPrefabs = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, AudioClip> _loadedAudioClips = new Dictionary<string, AudioClip>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _loadingEffectKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -146,6 +166,7 @@ namespace Combat
             float audioCooldown = config != null && config.fireAudioCooldown >= 0f ? config.fireAudioCooldown : WeaponConfig.DefaultFireAudioCooldown;
             float intensity = config != null && config.fireFeedbackIntensity > 0f ? config.fireFeedbackIntensity : WeaponConfig.DefaultFireFeedbackIntensity;
 
+            LogWeaponFireFeedback(eventData, muzzleFlashKey, muzzleSmokeKey, fireAudioKey);
             PlayEffect(muzzleFlashKey, eventData.muzzlePosition, eventData.muzzleRotation, intensity);
             PlayEffect(muzzleSmokeKey, eventData.muzzlePosition, eventData.muzzleRotation, intensity);
             PlayAudio(fireAudioKey, eventData.muzzlePosition, volume, pitchRandom, audioCooldown, fireAudioSpatialBlend);
@@ -273,7 +294,7 @@ namespace Combat
 
             if (_loadedEffectPrefabs.TryGetValue(key, out GameObject prefab) && prefab != null)
             {
-                SpawnEffect(prefab, position, rotation, intensity);
+                SpawnEffect(key, prefab, position, rotation, intensity);
                 return;
             }
 
@@ -281,16 +302,27 @@ namespace Combat
             BeginLoadEffectPrefab(key);
         }
 
-        private void SpawnEffect(GameObject prefab, Vector3 position, Quaternion rotation, float intensity)
+        private void SpawnEffect(string key, GameObject prefab, Vector3 position, Quaternion rotation, float intensity)
         {
+            EnforcePlayingEffectLimit(key);
+
             // 使用内部对象池 避免连续开火时频繁创建销毁
             GameObject effectObject = GetEffectInstance(prefab);
+            if (effectObject == null)
+            {
+                return;
+            }
+
             Transform effectTransform = effectObject.transform;
             effectTransform.SetParent(EnsureEffectRoot(), false);
             effectTransform.position = position;
             effectTransform.rotation = rotation;
             effectTransform.localScale = prefab.transform.localScale * Mathf.Max(0.01f, intensity);
+
+            bool smokeActive = ShouldEnableSmokeForSpawn(key);
+            SetNamedEffectObjects(effectObject.transform, SmokeParticleName, smokeActive);
             effectObject.SetActive(true);
+            LogEffectPlayback(key, prefab);
 
             ParticleSystem[] particleSystems = effectObject.GetComponentsInChildren<ParticleSystem>(true);
             for (int i = 0; i < particleSystems.Length; i++)
@@ -310,11 +342,12 @@ namespace Combat
 
             _playingEffects.Add(new PlayingEffect
             {
+                key = key,
                 prefab = prefab,
                 instance = effectObject,
                 particleSystems = particleSystems,
                 startTime = Time.time,
-                fallbackLifeTime = Mathf.Max(0.1f, effectFallbackLifeTime)
+                fallbackLifeTime = ResolveEffectFallbackLifeTime(key)
             });
         }
 
@@ -338,8 +371,9 @@ namespace Combat
             }
 
 #if UNITY_EDITOR
-            if (preferEditorDirectReferences && TryUseDirectEffectFallback(key))
+            if (preferEditorDirectReferences && TryUseDirectEffectFallback(key, out GameObject directPrefab))
             {
+                LogEffectLoaded(key, "EditorDirect", string.Empty, string.Empty, directPrefab);
                 FlushPendingEffectRequests(key);
                 return;
             }
@@ -353,13 +387,14 @@ namespace Combat
             if (!resourceLibrary.TryGetEffectAssetLocation(key, out string abName, out string assetName))
             {
                 _loadingEffectKeys.Remove(key);
-                if (!TryUseDirectEffectFallback(key))
+                if (!TryUseDirectEffectFallback(key, out GameObject missingLocationPrefab))
                 {
                     WarnMissingResource("特效", key);
                     ClearPendingEffectRequests(key);
                     return;
                 }
 
+                LogEffectLoaded(key, "DirectFallback", string.Empty, string.Empty, missingLocationPrefab);
                 FlushPendingEffectRequests(key);
                 return;
             }
@@ -370,12 +405,14 @@ namespace Combat
                 if (loadedPrefab != null)
                 {
                     _loadedEffectPrefabs[key] = loadedPrefab;
+                    LogEffectLoaded(key, "AssetBundle", abName, assetName, loadedPrefab);
                     FlushPendingEffectRequests(key);
                     return;
                 }
 
-                if (TryUseDirectEffectFallback(key))
+                if (TryUseDirectEffectFallback(key, out GameObject failedBundlePrefab))
                 {
+                    LogEffectLoaded(key, "DirectFallback", abName, assetName, failedBundlePrefab);
                     FlushPendingEffectRequests(key);
                     return;
                 }
@@ -385,9 +422,9 @@ namespace Combat
             });
         }
 
-        private bool TryUseDirectEffectFallback(string key)
+        private bool TryUseDirectEffectFallback(string key, out GameObject fallbackPrefab)
         {
-            GameObject fallbackPrefab = resourceLibrary != null ? resourceLibrary.GetEffectPrefab(key) : null;
+            fallbackPrefab = resourceLibrary != null ? resourceLibrary.GetEffectPrefab(key) : null;
             if (fallbackPrefab == null)
             {
                 return false;
@@ -429,8 +466,172 @@ namespace Combat
             for (int i = 0; i < requests.Count; i++)
             {
                 EffectPlayRequest request = requests[i];
-                SpawnEffect(prefab, request.position, request.rotation, request.intensity);
+                SpawnEffect(key, prefab, request.position, request.rotation, request.intensity);
             }
+        }
+
+        private void LogEffectPlayback(string key, GameObject prefab)
+        {
+            if (!debugFeedback || prefab == null || string.IsNullOrEmpty(key) || !_effectPlaybackLogs.Add(key))
+            {
+                return;
+            }
+
+            Debug.Log($"[CombatFeedback] 播放特效 Key={key} Prefab={prefab.name}", prefab);
+        }
+
+        private void LogWeaponFireFeedback(WeaponFiredEventData eventData, string muzzleFlashKey, string muzzleSmokeKey, string fireAudioKey)
+        {
+            if (!debugFeedback)
+            {
+                return;
+            }
+
+            string weaponName = string.IsNullOrEmpty(eventData.weaponName) ? "Unknown" : eventData.weaponName;
+            string logKey = $"{eventData.weaponId}|{weaponName}|{muzzleFlashKey}|{muzzleSmokeKey}|{fireAudioKey}";
+            if (!_weaponFireDebugLogs.Add(logKey))
+            {
+                return;
+            }
+
+            string muzzleName = eventData.muzzleTransform != null ? eventData.muzzleTransform.name : "None";
+            Debug.Log(
+                $"[CombatFeedback] 开火表现 Weapon={weaponName} Id={eventData.weaponId} FlashKey={FormatDebugKey(muzzleFlashKey)} SmokeKey={FormatDebugKey(muzzleSmokeKey)} AudioKey={FormatDebugKey(fireAudioKey)} Muzzle={muzzleName}",
+                eventData.weaponView);
+        }
+
+        private void LogEffectLoaded(string key, string source, string assetBundleName, string assetName, GameObject prefab)
+        {
+            if (!debugFeedback || prefab == null || string.IsNullOrEmpty(key))
+            {
+                return;
+            }
+
+            string logKey = $"{key}|{source}|{assetBundleName}|{assetName}|{prefab.name}";
+            if (!_effectLoadLogs.Add(logKey))
+            {
+                return;
+            }
+
+            Debug.Log(
+                $"[CombatFeedback] 特效绑定 Key={key} Source={source} AB={FormatDebugKey(assetBundleName)} Asset={FormatDebugKey(assetName)} Prefab={prefab.name}",
+                prefab);
+        }
+
+        private string FormatDebugKey(string key)
+        {
+            return string.IsNullOrEmpty(key) ? "None" : key;
+        }
+
+        private bool ShouldEnableSmokeForSpawn(string key)
+        {
+            if (!IsMuzzleFlashEffectKey(key) || muzzleSmokeMinInterval <= 0f)
+            {
+                return true;
+            }
+
+            if (_nextSmokeTimes.TryGetValue(key, out float nextTime) && Time.time < nextTime)
+            {
+                LogSmokeThrottle(key);
+                return false;
+            }
+
+            _nextSmokeTimes[key] = Time.time + muzzleSmokeMinInterval;
+            return true;
+        }
+
+        private void LogSmokeThrottle(string key)
+        {
+            if (!debugFeedback || !_smokeThrottleLogs.Add(key))
+            {
+                return;
+            }
+
+            Debug.Log($"[CombatFeedback] 枪口烟雾节流 Key={key} Interval={muzzleSmokeMinInterval:0.###}s", this);
+        }
+
+        private void SetNamedEffectObjects(Transform root, string objectName, bool isActive)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            if (string.Equals(root.name, objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                root.gameObject.SetActive(isActive);
+            }
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                SetNamedEffectObjects(root.GetChild(i), objectName, isActive);
+            }
+        }
+
+        private void EnforcePlayingEffectLimit(string key)
+        {
+            int limit = ResolvePlayingEffectLimit(key);
+            if (limit <= 0)
+            {
+                return;
+            }
+
+            int count = 0;
+            for (int i = _playingEffects.Count - 1; i >= 0; i--)
+            {
+                PlayingEffect effect = _playingEffects[i];
+                if (effect.instance == null)
+                {
+                    _playingEffects.RemoveAt(i);
+                    continue;
+                }
+
+                if (IsSameEffectKey(effect.key, key))
+                {
+                    count++;
+                }
+            }
+
+            for (int i = 0; i < _playingEffects.Count && count >= limit; i++)
+            {
+                PlayingEffect effect = _playingEffects[i];
+                if (!IsSameEffectKey(effect.key, key))
+                {
+                    continue;
+                }
+
+                ReturnEffect(effect);
+                _playingEffects.RemoveAt(i);
+                i--;
+                count--;
+            }
+        }
+
+        private int ResolvePlayingEffectLimit(string key)
+        {
+            return IsMuzzleFlashEffectKey(key)
+                ? maxPlayingMuzzleEffectsPerKey
+                : maxPlayingEffectsPerKey;
+        }
+
+        private float ResolveEffectFallbackLifeTime(string key)
+        {
+            float lifeTime = IsMuzzleFlashEffectKey(key)
+                ? muzzleEffectFallbackLifeTime
+                : effectFallbackLifeTime;
+
+            return Mathf.Max(0.1f, lifeTime);
+        }
+
+        private bool IsMuzzleFlashEffectKey(string key)
+        {
+            return !string.IsNullOrEmpty(key)
+                   && key.IndexOf(MuzzleFlashKeyToken, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private bool IsSameEffectKey(string left, string right)
+        {
+            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
         }
 
         private void ClearPendingEffectRequests(string key)
@@ -455,22 +656,70 @@ namespace Combat
                 }
             }
 
-            Object sourceObject = prefab;
-            Object spawnedObject = Instantiate(sourceObject, EnsureEffectRoot());
-            if (spawnedObject is GameObject spawnedGameObject)
+            GameObject spawnedObject = Instantiate(prefab, EnsureEffectRoot());
+            if (spawnedObject != null)
             {
-                return spawnedGameObject;
+                ApplyMobileEffectPerformanceSettings(spawnedObject);
+                return spawnedObject;
             }
 
-            if (spawnedObject is Component spawnedComponent)
-            {
-                return spawnedComponent.gameObject;
-            }
-
-            Debug.LogError($"[CombatFeedback] 特效实例化结果不是 GameObject KeyPrefab={prefab.name}", prefab);
-            Destroy(spawnedObject);
-            return new GameObject(prefab.name);
+            Debug.LogError($"[CombatFeedback] 特效实例化失败 KeyPrefab={prefab.name}", prefab);
+            return null;
         }
+
+        private void ApplyMobileEffectPerformanceSettings(GameObject effectObject)
+        {
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+            // 移动端关闭特效自带点光 避免连续开火产生额外光照开销
+            Light[] lights = effectObject.GetComponentsInChildren<Light>(true);
+            for (int i = 0; i < lights.Length; i++)
+            {
+                lights[i].enabled = false;
+            }
+
+            // 移动端关闭扭曲层 减少透明叠加和屏幕采样开销
+            SetNamedEffectObjects(effectObject.transform, DistortionObjectName, false);
+
+            // 移动端压低烟雾粒子数量 避免连续射击时烟雾堆叠造成过绘
+            ParticleSystem[] particleSystems = effectObject.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < particleSystems.Length; i++)
+            {
+                ApplyMobileParticleSettings(particleSystems[i]);
+            }
+#endif
+        }
+
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+        private void ApplyMobileParticleSettings(ParticleSystem particleSystem)
+        {
+            if (particleSystem == null)
+            {
+                return;
+            }
+
+            bool isSmoke = particleSystem.name.IndexOf(SmokeParticleName, StringComparison.OrdinalIgnoreCase) >= 0;
+            ParticleSystem.MainModule main = particleSystem.main;
+            int maxParticles = isSmoke ? MobileSmokeMaxParticles : MobileEffectMaxParticles;
+            main.maxParticles = Mathf.Min(main.maxParticles, maxParticles);
+
+            if (isSmoke)
+            {
+                main.startLifetimeMultiplier *= MobileSmokeLifetimeMultiplier;
+                ParticleSystem.EmissionModule emission = particleSystem.emission;
+                emission.rateOverTimeMultiplier *= MobileSmokeEmissionMultiplier;
+                emission.rateOverDistanceMultiplier *= MobileSmokeEmissionMultiplier;
+            }
+
+            ParticleSystemRenderer renderer = particleSystem.GetComponent<ParticleSystemRenderer>();
+            if (renderer == null)
+            {
+                return;
+            }
+
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+#endif
 
         private void UpdatePlayingEffects()
         {
@@ -765,7 +1014,13 @@ namespace Combat
         private string ResolveImpactAudioKey(WeaponConfig config, HitSurfaceType surfaceType)
         {
             HitSurfaceFeedbackConfig feedbackConfig = FindSurfaceFeedback(config, surfaceType);
-            return feedbackConfig != null ? feedbackConfig.impactAudioKey : string.Empty;
+            string fallbackKey = WeaponConfig.GetDefaultImpactAudioKey(surfaceType);
+            if (feedbackConfig != null && !string.IsNullOrEmpty(feedbackConfig.impactAudioKey))
+            {
+                return ResolveKey(feedbackConfig.impactAudioKey, fallbackKey);
+            }
+
+            return fallbackKey;
         }
 
         private HitSurfaceFeedbackConfig FindSurfaceFeedback(WeaponConfig config, HitSurfaceType surfaceType)
@@ -799,6 +1054,12 @@ namespace Combat
 
         private string ResolveKey(string key, string fallbackKey)
         {
+            // 数据填 None 时表示这个表现临时关闭
+            if (string.Equals(key, DisabledResourceKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Empty;
+            }
+
             return string.IsNullOrEmpty(key) ? fallbackKey : key;
         }
 

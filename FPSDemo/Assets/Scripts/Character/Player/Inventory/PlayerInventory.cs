@@ -56,6 +56,21 @@ public class PlayerInventory : MonoBehaviour
         SendBattleGoldChangedEvent();
     }
 
+    public void ConfigureRunWeapons(IList<CarriedWeaponSlot> runWeapons, int defaultWeaponIndex)
+    {
+        SetAllWeaponViewsActive(false);
+
+        carriedWeapons = runWeapons != null
+            ? new List<CarriedWeaponSlot>(runWeapons)
+            : new List<CarriedWeaponSlot>();
+
+        startWeaponIndex = Mathf.Max(0, defaultWeaponIndex);
+        _currentWeaponIndex = -1;
+        _initialized = false;
+
+        InitForNewRun();
+    }
+
     public bool SwitchNextWeapon()
     {
         InitForNewRun();

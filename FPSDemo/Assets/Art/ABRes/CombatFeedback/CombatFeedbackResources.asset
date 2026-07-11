@@ -37,6 +37,26 @@ MonoBehaviour:
     assetBundleName: combat_feedback
     assetName: Wood Impact
     prefab: {fileID: 1000011190285628, guid: beb3acff7ab73944fb8f470f24d74ed3, type: 3}
+  - key: KriptoFX Pistol Muzzle Flash
+    assetBundleName: combat_feedback
+    assetName: MuzzleFlash1
+    prefab: {fileID: 124018, guid: fdac2b543efe1164abc20e40e85905c2, type: 3}
+  - key: KriptoFX Assault Rifle Muzzle Flash
+    assetBundleName: combat_feedback
+    assetName: MuzzleFlash8
+    prefab: {fileID: 141106, guid: 5cdf043766019ab49a66cea4cfdc047b, type: 3}
+  - key: KriptoFX Concrete Impact
+    assetBundleName: combat_feedback
+    assetName: ConcreteImpact
+    prefab: {fileID: 108086, guid: e4ed01af280d76248a9d0e72030c40c6, type: 3}
+  - key: KriptoFX Metal Impact
+    assetBundleName: combat_feedback
+    assetName: MetalImpact
+    prefab: {fileID: 180772, guid: 52aa1f2e1567b6e47b50df0d054982a7, type: 3}
+  - key: KriptoFX Wood Impact
+    assetBundleName: combat_feedback
+    assetName: WoodImpact
+    prefab: {fileID: 138412, guid: 4fbc0156e9dd2ab41a17e56a2f515d2a, type: 3}
   audioEntries:
   - key: Pistol_1 Fire
     assetBundleName: combat_feedback
@@ -50,3 +70,23 @@ MonoBehaviour:
     assetBundleName: combat_feedback
     assetName: Hitmarker
     clip: {fileID: 8300000, guid: 8cfc67226e59dc649b0afdf0911e0caf, type: 3}
+  - key: Impact Concrete
+    assetBundleName: combat_feedback
+    assetName: SFX_Vefects_Shots_Squib_Concrete
+    clip: {fileID: 8300000, guid: 27d2899b9c84e304cbf788cddbe0f237, type: 3}
+  - key: Impact Metal
+    assetBundleName: combat_feedback
+    assetName: SFX_Vefects_Shots_Squib_Metal
+    clip: {fileID: 8300000, guid: 30b4e2c2943a8a041bce6e38985af649, type: 3}
+  - key: Impact Wood
+    assetBundleName: combat_feedback
+    assetName: SFX_Vefects_Shots_Squib_Wood
+    clip: {fileID: 8300000, guid: 965a7194a59e7b64fa4cc21f518909da, type: 3}
+  - key: Impact Flesh
+    assetBundleName: combat_feedback
+    assetName: SFX_Vefects_Shots_Destruction_Fruit
+    clip: {fileID: 8300000, guid: 0c230eff87abc3548a1404ab6b8e7acf, type: 3}
+  - key: Impact Glass
+    assetBundleName: combat_feedback
+    assetName: SFX_Vefects_Shots_Squib_Glass
+    clip: {fileID: 8300000, guid: 358b0a3bf262e8c40a40fb08f3e6b680, type: 3}

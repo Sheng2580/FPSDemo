@@ -12,6 +12,7 @@ public static class FPSDemoBuildTools
     private const string TouchCanvasPath = "Assets/Art/ABRes/UI/TounchControllerCanvas.prefab";
     private const string TestCanvasPath = "Assets/Art/ABRes/UI/TestCanvas.prefab";
     private const string TouchCanvasBundleName = "uipanel";
+    private const string PlayerRuntimeBundleName = "player_runtime";
     private const string CombatFeedbackBundleName = "combat_feedback";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
@@ -29,6 +30,13 @@ public static class FPSDemoBuildTools
     {
         TouchCanvasPath,
         TestCanvasPath
+    };
+
+    private static readonly string[] PlayerRuntimeAssetPaths =
+    {
+        "Assets/Art/ABRes/Player/Player.prefab",
+        "Assets/Art/ABRes/Player/PlayerWeapon/PistolView.prefab",
+        "Assets/Art/ABRes/Player/PlayerWeapon/AssaultRifleView.prefab"
     };
 
     private static readonly string[] CombatFeedbackAssetPaths =
@@ -71,6 +79,7 @@ public static class FPSDemoBuildTools
     private static readonly string[] RequiredRuntimeBundleNames =
     {
         TouchCanvasBundleName,
+        PlayerRuntimeBundleName,
         CombatFeedbackBundleName,
         EnemyPrefabBundleName
     };
@@ -402,6 +411,7 @@ public static class FPSDemoBuildTools
         bool success = true;
 
         success &= TrySetAssetBundleNames(UIAssetPaths, TouchCanvasBundleName, ref changed);
+        success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
         success &= TrySetAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName, ref changed);
         success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
@@ -503,6 +513,7 @@ public static class FPSDemoBuildTools
     {
         bool isValid = true;
         isValid &= ValidateAssetBundleNames(UIAssetPaths, TouchCanvasBundleName);
+        isValid &= ValidateAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName);
         isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
         isValid &= ValidateAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName);
 

@@ -16,6 +16,23 @@ namespace Enemy
     public class EnemySpawnManager : MonoBehaviour
     {
         private const string DefaultEnemyPrefabBundleName = "enemy_prefabs";
+        private const int FallbackSceneMaxEnemyCount = 12;
+        private const int FallbackSpawnCountPerBatch = 1;
+        private const int BurstSpawnCountForTest = 10;
+        private const int BurstSpawnMaxAttemptsMultiplier = 4;
+        private const int BurstSpawnHardMaxEnemyCount = 60;
+        private const float FallbackSpawnInterval = 3f;
+        private const float FallbackSpawnDistance = 12f;
+        private const float ReturnToPoolDelay = 2.5f;
+        private const float SingleSpawnClearRadius = 2.5f;
+        private const float SingleSpawnPlayerBlockRadius = 8f;
+        private const float BurstSpawnClearRadius = 0.6f;
+        private const float BurstSpawnScatterRadius = 6f;
+        private const float SpawnPointSampleRadius = 4f;
+        private const string SingleSpawnPointNameKeyword = "BirthplaceS";
+        private const string BurstSpawnPointNameKeyword = "BirthplaceB";
+        private const KeyCode SingleSpawnKey = KeyCode.S;
+        private const KeyCode BurstSpawnKey = KeyCode.B;
 #if UNITY_EDITOR
         private const string EditorEnemyPrefabFolder = "Assets/Art/ABRes/Enemies/Prefabs";
 #endif
@@ -62,31 +79,6 @@ namespace Enemy
         [Header("生成")]
         [SerializeField] private bool autoSpawn = true;
         [SerializeField] private bool useWaveConfigs = true;
-        [SerializeField] private int sceneMaxEnemyCount = 12;
-        [SerializeField] private int spawnCountPerBatch = 1;
-        [SerializeField] private float spawnInterval = 3f;
-        [SerializeField] private float fallbackSpawnDistance = 12f;
-        [SerializeField] private float returnToPoolDelay = 2.5f;
-
-        [Header("场景测试生成")]
-        [SerializeField] private bool enableKeyboardSpawnTest = true;
-        [SerializeField] private KeyCode singleSpawnKey = KeyCode.S;
-        [SerializeField] private bool singleSpawnRequiresShift = true;
-        [SerializeField] private KeyCode burstSpawnKey = KeyCode.B;
-        [SerializeField] private int burstSpawnCount = 10;
-        [SerializeField] private float singleSpawnClearRadius = 2.5f;
-        [SerializeField] private bool blockSingleSpawnPointWhenPlayerNear = true;
-        [SerializeField] private float singleSpawnPlayerBlockRadius = 8f;
-        [SerializeField] private float burstSpawnClearRadius = 0.6f;
-        [SerializeField] private float burstSpawnScatterRadius = 6f;
-        [SerializeField] private int burstSpawnMaxAttemptsMultiplier = 4;
-        [SerializeField] private bool burstSpawnIgnoreWaveLimit = true;
-        [SerializeField] private int burstSpawnHardMaxEnemyCount = 60;
-        [SerializeField] private float spawnPointSampleRadius = 4f;
-        [SerializeField] private bool requireCompletePathToPlayer = true;
-        [SerializeField] private string singleSpawnPointNameKeyword = "BirthplaceS";
-        [SerializeField] private string burstSpawnPointNameKeyword = "BirthplaceB";
-        [SerializeField] private bool autoCollectSpawnPoints = true;
 
         [Header("引用")]
         [SerializeField] private Transform playerTarget;
@@ -111,6 +103,13 @@ namespace Enemy
         private NavMeshPath _spawnPath;
         private float _nextSpawnTime;
         private float _battleStartTime;
+        private int _currentWaveIndex;
+        private int _currentWaveSpawnedCount;
+        private int _currentWaveTargetCount;
+        private float _currentWaveStartTime;
+        private bool _isWaveRunning;
+        private bool _isWaitingNextWave;
+        private EnemyWaveConfig _currentWave;
 
         private void Awake()
         {
@@ -130,7 +129,18 @@ namespace Enemy
             RemoveInvalidActiveEnemies();
             TickKeyboardSpawnTest();
 
-            if (!autoSpawn || playerTarget == null || Time.time < _nextSpawnTime)
+            if (!autoSpawn || playerTarget == null)
+            {
+                return;
+            }
+
+            if (useWaveConfigs && HasWaveConfigAssets())
+            {
+                TickWaveAutoSpawn();
+                return;
+            }
+
+            if (Time.time < _nextSpawnTime)
             {
                 return;
             }
@@ -138,29 +148,9 @@ namespace Enemy
             float elapsedTime = GetElapsedTime();
             EnemyWaveConfig wave = ResolveActiveWave(elapsedTime);
             _nextSpawnTime = Time.time + ResolveSpawnInterval(wave);
-
             int batchCount = ResolveSpawnCount(wave, elapsedTime);
             int maxCount = ResolveSceneMaxEnemyCount(wave);
-            for (int i = 0; i < batchCount; i++)
-            {
-                if (_activeEnemies.Count >= maxCount)
-                {
-                    break;
-                }
-
-                Transform spawnPoint = PickSpawnPoint(null, singleSpawnClearRadius, 0f, true);
-                if (spawnPoint == null && HasSceneSpawnPoints())
-                {
-                    break;
-                }
-
-                if (useWaveConfigs && wave != null && SpawnOneFromWave(wave, elapsedTime, spawnPoint, singleSpawnClearRadius, 0f))
-                {
-                    continue;
-                }
-
-                SpawnOneLegacy(spawnPoint, singleSpawnClearRadius, 0f);
-            }
+            TickAutoSpawn(wave, elapsedTime, batchCount, maxCount);
         }
 
         public void NotifyEnemyDied(EnemyController enemy)
@@ -179,9 +169,226 @@ namespace Enemy
             return SpawnOneLegacy();
         }
 
+        private void TickWaveAutoSpawn()
+        {
+            if (_isWaitingNextWave)
+            {
+                if (Time.time >= _currentWaveStartTime)
+                {
+                    StartWave(_currentWaveIndex + 1);
+                }
+
+                return;
+            }
+
+            if (!_isWaveRunning)
+            {
+                StartWave(1);
+            }
+
+            if (_currentWave == null)
+            {
+                return;
+            }
+
+            int maxCount = ResolveSceneMaxEnemyCount(_currentWave);
+            if (_currentWaveSpawnedCount >= _currentWaveTargetCount)
+            {
+                if (_activeEnemies.Count == 0)
+                {
+                    CompleteCurrentWave();
+                }
+
+                return;
+            }
+
+            if (_activeEnemies.Count >= maxCount || Time.time < _nextSpawnTime)
+            {
+                return;
+            }
+
+            float waveElapsedTime = Mathf.Max(0f, Time.time - _currentWaveStartTime);
+            int batchCount = ResolveSpawnCountForWaveElapsed(_currentWave, waveElapsedTime);
+            int remainWaveCount = Mathf.Max(0, _currentWaveTargetCount - _currentWaveSpawnedCount);
+            int remainSceneCapacity = Mathf.Max(0, maxCount - _activeEnemies.Count);
+            int targetCount = Mathf.Min(Mathf.Max(1, batchCount), remainWaveCount, remainSceneCapacity);
+            if (targetCount <= 0)
+            {
+                return;
+            }
+
+            _nextSpawnTime = Time.time + ResolveSpawnInterval(_currentWave);
+            int spawnedCount = TickAutoSpawn(_currentWave, waveElapsedTime, targetCount, maxCount);
+            if (spawnedCount <= 0)
+            {
+                return;
+            }
+
+            _currentWaveSpawnedCount += spawnedCount;
+            EventCenter.Instance.EventTrigger(
+                GameEvent.EnemyWaveProgressChanged,
+                CreateWaveEventData(0f));
+        }
+
+        private void StartWave(int waveIndex)
+        {
+            _currentWaveIndex = Mathf.Max(1, waveIndex);
+            _currentWave = ResolveWaveByAbsoluteIndex(_currentWaveIndex);
+            if (_currentWave == null)
+            {
+                _isWaveRunning = false;
+                return;
+            }
+
+            _isWaitingNextWave = false;
+            _isWaveRunning = true;
+            _currentWaveSpawnedCount = 0;
+            _currentWaveStartTime = Time.time;
+            _currentWaveTargetCount = ResolveWaveTotalSpawnCount(_currentWave, _currentWaveIndex);
+            _nextSpawnTime = Time.time;
+
+            Debug.Log(
+                $"[EnemyWave] 第 {_currentWaveIndex} 波开始 Tier={ResolveDifficultyTier(_currentWave, _currentWaveIndex)} Total={_currentWaveTargetCount}",
+                this);
+
+            EventCenter.Instance.EventTrigger(
+                GameEvent.EnemyWaveStarted,
+                CreateWaveEventData(0f));
+        }
+
+        private void CompleteCurrentWave()
+        {
+            float delay = ResolveWaveClearDelay(_currentWave);
+            Debug.Log(
+                $"[EnemyWave] 第 {_currentWaveIndex} 波清理完成 NextDelay={delay:0.##}",
+                this);
+
+            EventCenter.Instance.EventTrigger(
+                GameEvent.EnemyWaveCleared,
+                CreateWaveEventData(delay));
+
+            _isWaveRunning = false;
+            _isWaitingNextWave = true;
+            _currentWaveStartTime = Time.time + delay;
+
+            EventCenter.Instance.EventTrigger(
+                GameEvent.EnemyWavePreparing,
+                CreateWaveEventData(delay, _currentWaveIndex + 1));
+        }
+
+        private int TickAutoSpawn(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount)
+        {
+            if (_activeEnemies.Count >= maxCount)
+            {
+                return 0;
+            }
+
+            int burstSpawnedCount = TryAutoSpawnFromBurstPoint(wave, elapsedTime, batchCount, maxCount);
+            if (burstSpawnedCount > 0)
+            {
+                return burstSpawnedCount;
+            }
+
+            return TryAutoSpawnFromSinglePoints(wave, elapsedTime, batchCount, maxCount);
+        }
+
+        private int TryAutoSpawnFromBurstPoint(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount)
+        {
+            Transform spawnPoint = PickSpawnPoint(BurstSpawnPointNameKeyword, BurstSpawnClearRadius, BurstSpawnScatterRadius, false);
+            if (spawnPoint == null)
+            {
+                return 0;
+            }
+
+            int remainCapacity = Mathf.Max(0, maxCount - _activeEnemies.Count);
+            int targetCount = Mathf.Min(Mathf.Max(1, batchCount), remainCapacity);
+            int spawnedCount = SpawnBatchAtPoint(
+                wave,
+                elapsedTime,
+                spawnPoint,
+                targetCount,
+                BurstSpawnClearRadius,
+                BurstSpawnScatterRadius);
+
+            if (spawnedCount > 0)
+            {
+                Debug.Log(
+                    $"[EnemySpawn] 自动 B 点批量生成 Point={spawnPoint.name} Spawned={spawnedCount}/{targetCount}",
+                    this);
+                return spawnedCount;
+            }
+
+            return 0;
+        }
+
+        private int TryAutoSpawnFromSinglePoints(EnemyWaveConfig wave, float elapsedTime, int batchCount, int maxCount)
+        {
+            int spawnedCount = 0;
+            int targetCount = Mathf.Max(1, batchCount);
+            for (int i = 0; i < targetCount; i++)
+            {
+                if (_activeEnemies.Count >= maxCount)
+                {
+                    break;
+                }
+
+                Transform spawnPoint = PickSpawnPoint(SingleSpawnPointNameKeyword, SingleSpawnClearRadius, 0f, true);
+                if (spawnPoint == null && HasSceneSpawnPoints())
+                {
+                    break;
+                }
+
+                if (TrySpawnOneByCurrentMode(wave, elapsedTime, spawnPoint, SingleSpawnClearRadius, 0f))
+                {
+                    spawnedCount++;
+                    continue;
+                }
+
+                break;
+            }
+
+            return spawnedCount;
+        }
+
+        private int SpawnBatchAtPoint(
+            EnemyWaveConfig wave,
+            float elapsedTime,
+            Transform spawnPoint,
+            int targetCount,
+            float clearRadius,
+            float scatterRadius)
+        {
+            int spawnedCount = 0;
+            int maxAttempts = Mathf.Max(targetCount, targetCount * Mathf.Max(1, BurstSpawnMaxAttemptsMultiplier));
+            for (int i = 0; i < maxAttempts && spawnedCount < targetCount; i++)
+            {
+                if (TrySpawnOneByCurrentMode(wave, elapsedTime, spawnPoint, clearRadius, scatterRadius))
+                {
+                    spawnedCount++;
+                }
+            }
+
+            return spawnedCount;
+        }
+
+        private bool TrySpawnOneByCurrentMode(
+            EnemyWaveConfig wave,
+            float elapsedTime,
+            Transform spawnPoint,
+            float clearRadius,
+            float scatterRadius)
+        {
+            if (useWaveConfigs && wave != null && SpawnOneFromWave(wave, elapsedTime, spawnPoint, clearRadius, scatterRadius))
+            {
+                return true;
+            }
+
+            return SpawnOneLegacy(spawnPoint, clearRadius, scatterRadius);
+        }
+
         private bool SpawnOneFromWave(EnemyWaveConfig wave, float elapsedTime)
         {
-            return SpawnOneFromWave(wave, elapsedTime, null, singleSpawnClearRadius, 0f);
+            return SpawnOneFromWave(wave, elapsedTime, null, SingleSpawnClearRadius, 0f);
         }
 
         private bool SpawnOneFromWave(
@@ -191,45 +398,59 @@ namespace Enemy
             float clearRadius,
             float scatterRadius)
         {
-            if (!EnemyRuntimeStats.TryCreateFromWave(wave, elapsedTime, out EnemyRuntimeStats runtimeStats))
+            int absoluteWaveIndex = wave != null ? Mathf.Max(1, wave.waveIndex) : 1;
+            float waveElapsedTime = wave != null ? Mathf.Max(0f, elapsedTime - wave.startTime) : 0f;
+            if (_isWaveRunning && ReferenceEquals(wave, _currentWave))
             {
-                return false;
+                absoluteWaveIndex = _currentWaveIndex;
+                waveElapsedTime = Mathf.Max(0f, Time.time - _currentWaveStartTime);
             }
 
-            if (!CanSpawnRuntimeStats(runtimeStats))
+            const int maxRuntimePickAttempts = 8;
+            for (int i = 0; i < maxRuntimePickAttempts; i++)
             {
-                return false;
+                if (!EnemyRuntimeStats.TryCreateFromWave(wave, absoluteWaveIndex, waveElapsedTime, out EnemyRuntimeStats runtimeStats))
+                {
+                    return false;
+                }
+
+                if (!CanSpawnRuntimeStats(runtimeStats))
+                {
+                    continue;
+                }
+
+                GameObject prefab = ResolvePrefab(runtimeStats);
+                if (prefab == null)
+                {
+                    continue;
+                }
+
+                EnemyController enemy = enemyPool.Get(prefab);
+                if (enemy == null)
+                {
+                    continue;
+                }
+
+                if (!TryResolveSpawnPositionForSpawn(spawnPoint, clearRadius, scatterRadius, out Vector3 spawnPosition))
+                {
+                    enemyPool.Return(prefab, enemy);
+                    return false;
+                }
+
+                enemy.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
+                enemy.gameObject.SetActive(true);
+                enemy.InitFromSpawner(runtimeStats, playerTarget, this, enemyPool, prefab);
+                _activeEnemies.Add(enemy);
+                IncreaseAliveCount(runtimeStats.enemyId);
+                return true;
             }
 
-            GameObject prefab = ResolvePrefab(runtimeStats);
-            if (prefab == null)
-            {
-                return false;
-            }
-
-            EnemyController enemy = enemyPool.Get(prefab);
-            if (enemy == null)
-            {
-                return false;
-            }
-
-            if (!TryResolveSpawnPositionForSpawn(spawnPoint, clearRadius, scatterRadius, out Vector3 spawnPosition))
-            {
-                enemyPool.Return(prefab, enemy);
-                return false;
-            }
-
-            enemy.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
-            enemy.gameObject.SetActive(true);
-            enemy.InitFromSpawner(runtimeStats, playerTarget, this, enemyPool, prefab);
-            _activeEnemies.Add(enemy);
-            IncreaseAliveCount(runtimeStats.enemyId);
-            return true;
+            return false;
         }
 
         private bool SpawnOneLegacy()
         {
-            return SpawnOneLegacy(null, singleSpawnClearRadius, 0f);
+            return SpawnOneLegacy(null, SingleSpawnClearRadius, 0f);
         }
 
         private bool SpawnOneLegacy(Transform spawnPoint, float clearRadius, float scatterRadius)
@@ -358,19 +579,161 @@ namespace Enemy
             return fallback != null && elapsedTime >= fallback.startTime ? fallback : null;
         }
 
+        private bool HasWaveConfigAssets()
+        {
+            return waveConfigs != null && waveConfigs.Count > 0;
+        }
+
+        private EnemyWaveConfig ResolveWaveByAbsoluteIndex(int absoluteWaveIndex)
+        {
+            if (!HasWaveConfigAssets())
+            {
+                return null;
+            }
+
+            int safeWaveIndex = Mathf.Max(1, absoluteWaveIndex);
+            int targetTier = ResolveDifficultyTierForWave(safeWaveIndex);
+            EnemyWaveConfig fallback = null;
+            int fallbackTier = 0;
+
+            for (int i = 0; i < waveConfigs.Count; i++)
+            {
+                EnemyWaveConfigAsset asset = waveConfigs[i];
+                EnemyWaveConfig config = asset != null ? asset.Config : null;
+                if (config == null)
+                {
+                    continue;
+                }
+
+                config.ApplyMissingDefaults();
+                int configTier = Mathf.Max(1, config.difficultyTierIndex);
+                if (configTier == targetTier)
+                {
+                    return config;
+                }
+
+                if (configTier < targetTier && configTier > fallbackTier)
+                {
+                    fallback = config;
+                    fallbackTier = configTier;
+                }
+            }
+
+            return fallback ?? ResolveFirstAvailableWave();
+        }
+
+        private EnemyWaveConfig ResolveFirstAvailableWave()
+        {
+            if (!HasWaveConfigAssets())
+            {
+                return null;
+            }
+
+            EnemyWaveConfig fallback = null;
+            int fallbackTier = int.MaxValue;
+            for (int i = 0; i < waveConfigs.Count; i++)
+            {
+                EnemyWaveConfigAsset asset = waveConfigs[i];
+                EnemyWaveConfig config = asset != null ? asset.Config : null;
+                if (config == null)
+                {
+                    continue;
+                }
+
+                config.ApplyMissingDefaults();
+                int configTier = Mathf.Max(1, config.difficultyTierIndex);
+                if (fallback == null || configTier < fallbackTier)
+                {
+                    fallback = config;
+                    fallbackTier = configTier;
+                }
+            }
+
+            return fallback;
+        }
+
+        private int ResolveDifficultyTierForWave(int absoluteWaveIndex)
+        {
+            int safeWaveIndex = Mathf.Max(1, absoluteWaveIndex);
+            int wavesPerTier = ResolveWavesPerDifficultyTier();
+            return Mathf.Max(1, Mathf.CeilToInt(safeWaveIndex / (float)wavesPerTier));
+        }
+
+        private int ResolveWavesPerDifficultyTier()
+        {
+            if (!HasWaveConfigAssets())
+            {
+                return 1;
+            }
+
+            for (int i = 0; i < waveConfigs.Count; i++)
+            {
+                EnemyWaveConfig config = waveConfigs[i] != null ? waveConfigs[i].Config : null;
+                if (config != null)
+                {
+                    return Mathf.Max(1, config.wavesPerDifficultyTier);
+                }
+            }
+
+            return 1;
+        }
+
+        private int ResolveWaveTotalSpawnCount(EnemyWaveConfig wave, int absoluteWaveIndex)
+        {
+            return wave != null ? wave.GetTotalSpawnCountForWave(absoluteWaveIndex) : FallbackSpawnCountPerBatch;
+        }
+
+        private int ResolveDifficultyTier(EnemyWaveConfig wave, int absoluteWaveIndex)
+        {
+            return ResolveDifficultyTierForWave(absoluteWaveIndex);
+        }
+
+        private float ResolveWaveClearDelay(EnemyWaveConfig wave)
+        {
+            return wave != null ? Mathf.Max(0f, wave.waveClearDelay) : 0f;
+        }
+
         private float ResolveSpawnInterval(EnemyWaveConfig wave)
         {
-            return wave != null ? Mathf.Max(0.1f, wave.spawnInterval) : Mathf.Max(0.1f, spawnInterval);
+            return wave != null ? Mathf.Max(0.1f, wave.spawnInterval) : FallbackSpawnInterval;
         }
 
         private int ResolveSpawnCount(EnemyWaveConfig wave, float elapsedTime)
         {
-            return wave != null ? wave.GetSpawnCountForTime(elapsedTime) : Mathf.Max(1, spawnCountPerBatch);
+            return wave != null ? wave.GetSpawnCountForTime(elapsedTime) : FallbackSpawnCountPerBatch;
+        }
+
+        private int ResolveSpawnCountForWaveElapsed(EnemyWaveConfig wave, float waveElapsedTime)
+        {
+            return wave != null ? wave.GetSpawnCountForWaveElapsed(waveElapsedTime) : FallbackSpawnCountPerBatch;
         }
 
         private int ResolveSceneMaxEnemyCount(EnemyWaveConfig wave)
         {
-            return wave != null ? Mathf.Max(1, wave.sceneMaxEnemyCount) : Mathf.Max(1, sceneMaxEnemyCount);
+            return wave != null ? Mathf.Max(1, wave.sceneMaxEnemyCount) : FallbackSceneMaxEnemyCount;
+        }
+
+        private EnemyWaveEventData CreateWaveEventData(float delay)
+        {
+            return CreateWaveEventData(delay, _currentWaveIndex);
+        }
+
+        private EnemyWaveEventData CreateWaveEventData(float delay, int waveIndex)
+        {
+            EnemyWaveConfig wave = waveIndex == _currentWaveIndex ? _currentWave : ResolveWaveByAbsoluteIndex(waveIndex);
+            int targetCount = waveIndex == _currentWaveIndex
+                ? _currentWaveTargetCount
+                : ResolveWaveTotalSpawnCount(wave, waveIndex);
+            int spawnedCount = waveIndex == _currentWaveIndex ? _currentWaveSpawnedCount : 0;
+
+            return new EnemyWaveEventData(
+                waveIndex,
+                ResolveDifficultyTier(wave, waveIndex),
+                targetCount,
+                spawnedCount,
+                _activeEnemies.Count,
+                delay,
+                wave);
         }
 
         private bool CanSpawnRuntimeStats(EnemyRuntimeStats runtimeStats)
@@ -673,17 +1036,16 @@ namespace Enemy
 
         private void TickKeyboardSpawnTest()
         {
-            if (!enableKeyboardSpawnTest)
-            {
-                return;
-            }
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+            return;
+#endif
 
             if (IsSingleSpawnKeyDown())
             {
                 TrySpawnSingleForTest();
             }
 
-            if (Input.GetKeyDown(burstSpawnKey))
+            if (Input.GetKeyDown(BurstSpawnKey))
             {
                 TrySpawnBurstForTest();
             }
@@ -691,14 +1053,9 @@ namespace Enemy
 
         private bool IsSingleSpawnKeyDown()
         {
-            if (singleSpawnKey == KeyCode.None || !Input.GetKeyDown(singleSpawnKey))
+            if (!Input.GetKeyDown(SingleSpawnKey))
             {
                 return false;
-            }
-
-            if (!singleSpawnRequiresShift)
-            {
-                return true;
             }
 
             return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -712,14 +1069,14 @@ namespace Enemy
                 return;
             }
 
-            Transform spawnPoint = PickSpawnPoint(singleSpawnPointNameKeyword, singleSpawnClearRadius, 0f, true);
+            Transform spawnPoint = PickSpawnPoint(SingleSpawnPointNameKeyword, SingleSpawnClearRadius, 0f, true);
             if (spawnPoint == null)
             {
                 Debug.LogWarning("[EnemySpawn] 没有找到可用的 BirthplaceS，可能是出生点附近有敌人或玩家太近", this);
                 return;
             }
 
-            bool spawned = TrySpawnOneAtPoint(spawnPoint, singleSpawnClearRadius, 0f);
+            bool spawned = TrySpawnOneAtPoint(spawnPoint, SingleSpawnClearRadius, 0f);
             Debug.Log(spawned
                 ? $"[EnemySpawn] S 测试生成成功 Point={spawnPoint.name}"
                 : "[EnemySpawn] S 测试生成失败，资源可能还在异步加载或出生点不可达",
@@ -728,18 +1085,16 @@ namespace Enemy
 
         private void TrySpawnBurstForTest()
         {
-            int maxCount = burstSpawnIgnoreWaveLimit
-                ? Mathf.Max(1, burstSpawnHardMaxEnemyCount)
-                : ResolveCurrentSceneMaxEnemyCount();
+            int maxCount = Mathf.Max(1, BurstSpawnHardMaxEnemyCount);
             int remainCapacity = Mathf.Max(0, maxCount - _activeEnemies.Count);
-            int targetCount = Mathf.Min(Mathf.Max(1, burstSpawnCount), remainCapacity);
+            int targetCount = Mathf.Min(Mathf.Max(1, BurstSpawnCountForTest), remainCapacity);
             if (targetCount <= 0)
             {
                 Debug.Log("[EnemySpawn] 场景敌人已到上限，B 批量生成跳过", this);
                 return;
             }
 
-            Transform spawnPoint = PickSpawnPoint(burstSpawnPointNameKeyword, burstSpawnClearRadius, burstSpawnScatterRadius, false);
+            Transform spawnPoint = PickSpawnPoint(BurstSpawnPointNameKeyword, BurstSpawnClearRadius, BurstSpawnScatterRadius, false);
             if (spawnPoint == null)
             {
                 Debug.LogWarning("[EnemySpawn] 没有找到可用的 BirthplaceB，B 批量生成失败", this);
@@ -751,7 +1106,7 @@ namespace Enemy
                 this);
 
             int spawnedCount = 0;
-            int maxAttempts = Mathf.Max(targetCount, targetCount * Mathf.Max(1, burstSpawnMaxAttemptsMultiplier));
+            int maxAttempts = Mathf.Max(targetCount, targetCount * Mathf.Max(1, BurstSpawnMaxAttemptsMultiplier));
             for (int i = 0; i < maxAttempts && spawnedCount < targetCount; i++)
             {
                 if (_activeEnemies.Count >= maxCount)
@@ -759,9 +1114,7 @@ namespace Enemy
                     break;
                 }
 
-                bool spawned = burstSpawnIgnoreWaveLimit
-                    ? TrySpawnOneLegacyForTest(spawnPoint, burstSpawnClearRadius, burstSpawnScatterRadius)
-                    : TrySpawnOneAtPoint(spawnPoint, burstSpawnClearRadius, burstSpawnScatterRadius);
+                bool spawned = TrySpawnOneLegacyForTest(spawnPoint, BurstSpawnClearRadius, BurstSpawnScatterRadius);
                 if (spawned)
                 {
                     spawnedCount++;
@@ -828,24 +1181,19 @@ namespace Enemy
 
         private Vector3 GetSpawnPosition()
         {
-            Transform spawnPoint = PickSpawnPoint(null, singleSpawnClearRadius, 0f, false);
-            if (spawnPoint != null && TryResolveSpawnPosition(spawnPoint, singleSpawnClearRadius, 0f, out Vector3 spawnPosition))
+            Transform spawnPoint = PickSpawnPoint(null, SingleSpawnClearRadius, 0f, false);
+            if (spawnPoint != null && TryResolveSpawnPosition(spawnPoint, SingleSpawnClearRadius, 0f, out Vector3 spawnPosition))
             {
                 return spawnPosition;
             }
 
-            Vector2 randomCircle = UnityEngine.Random.insideUnitCircle.normalized * fallbackSpawnDistance;
+            Vector2 randomCircle = UnityEngine.Random.insideUnitCircle.normalized * FallbackSpawnDistance;
             Vector3 fallbackPosition = playerTarget.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
             return SampleNavMeshPosition(fallbackPosition);
         }
 
         private void CacheSpawnPointsIfNeeded()
         {
-            if (!autoCollectSpawnPoints)
-            {
-                return;
-            }
-
             spawnPoints ??= new List<Transform>();
             for (int i = spawnPoints.Count - 1; i >= 0; i--)
             {
@@ -941,18 +1289,16 @@ namespace Enemy
 
         private bool ShouldBlockSpawnPointByPlayerDistance(Transform spawnPoint)
         {
-            if (!blockSingleSpawnPointWhenPlayerNear
-                || spawnPoint == null
+            if (spawnPoint == null
                 || playerTarget == null
-                || singleSpawnPlayerBlockRadius <= 0f
-                || !IsSpawnPointNameMatch(spawnPoint.name, singleSpawnPointNameKeyword))
+                || !IsSpawnPointNameMatch(spawnPoint.name, SingleSpawnPointNameKeyword))
             {
                 return false;
             }
 
             Vector3 offset = playerTarget.position - spawnPoint.position;
             offset.y = 0f;
-            return offset.sqrMagnitude <= singleSpawnPlayerBlockRadius * singleSpawnPlayerBlockRadius;
+            return offset.sqrMagnitude <= SingleSpawnPlayerBlockRadius * SingleSpawnPlayerBlockRadius;
         }
 
         private bool TryResolveSpawnPosition(
@@ -1093,7 +1439,7 @@ namespace Enemy
 
         private bool HasCompletePathToPlayer(Vector3 position)
         {
-            if (!requireCompletePathToPlayer || playerTarget == null)
+            if (playerTarget == null)
             {
                 return true;
             }
@@ -1132,7 +1478,7 @@ namespace Enemy
 
         private bool TrySampleNavMeshPosition(Vector3 position, out Vector3 samplePosition)
         {
-            if (NavMesh.SamplePosition(position, out NavMeshHit hit, spawnPointSampleRadius, NavMesh.AllAreas))
+            if (NavMesh.SamplePosition(position, out NavMeshHit hit, SpawnPointSampleRadius, NavMesh.AllAreas))
             {
                 samplePosition = hit.position;
                 return true;
@@ -1144,9 +1490,9 @@ namespace Enemy
 
         private IEnumerator ReturnEnemyAfterDelay(EnemyController enemy)
         {
-            if (returnToPoolDelay > 0f)
+            if (ReturnToPoolDelay > 0f)
             {
-                yield return new WaitForSeconds(returnToPoolDelay);
+                yield return new WaitForSeconds(ReturnToPoolDelay);
             }
 
             if (enemy != null)
@@ -1172,6 +1518,17 @@ namespace Enemy
 
         private int ResolveCurrentSceneMaxEnemyCount()
         {
+            if (useWaveConfigs && _currentWave != null)
+            {
+                return ResolveSceneMaxEnemyCount(_currentWave);
+            }
+
+            if (useWaveConfigs && HasWaveConfigAssets())
+            {
+                EnemyWaveConfig waveByIndex = ResolveWaveByAbsoluteIndex(Mathf.Max(1, _currentWaveIndex));
+                return ResolveSceneMaxEnemyCount(waveByIndex);
+            }
+
             EnemyWaveConfig wave = ResolveActiveWave(GetElapsedTime());
             return ResolveSceneMaxEnemyCount(wave);
         }

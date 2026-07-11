@@ -8,7 +8,12 @@ namespace Weapon.State
 
         public override void Enter()
         {
-            controller.CurrentWeaponView?.PlayIdle();
+            // 换弹结束回到待机时保留过渡时间 避免动画直接切断
+            float transition = controller.PreviousStateType == WeaponStateType.Reload && controller.Config != null
+                ? controller.Config.reloadTransition
+                : 0f;
+
+            controller.CurrentWeaponView?.PlayIdle(transition);
         }
 
         public override void Update()

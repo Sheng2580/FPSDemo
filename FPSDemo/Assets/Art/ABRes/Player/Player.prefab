@@ -1,0 +1,655 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &3043820525526175311
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3021470408071157083}
+  - component: {fileID: 2306919981900108921}
+  - component: {fileID: 7243569499790364818}
+  - component: {fileID: 4790285579399957680}
+  - component: {fileID: 7691947819577527116}
+  - component: {fileID: 6824186387950918711}
+  - component: {fileID: 1026591075294092676}
+  - component: {fileID: 3008036074051731131}
+  m_Layer: 0
+  m_Name: Player
+  m_TagString: Player
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3021470408071157083
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.568, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5914884403741803737}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &2306919981900108921
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!143 &7243569499790364818
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 1.8
+  m_Radius: 0.25
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0.52, z: 0}
+--- !u!114 &4790285579399957680
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d15cef246b44e4b3baced5315626f918, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  groundDetectionRadius: 0.1
+  groundDetectionOffset: 0.1
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 64
+  isEnableGravity: 1
+  gravity: 11.8
+  terminalVelocity: -54
+  groundedVelocity: -2
+  fallOutTime: 0.15
+  velocityY: 0
+  characterIsGrounded: 0
+  characterController: {fileID: 7243569499790364818}
+  model: {fileID: 0}
+  playerModel: {fileID: 0}
+  defaultConfigAsset: {fileID: 11400000, guid: f8bd72d452cf245ba8d7500ddc65a17d, type: 2}
+  inventory: {fileID: 3008036074051731131}
+--- !u!114 &7691947819577527116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba8c93c0dbc444939bedbf2997924398, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerRoot: {fileID: 3021470408071157083}
+  cameraRoot: {fileID: 5914884403741803737}
+  playerCamera: {fileID: 1161174524743118253}
+  mouseSensitivity: 0.12
+  controllerSensitivity: 120
+  minPitch: -80
+  maxPitch: 80
+  invertY: 0
+  lockCursorOnStart: 0
+  aimFovSmoothTime: 0.06
+  recoilOffset: {x: 0, y: 0}
+  recoilKickMultiplier: 0.2
+  recoilFollowSmoothTime: 0.045
+  recoilTargetReturnSpeed: 2.5
+  maxRecoilPitchOffset: 8
+  maxRecoilYawOffset: 4
+--- !u!114 &6824186387950918711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0da48fa8e98b948b8a070c3223057ded, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 4790285579399957680}
+--- !u!114 &1026591075294092676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09505846eed79456e8625bdcd0b91ac3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentWeaponView: {fileID: 0}
+  cameraController: {fileID: 7691947819577527116}
+  playerInventory: {fileID: 3008036074051731131}
+  configAsset: {fileID: 11400000, guid: b7f0a0d9f10d4f11a2e6b49a33c72f21, type: 2}
+  fallbackConfig:
+    weaponId: 2
+    weaponName: Default Assault Rifle
+    fireMode: 1
+    damage: 16
+    fireInterval: 0.09
+    magazineSize: 30
+    maxReserveAmmo: 120
+    reloadTime: 1.65
+    range: 160
+    attackType: 0
+    spreadAngle: 0.9
+    pelletCount: 1
+    maxPenetrationCount: 0
+    penetrationDamageMultiplier: 0.5
+    projectilePrefabKey: 
+    projectileSpeed: 0
+    projectileLifeTime: 0
+    explosionRadius: 0
+    explosionFalloff: 1
+    hitLayerMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    tracerPrefabKey: 
+    impactEffectKey: KriptoFX Concrete Impact
+    muzzleFlashEffectKey: KriptoFX Assault Rifle Muzzle Flash
+    muzzleSmokeEffectKey: None
+    fireAudioKey: Assault Rifle_1 Fire
+    fireVolume: 1
+    firePitchRandom: 0.04
+    fireAudioCooldown: 0.03
+    fireFeedbackIntensity: 1
+    defaultImpactEffectKey: KriptoFX Concrete Impact
+    hitSurfaceFeedbacks:
+    - surfaceType: 0
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: 
+      decalKey: 
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 1
+      impactEffectKey: KriptoFX Concrete Impact
+      impactAudioKey: 
+      decalKey: 
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 2
+      impactEffectKey: KriptoFX Metal Impact
+      impactAudioKey: 
+      decalKey: 
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 3
+      impactEffectKey: KriptoFX Wood Impact
+      impactAudioKey: 
+      decalKey: 
+      decalLifeTime: 8
+      decalScale: 1
+    - surfaceType: 4
+      impactEffectKey: Blood Impact
+      impactAudioKey: 
+      decalKey: 
+      decalLifeTime: 8
+      decalScale: 1
+    crosshairSize: 20
+    crosshairMinSprayAmount: 1
+    crosshairSpreadScale: 0.55
+    crosshairFireKickAmount: 0.55
+    crosshairFireKickDecaySpeed: 10.5
+    recoilPitch: -0.32
+    recoilYaw: 0.16
+    viewRecoilPosition: {x: 0, y: -0.004, z: -0.025}
+    viewRecoilRotation: {x: -1.25, y: 0.25, z: 0}
+    viewRecoilReturnSpeed: 16
+    aimInSpeed: 9
+    aimOutSpeed: 12
+    aimCameraFov: 30
+    aimViewPositionOffset: {x: -0.018, y: 0.07, z: 0.025}
+    aimViewRotationOffset: {x: 0, y: 0, z: 0}
+    useAimLocalPose: 1
+    aimLocalPosition: {x: -0.162, y: -1.517, z: -0.13}
+    aimLocalEulerAngles: {x: 0, y: 0, z: 0}
+    aimLocalScale: {x: 0.06154, y: 0.06154, z: 0.06154}
+    idleStateName: Idle
+    equipStateName: Take
+    fireStateName: Fire
+    reloadStateName: Reload
+    fireTransition: 0.03
+    reloadTransition: 0.08
+    equipTransition: 0.1
+  debugWeaponHit: 1
+--- !u!114 &3008036074051731131
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3043820525526175311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f8f6cfe6b7949d8a26c0c2eef74c7b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startWeaponIndex: 1
+  carriedWeapons:
+  - displayName: Default Pistol
+    weaponView: {fileID: 0}
+    configAsset: {fileID: 11400000, guid: 45b1484c4e904ab6b9a19c6e3d10ffff, type: 2}
+    fallbackConfig:
+      weaponId: 2
+      weaponName: Default Assault Rifle
+      fireMode: 1
+      damage: 16
+      fireInterval: 0.09
+      magazineSize: 30
+      maxReserveAmmo: 120
+      reloadTime: 1.65
+      range: 160
+      attackType: 0
+      spreadAngle: 0.9
+      pelletCount: 1
+      maxPenetrationCount: 0
+      penetrationDamageMultiplier: 0.5
+      projectilePrefabKey: 
+      projectileSpeed: 0
+      projectileLifeTime: 0
+      explosionRadius: 0
+      explosionFalloff: 1
+      hitLayerMask:
+        serializedVersion: 2
+        m_Bits: 4294967291
+      tracerPrefabKey: 
+      impactEffectKey: KriptoFX Concrete Impact
+      muzzleFlashEffectKey: KriptoFX Pistol Muzzle Flash
+      muzzleSmokeEffectKey: None
+      fireAudioKey: Pistol_1 Fire
+      fireVolume: 1
+      firePitchRandom: 0.04
+      fireAudioCooldown: 0.03
+      fireFeedbackIntensity: 1
+      defaultImpactEffectKey: KriptoFX Concrete Impact
+      hitSurfaceFeedbacks:
+      - surfaceType: 0
+        impactEffectKey: KriptoFX Concrete Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 1
+        impactEffectKey: KriptoFX Concrete Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 2
+        impactEffectKey: KriptoFX Metal Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 3
+        impactEffectKey: KriptoFX Wood Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 4
+        impactEffectKey: Blood Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      crosshairSize: 20
+      crosshairMinSprayAmount: 1
+      crosshairSpreadScale: 0.55
+      crosshairFireKickAmount: 0.55
+      crosshairFireKickDecaySpeed: 10.5
+      recoilPitch: -0.32
+      recoilYaw: 0.16
+      viewRecoilPosition: {x: 0, y: -0.004, z: -0.025}
+      viewRecoilRotation: {x: -1.25, y: 0.25, z: 0}
+      viewRecoilReturnSpeed: 16
+      aimInSpeed: 9
+      aimOutSpeed: 12
+      aimCameraFov: 30
+      aimViewPositionOffset: {x: -0.018, y: 0.07, z: 0.025}
+      aimViewRotationOffset: {x: 0, y: 0, z: 0}
+      useAimLocalPose: 1
+      aimLocalPosition: {x: -0.162, y: -1.517, z: -0.13}
+      aimLocalEulerAngles: {x: 0, y: 0, z: 0}
+      aimLocalScale: {x: 0.06154, y: 0.06154, z: 0.06154}
+      idleStateName: Idle
+      equipStateName: Take
+      fireStateName: Fire
+      reloadStateName: Reload
+      fireTransition: 0.03
+      reloadTransition: 0.08
+      equipTransition: 0.1
+  - displayName: Default Assault Rifle
+    weaponView: {fileID: 0}
+    configAsset: {fileID: 11400000, guid: b7f0a0d9f10d4f11a2e6b49a33c72f21, type: 2}
+    fallbackConfig:
+      weaponId: 1
+      weaponName: Default Pistol
+      fireMode: 0
+      damage: 20
+      fireInterval: 0.2
+      magazineSize: 12
+      maxReserveAmmo: 48
+      reloadTime: 1.4
+      range: 100
+      attackType: 0
+      spreadAngle: 0.6
+      pelletCount: 1
+      maxPenetrationCount: 0
+      penetrationDamageMultiplier: 0.5
+      projectilePrefabKey: 
+      projectileSpeed: 0
+      projectileLifeTime: 0
+      explosionRadius: 0
+      explosionFalloff: 1
+      hitLayerMask:
+        serializedVersion: 2
+        m_Bits: 4294967291
+      tracerPrefabKey: 
+      impactEffectKey: KriptoFX Concrete Impact
+      muzzleFlashEffectKey: KriptoFX Assault Rifle Muzzle Flash
+      muzzleSmokeEffectKey: None
+      fireAudioKey: Assault Rifle_1 Fire
+      fireVolume: 1
+      firePitchRandom: 0.04
+      fireAudioCooldown: 0.03
+      fireFeedbackIntensity: 1
+      defaultImpactEffectKey: KriptoFX Concrete Impact
+      hitSurfaceFeedbacks:
+      - surfaceType: 0
+        impactEffectKey: KriptoFX Concrete Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 1
+        impactEffectKey: KriptoFX Concrete Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 2
+        impactEffectKey: KriptoFX Metal Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 3
+        impactEffectKey: KriptoFX Wood Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      - surfaceType: 4
+        impactEffectKey: Blood Impact
+        impactAudioKey: 
+        decalKey: 
+        decalLifeTime: 8
+        decalScale: 1
+      crosshairSize: 26
+      crosshairMinSprayAmount: 1
+      crosshairSpreadScale: 0.75
+      crosshairFireKickAmount: 1.2
+      crosshairFireKickDecaySpeed: 8
+      recoilPitch: -1.5
+      recoilYaw: 0.5
+      viewRecoilPosition: {x: 0, y: -0.015, z: -0.08}
+      viewRecoilRotation: {x: -6, y: 1.5, z: 0}
+      viewRecoilReturnSpeed: 18
+      aimInSpeed: 10
+      aimOutSpeed: 12
+      aimCameraFov: 55
+      aimViewPositionOffset: {x: -0.06, y: 0.044, z: 0.02}
+      aimViewRotationOffset: {x: 0, y: 0, z: 0}
+      useAimLocalPose: 1
+      aimLocalPosition: {x: -0.084, y: -0.817, z: 0.35677}
+      aimLocalEulerAngles: {x: 0, y: 0, z: 0}
+      aimLocalScale: {x: 0.04, y: 0.04, z: 0.04}
+      idleStateName: Idle
+      equipStateName: Take
+      fireStateName: Fire
+      reloadStateName: Reload
+      fireTransition: 0.05
+      reloadTransition: 0.1
+      equipTransition: 0.1
+  battleGold: 0
+  items: []
+--- !u!1 &3445585370929438331
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5818908108277669205}
+  - component: {fileID: 1161174524743118253}
+  - component: {fileID: 3083919207829165399}
+  - component: {fileID: 6403580852078014184}
+  m_Layer: 0
+  m_Name: Camera
+  m_TagString: MainCamera
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5818908108277669205
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3445585370929438331}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8247376314910137479}
+  m_Father: {fileID: 5914884403741803737}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!20 &1161174524743118253
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3445585370929438331}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 1
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 1}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.3
+  far clip plane: 1000
+  field of view: 60
+  orthographic: 0
+  orthographic size: 5
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
+--- !u!81 &3083919207829165399
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3445585370929438331}
+  m_Enabled: 1
+--- !u!114 &6403580852078014184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3445585370929438331}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 1
+  m_RequiresOpaqueTextureOption: 1
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 1
+  m_Antialiasing: 2
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_Version: 2
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+--- !u!1 &3629853665691712604
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8247376314910137479}
+  m_Layer: 0
+  m_Name: WeaponViewRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8247376314910137479
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3629853665691712604}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5818908108277669205}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3952119493877138783
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5914884403741803737}
+  m_Layer: 0
+  m_Name: CameraRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5914884403741803737
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3952119493877138783}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.106, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5818908108277669205}
+  m_Father: {fileID: 3021470408071157083}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

@@ -137,6 +137,7 @@ public static class EnemyPrefabBuildTools
         agent.angularSpeed = 360f;
         agent.acceleration = 12f;
         agent.stoppingDistance = 1.4f;
+        agent.autoTraverseOffMeshLink = false;
 
         EnemyController controller = GetOrAdd<EnemyController>(root);
         EnemyHealth health = GetOrAdd<EnemyHealth>(root);

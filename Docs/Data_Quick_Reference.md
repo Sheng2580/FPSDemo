@@ -2,7 +2,7 @@
 
 用途：快速查看当前已经应用到项目里的数据值、来源、用法和维护位置。数据层每次改武器、敌人、波次、AI Profile、ABRes key、掉落、金币、Buff、道具或存档数据时，都必须同步更新本表。
 
-更新时间：2026-07-10
+更新时间：2026-07-11
 
 ## 维护规则
 
@@ -128,22 +128,48 @@
 
 来源目录：`FPSDemo/Assets/Resources/EnemyWaves`
 
-| 波次 | 时间 | spawnInterval | batch | batchGrowth/min | maxBatch | sceneMax | maxNear | maxAgent | maxAttackers | 用法 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Wave01 | 0-60 | 3 | 1 | 0 | 1 | 10 | 8 | 10 | 2 | 前 1 分钟基础刷怪 |
-| Wave02 | 60-180 | 2.5 | 1 | 0.5 | 2 | 16 | 12 | 14 | 3 | 中期加入快速敌人数值 |
-| Wave03 | 180+ | 2 | 2 | 0.5 | 4 | 24 | 16 | 18 | 4 | 后期加入精英敌人数值 |
+| 波次模板 | 时间兜底 | difficultyTierIndex | wavesPerDifficultyTier | waveTotalSpawnCount | waveTotalSpawnGrowth | waveClearDelay | waitForAvailableSpawnSlot | spawnInterval | batch | batchGrowth/min | maxBatch | sceneMax | maxNear | maxAgent | maxAttackers | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Wave01 | 0-60 | 1 | 3 | 12 | 3 | 5 | true | 3 | 1 | 0 | 1 | 10 | 8 | 10 | 2 | 前 3 波基础刷怪模板 |
+| Wave02 | 60-180 | 2 | 3 | 20 | 4 | 5 | true | 2.5 | 1 | 0.5 | 2 | 16 | 12 | 14 | 3 | 第 4-6 波中期刷怪模板 |
+| Wave03 | 180+ | 3 | 3 | 30 | 6 | 5 | true | 2 | 2 | 0.5 | 4 | 24 | 16 | 18 | 4 | 第 7 波后期刷怪模板，后续可作为最高档兜底 |
 
-## 波次 Entry 权重
+正式波次消费规则：
 
-| 波次 | 敌人 | weight | maxAlive | healthMultiplier | damageMultiplier | moveSpeedMultiplier | goldMultiplier |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Wave01 | NormalZombie | 100 | 10 | 1 | 1 | 1 | 1 |
-| Wave02 | NormalZombie | 80 | 12 | 1.2 | 1.1 | 1 | 1.1 |
-| Wave02 | FastZombie | 20 | 4 | 1 | 1 | 1 | 1 |
-| Wave03 | NormalZombie | 60 | 16 | 1.5 | 1.25 | 1.05 | 1.25 |
-| Wave03 | FastZombie | 30 | 8 | 1.2 | 1.15 | 1.05 | 1.2 |
-| Wave03 | EliteZombie | 10 | 3 | 1 | 1 | 1 | 1 |
+- `waveTotalSpawnCount` 是该难度档第一波总刷怪数。
+- `waveTotalSpawnGrowth` 是同一难度档内每推进 1 波增加的刷怪数。
+- `wavesPerDifficultyTier` 当前统一为 3，表示每 3 波切换一个难度档。
+- `EnemyWaveConfig.GetTotalSpawnCountForWave(absoluteWaveIndex)` 可根据第 N 波返回该波总刷怪数。
+- `EnemyWaveConfig.GetFirstWaveIndexInDifficultyTier()` 可把旧时间段模板映射到该难度档首个绝对波次。
+- `EnemyWaveConfig.GetResolvedSpawnEntriesForWave(absoluteWaveIndex)` 可根据第 N 波返回已筛选、已计算权重和倍率的刷新池。
+- `EnemyRuntimeStats.TryCreateFromWave(wave, absoluteWaveIndex, waveElapsedTime, ...)` 可直接按权重生成最终运行时敌人数值。
+- `waveClearDelay` 当前统一为 5 秒，表现层清完当前波后等待 5 秒进入下一波。
+- `waitForAvailableSpawnSlot = true` 表示当前波还没刷完但场上敌人达到 `sceneMaxEnemyCount` 时，不丢弃剩余生成数，等待敌人死亡回池后继续补刷。
+
+## 波次候选敌人算法配置
+
+`EnemySpawnEntry` 现在不是逐波手填结果，而是候选敌人配置。控制层只传 `absoluteWaveIndex / waveElapsedTime`，数据层负责筛选候选敌人、计算最终权重和倍率。
+
+| 模板 | 敌人 | unlock / min / max | baseWeight | weightGrowth/wave | weightGrowth/tier | maxWeight | maxAlive | base H/D/S/G | growth/wave H/D/S/G | growth/tier H/D/S/G | max H/D/S/G |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Wave01 | NormalZombie | 1 / 1 / 0 | 100 | 0 | 0 | 100 | 10 | 1 / 1 / 1 / 1 | 0.06 / 0.03 / 0.02 / 0.05 | 0 / 0 / 0 / 0 | 1.2 / 1.1 / 1.05 / 1.15 |
+| Wave02 | NormalZombie | 1 / 4 / 0 | 80 | -2 | 0 | 80 | 12 | 1.2 / 1.1 / 1 / 1.1 | 0.08 / 0.04 / 0.01 / 0.05 | 0 / 0 / 0 / 0 | 1.5 / 1.25 / 1.05 / 1.3 |
+| Wave02 | FastZombie | 4 / 4 / 0 | 25 | 4 | 0 | 45 | 4 | 1 / 1 / 1 / 1 | 0.06 / 0.04 / 0.01 / 0.05 | 0 / 0 / 0 / 0 | 1.3 / 1.2 / 1.08 / 1.25 |
+| Wave03 | NormalZombie | 1 / 7 / 0 | 60 | -3 | 0 | 60 | 16 | 1.5 / 1.25 / 1.05 / 1.25 | 0.08 / 0.04 / 0.01 / 0.05 | 0.1 / 0.05 / 0 / 0.05 | 2.2 / 1.7 / 1.15 / 1.8 |
+| Wave03 | FastZombie | 4 / 7 / 0 | 35 | 1 | 0 | 45 | 8 | 1.2 / 1.15 / 1.05 / 1.2 | 0.08 / 0.04 / 0.01 / 0.05 | 0.08 / 0.05 / 0 / 0.05 | 1.8 / 1.6 / 1.15 / 1.7 |
+| Wave03 | EliteZombie | 7 / 7 / 0 | 12 | 4 | 5 | 35 | 3 | 1 / 1 / 1 / 1 | 0.12 / 0.06 / 0.005 / 0.08 | 0.15 / 0.08 / 0 / 0.1 | 2.5 / 2 / 1.08 / 2 |
+
+说明：`H/D/S/G` 分别表示 `healthMultiplier / damageMultiplier / moveSpeedMultiplier / goldMultiplier`。`maxWaveIndex = 0` 表示不自动退场；如果某类早期怪后续需要退出，可配置为具体波次。
+
+快速示例：
+
+| 绝对波次 | 使用模板 | 可刷敌人和大致权重 |
+| --- | --- | --- |
+| 1 | Wave01 | Normal 100 |
+| 4 | Wave02 | Normal 80，Fast 25 |
+| 6 | Wave02 | Normal 76，Fast 33 |
+| 7 | Wave03 | Normal 60，Fast 35，Elite 12 |
+| 10 | Wave03 作为后期兜底 | Normal 51，Fast 38，Elite 29 |
 
 ## ABRes 敌人 Prefab
 
@@ -160,16 +186,27 @@
 - 所有武器表现 key 必须先存在于 `CombatFeedbackResources.asset`，再写入武器配置。
 - 本表是快速读取表，不替代源码和 Unity Inspector。最终运行值以资源文件和 `ApplyMissingDefaults()` 后的运行时数据为准。
 
-## 敌人波次待补数据
+## 敌人波次正式字段
 
-后续正式波次需要从“按时间切波”升级为“本波清空后进下一波”，数据层需要补这些字段：
+字段来源：`EnemyWaveConfig`，资源位置：`FPSDemo/Assets/Resources/EnemyWaves`
 
-| 字段 | 建议位置 | 用法 |
+| 字段 | 当前状态 | 用法 |
 | --- | --- | --- |
-| waveTotalSpawnCount | EnemyWaveConfig | 本波总生成数量，用于判断本波是否已经刷完 |
-| clearDelay | EnemyWaveConfig | 本波清空后等待多久进入下一波 |
-| softlockTimeout | EnemyWaveConfig 或 EnemyAIProfile | 单只怪长期不可达后的兜底时间 |
-| stuckTeleportRadius | EnemyWaveConfig 或 EnemyAIProfile | 卡住敌人重新投放到玩家外围的半径 |
-| allowRecycleWhenUnreachable | EnemyWaveConfig | 传送失败时是否允许回池并计入清波 |
+| difficultyTierIndex | 已接入 | 表示这份 Wave 资源对应第几个难度档 |
+| wavesPerDifficultyTier | 已接入 | 表示每几个正式波次使用同一难度档，当前为 3 |
+| waveTotalSpawnCount | 已接入 | 本难度档第一波总生成数量，用于判断本波是否已经刷完 |
+| waveTotalSpawnGrowth | 已接入 | 同一难度档内每推进 1 波增加的总生成数量 |
+| waveClearDelay | 已接入 | 本波清空后等待多久进入下一波，当前统一 5 秒 |
+| waitForAvailableSpawnSlot | 已接入 | 达到 `sceneMaxEnemyCount` 时等待敌人死亡回池后继续补刷 |
+| sceneMaxEnemyCount | 已接入 | 场上敌人总数量上限 |
+| maxActiveAgentCount | 已接入 | 当前波次最大追击/活跃 Agent 数量 |
+| maxAttackersCount | 已接入 | 当前波次同时攻击玩家的敌人上限 |
+| EnemySpawnEntry.unlockWaveIndex | 已接入 | 候选敌人从第几波开始可能进入刷新池 |
+| EnemySpawnEntry.minWaveIndex | 已接入 | 当前难度模板内的最低出现波次，用于模板复用 |
+| EnemySpawnEntry.maxWaveIndex | 已接入 | 可选退出波次，0 表示不退出 |
+| EnemySpawnEntry.baseWeight / weightGrowthPerWave / weightGrowthPerDifficultyTier / maxWeight | 已接入 | 数据层计算当前波次最终刷新权重 |
+| EnemySpawnEntry.*MultiplierGrowthPerWave / *MultiplierGrowthPerDifficultyTier / max*Multiplier | 已接入 | 数据层计算生命、伤害、速度、金币倍率 |
+| EnemyRuntimeStats.absoluteWaveIndex / waveElapsedTime / difficultyTierIndex | 已接入 | 表现层调试当前敌人来自第几波和哪个难度档 |
+| EnemyRuntimeStats.candidateFinalWeight / resolved*Multiplier | 已接入 | 表现层调试当前敌人最终权重和倍率 |
 
-当前 `maxActiveAgentCount` 已被控制层临时用作最大追击玩家数量。拿到追击名额的怪直接 Run，没拿到名额的怪 Walk 到玩家外圈徘徊等待。
+待后续控制层或 AI 数据继续接入：`softlockTimeout`、`stuckTeleportRadius`、`allowRecycleWhenUnreachable`。当前 `maxActiveAgentCount` 已被控制层临时用作最大追击玩家数量。拿到追击名额的怪直接 Run，没拿到名额的怪 Walk 到玩家外圈徘徊等待。

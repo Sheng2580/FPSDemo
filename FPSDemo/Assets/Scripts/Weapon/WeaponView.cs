@@ -6,6 +6,9 @@ namespace Weapon
 {
     public class WeaponView : MonoBehaviour
     {
+        private const float DefaultAnimatorSpeed = 1f;
+        private const float MinReloadAnimationSpeed = 0.1f;
+        private const float MaxReloadAnimationSpeed = 5f;
         private static readonly int AmmoHash = Animator.StringToHash("Ammo");
         private static readonly int IsReloadingHash = Animator.StringToHash("Is Reloading");
         private static readonly int ADSAmountHash = Animator.StringToHash("ADS Amount");
@@ -66,25 +69,39 @@ namespace Weapon
             ApplyViewModelShadowSettings();
         }
 
-        public void PlayIdle()
+        public void PlayIdle(float transitionDuration = 0f)
         {
-            CrossFade(_config?.idleStateName, 0f);
+            ResetAnimationSpeed();
+            CrossFade(_config?.idleStateName, transitionDuration);
         }
 
         public void PlayEquip()
         {
+            ResetAnimationSpeed();
             CrossFade(_config?.equipStateName, _config != null ? _config.equipTransition : 0f);
         }
 
         public void PlayFire()
         {
+            ResetAnimationSpeed();
             CrossFade(_config?.fireStateName, _config != null ? _config.fireTransition : 0f);
             ApplyViewRecoil();
         }
 
-        public void PlayReload()
+        public void PlayReload(float reloadDuration)
         {
+            ApplyReloadAnimationSpeed(reloadDuration);
             CrossFade(_config?.reloadStateName, _config != null ? _config.reloadTransition : 0f);
+        }
+
+        public void ResetAnimationSpeed()
+        {
+            if (animator == null)
+            {
+                return;
+            }
+
+            animator.speed = DefaultAnimatorSpeed;
         }
 
         public float GetAnimationLength(string stateName, float fallbackLength)
@@ -177,6 +194,7 @@ namespace Weapon
 
             if (animator != null)
             {
+                ResetAnimationSpeed();
                 animator.SetFloat(ADSAmountHash, 0f);
                 animator.SetFloat(SprintAmountHash, 0f);
                 animator.SetBool(IsReloadingHash, false);
@@ -364,6 +382,43 @@ namespace Weapon
             }
 
             animator.CrossFade(Animator.StringToHash(stateName), transitionDuration);
+        }
+
+        private void ApplyReloadAnimationSpeed(float reloadDuration)
+        {
+            if (animator == null || _config == null || reloadDuration <= 0f)
+            {
+                ResetAnimationSpeed();
+                return;
+            }
+
+            // reloadTime 同时控制逻辑换弹时间和动画播放速度 保证换弹表现不会被硬切
+            float clipLength = GetAnimationClipLength(_config.reloadStateName, reloadDuration);
+            float speed = clipLength / reloadDuration;
+            animator.speed = Mathf.Clamp(speed, MinReloadAnimationSpeed, MaxReloadAnimationSpeed);
+        }
+
+        private float GetAnimationClipLength(string stateName, float fallbackLength)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null || string.IsNullOrEmpty(stateName))
+            {
+                return fallbackLength;
+            }
+
+            foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
+            {
+                if (clip == null)
+                {
+                    continue;
+                }
+
+                if (clip.name == stateName || clip.name.Contains(stateName))
+                {
+                    return Mathf.Max(0.01f, clip.length);
+                }
+            }
+
+            return fallbackLength;
         }
 
         private static Transform FindChildRecursive(Transform root, string childName)

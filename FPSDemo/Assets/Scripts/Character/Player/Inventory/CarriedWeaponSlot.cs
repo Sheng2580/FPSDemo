@@ -26,6 +26,20 @@ public class CarriedWeaponSlot
                 ? weaponView.name
                 : "Weapon";
 
+    public void ConfigureRuntimeWeapon(string newDisplayName, WeaponView newWeaponView, WeaponConfigAsset newConfigAsset)
+    {
+        displayName = newDisplayName;
+        weaponView = newWeaponView;
+        configAsset = newConfigAsset;
+        _runtimeConfig = null;
+        _runtimeData = null;
+
+        if (weaponView != null)
+        {
+            weaponView.gameObject.SetActive(false);
+        }
+    }
+
     public void InitForNewRun()
     {
         _runtimeConfig = CreateRuntimeConfig();
