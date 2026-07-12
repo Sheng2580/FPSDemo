@@ -207,6 +207,24 @@ namespace Enemy
         private void CacheColliders()
         {
             _colliders = GetComponentsInChildren<Collider>(true);
+            ApplyEnemyLayerToColliders();
+        }
+
+        private void ApplyEnemyLayerToColliders()
+        {
+            int enemyLayer = CombatLayerNames.EnemyLayer;
+            if (enemyLayer < 0 || _colliders == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _colliders.Length; i++)
+            {
+                if (_colliders[i] != null)
+                {
+                    _colliders[i].gameObject.layer = enemyLayer;
+                }
+            }
         }
 
         private void SetCollidersEnabled(bool enabled)

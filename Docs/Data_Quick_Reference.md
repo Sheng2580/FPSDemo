@@ -2,7 +2,7 @@
 
 用途：快速查看当前已经应用到项目里的数据值、来源、用法和维护位置。数据层每次改武器、敌人、波次、AI Profile、ABRes key、掉落、金币、Buff、道具或存档数据时，都必须同步更新本表。
 
-更新时间：2026-07-11
+更新时间：2026-07-12
 
 ## 维护规则
 
@@ -19,9 +19,11 @@
 
 | 武器 | 来源文件 | weaponId | fireMode | damage | fireInterval | magazine / reserve | reloadTime | range | attackType | spreadAngle | hitLayerMask | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Default Pistol | `DefaultPistolWeaponConfig.asset` | 1 | SemiAuto | 20 | 0.2 | 12 / 48 | 1.4 | 100 | Hitscan | 0.6 | 115 | `WeaponController` 读取运行时武器数据 |
-| Default Assault Rifle | `DefaultAssaultRifleWeaponConfig.asset` | 2 | FullAuto | 16 | 0.09 | 30 / 120 | 1.65 | 160 | Hitscan | 0.9 | 115 | `WeaponController` 读取运行时武器数据 |
-| Default Shotgun | `DefaultShotgunWeaponConfig.asset` | 3 | SemiAuto | 8 | 0.72 | 6 / 36 | 2.35 | 70 | MultiHitscan | 5.5 | 115 | `WeaponController` 按 `pelletCount` 多射线结算 |
+| Default Pistol | `DefaultPistolWeaponConfig.asset` | 1 | SemiAuto | 20 | 0.2 | 12 / 48 | 1.4 | 100 | Hitscan | 0.6 | 16321 | `WeaponController` 读取运行时武器数据 |
+| Default Assault Rifle | `DefaultAssaultRifleWeaponConfig.asset` | 2 | FullAuto | 16 | 0.09 | 30 / 120 | 1.65 | 160 | Hitscan | 0.9 | 16321 | `WeaponController` 读取运行时武器数据 |
+| Default Shotgun | `DefaultShotgunWeaponConfig.asset` | 3 | SemiAuto | 8 | 0.72 | 6 / 36 | 2.35 | 70 | MultiHitscan | 5.5 | 16321 | `WeaponController` 按 `pelletCount` 多射线结算 |
+
+备注：`hitLayerMask=16321` 包含 `Default / Ground / barrier / Climbable / Enemy / Surface_Stone / Surface_Metal / Surface_Wood / Surface_Glass`。敌人伤害先用 `Enemy` Layer 快速判定，场景命中特效用 `Surface_*` Layer 快速判定，不再给大量场景物体挂 `HitSurface` MonoBehaviour。导航工具已把 `Surface_*` 层加入 NavMesh 烘焙范围，金属/木头/玻璃平台可以直接使用对应表面层。
 
 ## 武器换弹数据
 
@@ -55,17 +57,19 @@
 
 来源：武器配置资源 + `FPSDemo/Assets/Art/ABRes/CombatFeedback/CombatFeedbackResources.asset`
 
-| 武器 | muzzleFlashEffectKey | muzzleSmokeEffectKey | fireAudioKey | fireVolume | firePitchRandom | fireAudioCooldown | fireFeedbackIntensity | defaultImpactEffectKey | 用法 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Default Pistol | KriptoFX Pistol Muzzle Flash | None | Pistol_1 Fire | 1 | 0.04 | 0.03 | 1 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
-| Default Assault Rifle | KriptoFX Assault Rifle Muzzle Flash | None | Assault Rifle_1 Fire | 1 | 0.04 | 0.03 | 1 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
-| Default Shotgun | KriptoFX Shotgun Muzzle Flash | None | Shotgun_1 Fire | 1 | 0.04 | 0.03 | 1.25 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
+| 武器 | muzzleFlashEffectKey | muzzleSmokeEffectKey | muzzleSmokeInterval | muzzleSmokeIntensity | fireAudioKey | fireVolume | firePitchRandom | fireAudioCooldown | fireFeedbackIntensity | defaultImpactEffectKey | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Default Pistol | KriptoFX Pistol Muzzle Flash | None | 0.22 | 0.35 | Pistol_1 Fire | 1 | 0.04 | 0.03 | 1 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
+| Default Assault Rifle | KriptoFX Assault Rifle Muzzle Flash | None | 0.35 | 0 | Assault Rifle_1 Fire | 1 | 0.04 | 0.03 | 1 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
+| Default Shotgun | KriptoFX Shotgun Muzzle Flash | None | 0.45 | 0.6 | Shotgun_1 Fire | 1 | 0.04 | 0.03 | 1.25 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
 
-规则：武器表现只由 `WeaponConfig` 维护 key，表现层只按 key 播放；不得在 `WeaponController`、`WeaponView` 或 ShotgunView prefab 中硬写特效/音效资源引用。散弹枪当前使用专用 key，资源项已登记在 `CombatFeedbackResources.asset`；后续替换散弹枪音效或枪口火光时只改资源表和本快速表。
+规则：武器表现只由 `WeaponConfig` 维护 key 和枪口烟雾参数，表现层只按 key 播放；不得在 `WeaponController`、`WeaponView` 或 ShotgunView prefab 中硬写特效/音效资源引用。`muzzleSmokeEffectKey` 目前保持 `None`，因为 KriptoFX 枪口火光 prefab 内部自带 `Smoke` 子物体；`muzzleSmokeIntensity <= 0` 表示关闭该枪口火光内嵌烟雾。步枪默认关闭烟雾，避免高射速连续透明粒子造成 GPU 过绘；手枪保留少量烟，霰弹枪保留更明显但受节流控制的短烟。散弹枪当前使用专用 key，资源项已登记在 `CombatFeedbackResources.asset`；后续替换散弹枪音效或枪口火光时只改资源表和本快速表。
 
 ## 命中表面数据
 
 字段来源：`WeaponConfig.HitSurfaceFeedbackConfig`
+
+命中表面识别方式：运行时由 `CombatLayerNames` 按 Layer 解析，`Surface_Metal` 对应 `Metal`，`Surface_Wood` 对应 `Wood`，`Surface_Glass` 对应 `Glass`，`Surface_Stone` 对应 `Stone`。没有设置这些 Layer 的场景物体走 `Default`。
 
 | surfaceType | impactEffectKey | impactAudioKey | decalKey | decalLifeTime | decalScale | 当前来源 | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -74,8 +78,9 @@
 | Metal | KriptoFX Metal Impact | Impact Metal | 空 | 8 | 1 | 三把武器资源相同 | 金属命中特效 |
 | Wood | KriptoFX Wood Impact | Impact Wood | 空 | 8 | 1 | 三把武器资源相同 | 木头命中特效 |
 | Flesh | Blood Impact | Impact Flesh | 空 | 8 | 1 | 三把武器资源相同 | 敌人血肉命中特效 |
+| Glass | KriptoFX Glass Impact | Impact Glass | 空 | 8 | 1 | 三把武器资源相同 | 玻璃命中特效 |
 
-备注：`decalKey` 目前留空，后续有弹孔贴花资源再补。`Glass` 表面当前使用 `KriptoFX Concrete Impact / Impact Glass` 兜底。
+备注：`decalKey` 目前留空，后续有弹孔贴花资源再补。`Surface_Glass` 已使用独立 `KriptoFX Glass Impact`，不再复用混凝土命中特效。
 
 ## CombatFeedback ABRes 资源表
 
@@ -92,9 +97,10 @@
 | KriptoFX Pistol Muzzle Flash | combat_feedback | MuzzleFlash1 | `Effects/MuzzleFlashes/MuzzleFlash1.prefab` |
 | KriptoFX Assault Rifle Muzzle Flash | combat_feedback | MuzzleFlash8 | `Effects/MuzzleFlashes/MuzzleFlash8.prefab` |
 | KriptoFX Shotgun Muzzle Flash | combat_feedback | MuzzleFlash7 | `Effects/MuzzleFlashes/MuzzleFlash7.prefab` |
-| KriptoFX Concrete Impact | combat_feedback | ConcreteImpact | `Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/ConcreteImpact.prefab` |
-| KriptoFX Metal Impact | combat_feedback | MetalImpact | `Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/MetalImpact.prefab` |
-| KriptoFX Wood Impact | combat_feedback | WoodImpact | `Assets/KriptoFX/MuzzleFlashes/Prefab/Impacts/Mobile/WoodImpact.prefab` |
+| KriptoFX Concrete Impact | combat_feedback | ConcreteImpact | `Effects/Impacts/ConcreteImpact.prefab` |
+| KriptoFX Metal Impact | combat_feedback | MetalImpact | `Effects/Impacts/MetalImpact.prefab` |
+| KriptoFX Wood Impact | combat_feedback | WoodImpact | `Effects/Impacts/WoodImpact.prefab` |
+| KriptoFX Glass Impact | combat_feedback | GlassImpact | `Effects/Impacts/GlassImpact.prefab` |
 | Pistol_1 Fire | combat_feedback | Pistol_1 Fire | `Audio/Pistol_1 Fire.wav` |
 | Assault Rifle_1 Fire | combat_feedback | Assault Rifle_1 Fire | `Audio/Assault Rifle_1 Fire.wav` |
 | Shotgun_1 Fire | combat_feedback | Shotgun_1 Fire | `Audio/Shotgun_1 Fire.wav` |
@@ -241,7 +247,9 @@
 | Old Crone 皮肤 / 衣服 / 头发 | `AB_ZombieOldCrone_Skin_Grounded.mat` / `AB_ZombieOldCrone_Clothes_Grounded.mat` / `AB_ZombieOldCrone_Hair_Grounded.mat` | `Enemy_ZombieOldCrone_LOD2.prefab` |
 | 敌人手持武器 | `AB_Enemy_Axe_Grimy.mat` / `AB_Enemy_Sickle1_Grimy.mat` / `AB_Enemy_Sickle2_Grimy.mat` | 当前 ABRes 敌人 prefab 按模型引用 |
 
-敌人可见性参数：当前敌人材质通过 `_MinVisibility / _AmbientLift / _ColdRimStrength / _RimDamp` 做角色分层。皮肤材质主负责眼睛和伤口识别点，当前 `_EyeGlowIntensity 2.05`、`_WoundGlowIntensity 1.25`；衣服材质主负责身体块面读图，当前 `_MinVisibility 0.64`、`_ColdRimStrength 0.60`；头发和敌人武器负责边缘高光，当前头发 `_MinVisibility 0.62`，武器 `_ColdRimStrength 0.74`。敌人 shader 只保留约 58%-62% 场景雾融合，避免敌人被 Combat 冷灰雾完全吞掉。皮肤和衣服 shader 额外使用 `_CharacterFillColor / _CharacterFillStrength / _FocusLift / _ContactShadowStrength`：皮肤柔补光 `0.20`、头胸聚焦 `0.20`、脚底接触阴影 `0.14`；衣服柔补光 `0.16`、头胸聚焦 `0.16`、脚底接触阴影 `0.12`。这组参数用于替代单纯加边缘光，让头胸块面先读出来，脚底保留软接触关系。
+敌人材质移动端优化：当前敌人材质已从“强补光强边缘光”调整为更脏、更压暗的移动端版本。皮肤 / 身体材质当前 `_MinVisibility 0.50`、`_AmbientLift 0.46`、`_ColdRimStrength 0.34`、`_RimDamp 0.22`、`_EyeGlowIntensity 0.72`、`_WoundGlowIntensity 0.45`、`_DirtAmount 0.24`、`_Wetness 0.18`；衣服材质当前 `_MinVisibility 0.54`、`_AmbientLift 0.50`、`_ColdRimStrength 0.24`、`_CharacterFillStrength 0.12`、`_FocusLift 0.11`、`_WoundGlowIntensity 0`；头发材质当前 `_MinVisibility 0.52`、`_AmbientLift 0.48`、`_ColdRimStrength 0.22`；敌人手持武器当前 `_MinVisibility 0.44`、`_AmbientLift 0.40`、`_ColdRimStrength 0.28`。敌人 shader 保留主光方向、SH 环境光、雾融合、法线和脏污/湿润细节，但已取消实时主光阴影采样和阴影变体，适配烘焙场景与大量敌人同屏。
+
+敌人 Prefab 渲染开关：`Enemy_ZombieSkeleton_LOD2`、`Enemy_ZombieNerd_LOD2`、`Enemy_ZombieOldCrone_LOD2` 的渲染器已关闭动态投影、接收实时阴影、运动向量、Skinned Motion Vectors 和反射探针；保留 Light Probe，用于移动敌人在烘焙场景中获得环境光过渡。后续如果需要近景 Boss 投影，建议单独给 Boss 开启，不要恢复到普通杂兵 prefab。
 
 场景材质来源：`FPSDemo/Assets/Art/ABRes/SceneMaterials`，AssetBundle：`scene_materials`
 

@@ -121,7 +121,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _QueueOffset: 0
-    - _ReceiveShadows: 1
+    - _ReceiveShadows: 0
     - _Smoothness: 0.32
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -132,23 +132,23 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     - _Desaturation: 0.22
-    - _DirtAmount: 0.14
+    - _DirtAmount: 0.20
     - _InfectionAmount: 0.03
     - _BloodAmount: 0.18
-    - _Wetness: 0.12
+    - _Wetness: 0.10
     - _CavityDarkness: 0.16
     - _HeadContrastBoost: 0.14
-    - _RimDamp: 0.32
+    - _RimDamp: 0.18
     - _SpecularStrength: 0.28
     - _PromoContrast: 0.14
     - _PromoPale: 0
-    - _ColdRimStrength: 0.74
+    - _ColdRimStrength: 0.28
     - _WoundRedBoost: 0.12
-    - _WoundGlowIntensity: 0.12
+    - _WoundGlowIntensity: 0
     - _WoundGlowSpread: 0.26
     - _CavityInk: 0.02
-    - _MinVisibility: 0.58
-    - _AmbientLift: 0.62
+    - _MinVisibility: 0.44
+    - _AmbientLift: 0.40
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 0.94, a: 1}
     - _Color: {r: 1, g: 1, b: 0.94, a: 1}

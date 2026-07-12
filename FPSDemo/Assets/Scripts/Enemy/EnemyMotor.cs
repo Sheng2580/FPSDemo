@@ -46,6 +46,15 @@ namespace Enemy
         [SerializeField] private float offMeshLinkEndSampleRadius = 1.5f;
         [SerializeField] private bool debugOffMeshLink;
 
+        [Header("高低差跳跃")]
+        [SerializeField] private bool enableLedgeJump = true;
+        [SerializeField] private float ledgeJumpMinHeight = 0.55f;
+        [SerializeField] private float ledgeJumpMaxHeight = 5.6f;
+        [SerializeField] private float ledgeJumpStartDistance = 3.4f;
+        [SerializeField] private float ledgeJumpLandingBackoff = 0.65f;
+        [SerializeField] private float ledgeJumpEndSampleRadius = 1.8f;
+        [SerializeField] private float ledgeJumpCooldown = 0.8f;
+
         [Header("导航约束")]
         [SerializeField] private bool constrainToNavMesh = true;
         [SerializeField] private float navMeshClampDistance = 0.9f;
@@ -67,7 +76,10 @@ namespace Enemy
         private float _knockbackRemainingDistance;
         private float _knockbackSpeed;
         private float _offMeshLinkTimer;
+        private float _currentTraverseDuration;
+        private float _currentTraverseArcHeight;
         private float _nextNavMeshClampTime;
+        private float _nextLedgeJumpTime;
         private Vector3 _offMeshLinkStart;
         private Vector3 _offMeshLinkEnd;
         private Vector3 _lastOffMeshLinkPosition;
@@ -79,6 +91,7 @@ namespace Enemy
         private bool _wantsMove;
         private bool _knockbackActive;
         private bool _isTraversingOffMeshLink;
+        private bool _isTraversingAgentOffMeshLink;
 
         public bool IsTraversingOffMeshLink => _isTraversingOffMeshLink;
 
@@ -168,6 +181,18 @@ namespace Enemy
                 return;
             }
 
+            if (TryBeginOffMeshLinkTraversal())
+            {
+                TickOffMeshLinkTraversal();
+                return;
+            }
+
+            if (TryBeginLedgeJumpTraversal())
+            {
+                TickOffMeshLinkTraversal();
+                return;
+            }
+
             Vector3 direction = ResolveMoveDirection(desiredDirection, pursueTarget);
 
             if (TryBeginOffMeshLinkTraversal())
@@ -208,6 +233,7 @@ namespace Enemy
             _wantsMove = false;
             _moveDirection = Vector3.zero;
             _isTraversingOffMeshLink = false;
+            _isTraversingAgentOffMeshLink = false;
             StopAgentPath(clearPath: false);
         }
 
@@ -219,6 +245,7 @@ namespace Enemy
             _knockbackRemainingDistance = 0f;
             _verticalVelocity = 0f;
             _isTraversingOffMeshLink = false;
+            _isTraversingAgentOffMeshLink = false;
             StopAgentPath(clearPath: true);
         }
 
@@ -327,9 +354,12 @@ namespace Enemy
             _offMeshLinkEnd = ResolveOffMeshLinkEnd(linkData);
             _lastOffMeshLinkPosition = _offMeshLinkStart;
             _offMeshLinkTimer = 0f;
+            _currentTraverseDuration = offMeshLinkTraverseDuration;
+            _currentTraverseArcHeight = offMeshLinkArcHeight;
             _verticalVelocity = 0f;
             _knockbackActive = false;
             _isTraversingOffMeshLink = true;
+            _isTraversingAgentOffMeshLink = true;
 
             Vector3 linkDirection = _offMeshLinkEnd - _offMeshLinkStart;
             linkDirection.y = 0f;
@@ -346,6 +376,100 @@ namespace Enemy
             }
 
             return true;
+        }
+
+        private bool TryBeginLedgeJumpTraversal()
+        {
+            if (!enableLedgeJump
+                || _isTraversingOffMeshLink
+                || _target == null
+                || Time.time < _nextLedgeJumpTime)
+            {
+                return false;
+            }
+
+            Vector3 toTarget = _target.position - transform.position;
+            float heightDelta = toTarget.y;
+            if (heightDelta < ledgeJumpMinHeight || heightDelta > ledgeJumpMaxHeight)
+            {
+                return false;
+            }
+
+            Vector3 horizontalToTarget = toTarget;
+            horizontalToTarget.y = 0f;
+            float startDistance = Mathf.Max(0.1f, ledgeJumpStartDistance);
+            if (horizontalToTarget.sqrMagnitude > startDistance * startDistance)
+            {
+                return false;
+            }
+
+            Vector3 horizontalDirection = horizontalToTarget.sqrMagnitude > 0.0001f
+                ? horizontalToTarget.normalized
+                : transform.forward;
+            Vector3 desiredLanding = _target.position - horizontalDirection * Mathf.Max(0f, ledgeJumpLandingBackoff);
+
+            if (!TrySampleLedgeJumpLanding(desiredLanding, out Vector3 landingPosition)
+                && !TrySampleLedgeJumpLanding(_target.position, out landingPosition))
+            {
+                _nextLedgeJumpTime = Time.time + Mathf.Max(0.1f, ledgeJumpCooldown);
+                return false;
+            }
+
+            float landingHeightDelta = landingPosition.y - transform.position.y;
+            if (landingHeightDelta < ledgeJumpMinHeight || landingHeightDelta > ledgeJumpMaxHeight)
+            {
+                _nextLedgeJumpTime = Time.time + Mathf.Max(0.1f, ledgeJumpCooldown);
+                return false;
+            }
+
+            BeginManualTraverse(landingPosition, landingHeightDelta, horizontalToTarget.magnitude);
+            return true;
+        }
+
+        private bool TrySampleLedgeJumpLanding(Vector3 position, out Vector3 landingPosition)
+        {
+            landingPosition = Vector3.zero;
+            if (!NavMesh.SamplePosition(position, out NavMeshHit hit, Mathf.Max(0.1f, ledgeJumpEndSampleRadius), NavMesh.AllAreas))
+            {
+                return false;
+            }
+
+            landingPosition = hit.position;
+            return true;
+        }
+
+        private void BeginManualTraverse(Vector3 landingPosition, float heightDelta, float horizontalDistance)
+        {
+            _offMeshLinkStart = transform.position;
+            _offMeshLinkEnd = landingPosition;
+            _lastOffMeshLinkPosition = _offMeshLinkStart;
+            _offMeshLinkTimer = 0f;
+            _currentTraverseDuration = Mathf.Max(
+                0.08f,
+                offMeshLinkTraverseDuration + horizontalDistance * 0.05f + heightDelta * 0.04f);
+            _currentTraverseArcHeight = Mathf.Max(offMeshLinkArcHeight, heightDelta * 0.45f + 0.45f);
+            _verticalVelocity = 0f;
+            _knockbackActive = false;
+            _isTraversingOffMeshLink = true;
+            _isTraversingAgentOffMeshLink = false;
+            _nextLedgeJumpTime = Time.time + Mathf.Max(0.1f, ledgeJumpCooldown);
+
+            Vector3 linkDirection = _offMeshLinkEnd - _offMeshLinkStart;
+            linkDirection.y = 0f;
+            _moveDirection = linkDirection.sqrMagnitude > 0.0001f ? linkDirection.normalized : transform.forward;
+            _wantsMove = true;
+
+            if (CanUseNavMeshAgent())
+            {
+                agent.isStopped = true;
+            }
+
+            if (debugOffMeshLink)
+            {
+                Debug.Log(
+                    $"[EnemyMotor] {name} 开始高低差跳跃 Start={_offMeshLinkStart} End={_offMeshLinkEnd}",
+                    this);
+            }
         }
 
         private Vector3 ResolveOffMeshLinkEnd(OffMeshLinkData linkData)
@@ -366,12 +490,13 @@ namespace Enemy
                 return;
             }
 
-            float duration = Mathf.Max(0.05f, offMeshLinkTraverseDuration);
+            float duration = Mathf.Max(0.05f, _currentTraverseDuration > 0f ? _currentTraverseDuration : offMeshLinkTraverseDuration);
             _offMeshLinkTimer += Time.deltaTime;
             float t = Mathf.Clamp01(_offMeshLinkTimer / duration);
             float smoothT = Mathf.SmoothStep(0f, 1f, t);
             Vector3 nextPosition = Vector3.Lerp(_offMeshLinkStart, _offMeshLinkEnd, smoothT);
-            nextPosition.y += Mathf.Sin(smoothT * Mathf.PI) * Mathf.Max(0f, offMeshLinkArcHeight);
+            float arcHeight = _currentTraverseArcHeight > 0f ? _currentTraverseArcHeight : offMeshLinkArcHeight;
+            nextPosition.y += Mathf.Sin(smoothT * Mathf.PI) * Mathf.Max(0f, arcHeight);
 
             Vector3 motion = nextPosition - _lastOffMeshLinkPosition;
             if (motion.sqrMagnitude > 0.0000001f)
@@ -407,10 +532,18 @@ namespace Enemy
             if (CanUseNavMeshAgent())
             {
                 agent.Warp(finishPosition);
-                agent.CompleteOffMeshLink();
+                if (_isTraversingAgentOffMeshLink && agent.isOnOffMeshLink)
+                {
+                    agent.CompleteOffMeshLink();
+                }
+
                 agent.isStopped = false;
                 agent.nextPosition = finishPosition;
             }
+
+            _isTraversingAgentOffMeshLink = false;
+            _currentTraverseDuration = 0f;
+            _currentTraverseArcHeight = 0f;
 
             if (debugOffMeshLink)
             {

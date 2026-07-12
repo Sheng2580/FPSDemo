@@ -14,11 +14,11 @@ TagManager:
   - Ground
   - barrier
   - Climbable
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Enemy
+  - Surface_Stone
+  - Surface_Metal
+  - Surface_Wood
+  - Surface_Glass
   - 
   - 
   - 

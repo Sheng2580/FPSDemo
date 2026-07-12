@@ -39,6 +39,8 @@ namespace Enemy
         public Vector3 desiredMoveDirection;
         public Vector3 navSteeringTarget;
         public float sqrDistanceToTarget;
+        public float targetVerticalDelta;
+        public float absTargetVerticalDelta;
         public bool canSeeTarget;
         public bool isTargetInAttackRange;
         public bool hasNavPath;
@@ -190,6 +192,8 @@ namespace Enemy
                 toTarget = Vector3.zero;
                 desiredMoveDirection = Vector3.zero;
                 sqrDistanceToTarget = float.MaxValue;
+                targetVerticalDelta = 0f;
+                absTargetVerticalDelta = 0f;
                 canSeeTarget = false;
                 isTargetInAttackRange = false;
                 return;
@@ -197,13 +201,18 @@ namespace Enemy
 
             targetPosition = target.position;
             toTarget = targetPosition - controller.transform.position;
+            targetVerticalDelta = toTarget.y;
+            absTargetVerticalDelta = Mathf.Abs(targetVerticalDelta);
             toTarget.y = 0f;
             sqrDistanceToTarget = toTarget.sqrMagnitude;
             float attackDistanceValue = attackDistance;
             float detectionRangeValue = detectionRange;
+            float attackVerticalReach = attack != null ? attack.AttackVerticalReach : 1.15f;
 
             canSeeTarget = alwaysKnowTarget || sqrDistanceToTarget <= detectionRangeValue * detectionRangeValue;
-            isTargetInAttackRange = sqrDistanceToTarget <= attackDistanceValue * attackDistanceValue;
+            isTargetInAttackRange =
+                sqrDistanceToTarget <= attackDistanceValue * attackDistanceValue
+                && absTargetVerticalDelta <= attackVerticalReach;
 
             if (toTarget.sqrMagnitude > 0.0001f)
             {

@@ -52,15 +52,19 @@ MonoBehaviour:
   - key: KriptoFX Concrete Impact
     assetBundleName: combat_feedback
     assetName: ConcreteImpact
-    prefab: {fileID: 108086, guid: e4ed01af280d76248a9d0e72030c40c6, type: 3}
+    prefab: {fileID: 108086, guid: 9b475351faeb4560ad4524b0dcb527bd, type: 3}
   - key: KriptoFX Metal Impact
     assetBundleName: combat_feedback
     assetName: MetalImpact
-    prefab: {fileID: 180772, guid: 52aa1f2e1567b6e47b50df0d054982a7, type: 3}
+    prefab: {fileID: 180772, guid: cbd4c481f5a44ae0b90c832a50a63d5c, type: 3}
   - key: KriptoFX Wood Impact
     assetBundleName: combat_feedback
     assetName: WoodImpact
-    prefab: {fileID: 138412, guid: 4fbc0156e9dd2ab41a17e56a2f515d2a, type: 3}
+    prefab: {fileID: 138412, guid: ef8017abe0614c3e984b0536c671e9a4, type: 3}
+  - key: KriptoFX Glass Impact
+    assetBundleName: combat_feedback
+    assetName: GlassImpact
+    prefab: {fileID: 168394, guid: 29883cba811c414aa88853635f3c339c, type: 3}
   audioEntries:
   - key: Pistol_1 Fire
     assetBundleName: combat_feedback

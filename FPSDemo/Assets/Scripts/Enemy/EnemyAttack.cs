@@ -17,6 +17,8 @@ namespace Enemy
         [SerializeField] private float attackInterval = 1.2f;
         [SerializeField] private float attackHitDelay = 0.35f;
         [SerializeField] private float hitDistancePadding = 0.35f;
+        [Tooltip("允许攻击命中的最大垂直高度差 超过后敌人会继续追击或跳上平台")]
+        [SerializeField] private float maxAttackVerticalDifference = 1.15f;
         [SerializeField] private bool useAnimationHitWindow = true;
 
         private Transform _target;
@@ -32,6 +34,7 @@ namespace Enemy
 
         public float AttackDistance => attackDistance;
         public float AttackInterval => attackInterval;
+        public float AttackVerticalReach => Mathf.Max(0.1f, maxAttackVerticalDifference);
         public float AttackStartTime => _attackStartTime;
         public float AttackElapsedTime => _attackPlaying ? Time.time - _attackStartTime : 0f;
         public bool IsAttacking => _attackPlaying;
@@ -180,6 +183,12 @@ namespace Enemy
             }
 
             Vector3 toTarget = _target.position - transform.position;
+            float verticalDifference = Mathf.Abs(toTarget.y);
+            if (verticalDifference > AttackVerticalReach)
+            {
+                return false;
+            }
+
             toTarget.y = 0f;
             float distance = attackDistance + hitDistancePadding;
             return toTarget.sqrMagnitude <= distance * distance;

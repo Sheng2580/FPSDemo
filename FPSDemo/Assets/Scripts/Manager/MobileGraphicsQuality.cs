@@ -36,29 +36,33 @@ public readonly struct MobileGraphicsQualityProfile
         switch (preset)
         {
             case MobileGraphicsPreset.Smooth:
-                return new MobileGraphicsQualityProfile(60, 1, 1f, 1f, AnisotropicFiltering.Enable);
+                return new MobileGraphicsQualityProfile(60, 1, 0.85f, 1f, AnisotropicFiltering.Enable);
 
             case MobileGraphicsPreset.Clear:
-                return new MobileGraphicsQualityProfile(60, 4, 1f, 1.5f, AnisotropicFiltering.ForceEnable);
+                return new MobileGraphicsQualityProfile(60, 2, 1f, 1.4f, AnisotropicFiltering.ForceEnable);
 
             default:
-                return new MobileGraphicsQualityProfile(60, 2, 1f, 1.2f, AnisotropicFiltering.ForceEnable);
+                return new MobileGraphicsQualityProfile(60, 1, 0.9f, 1.15f, AnisotropicFiltering.ForceEnable);
         }
     }
 }
 
 public static class MobileGraphicsQuality
 {
-    public static MobileGraphicsPreset CurrentPreset { get; private set; } = MobileGraphicsPreset.Balanced;
+    private const string PerformantQualityName = "Performant";
+    private const string BalancedQualityName = "Balanced";
+
+    public static MobileGraphicsPreset CurrentPreset { get; private set; } = MobileGraphicsPreset.Smooth;
 
     public static void ApplyDefaultMobileProfile()
     {
-        ApplyPreset(MobileGraphicsPreset.Balanced);
+        ApplyPreset(MobileGraphicsPreset.Smooth);
     }
 
     public static void ApplyPreset(MobileGraphicsPreset preset)
     {
         CurrentPreset = preset;
+        ApplyUnityQualityLevel(preset);
         ApplyProfile(MobileGraphicsQualityProfile.Create(preset));
     }
 
@@ -85,10 +89,10 @@ public static class MobileGraphicsQuality
 
     private static void ApplyUniversalRenderPipelineProfile(MobileGraphicsQualityProfile profile)
     {
-        RenderPipelineAsset pipelineAsset = GraphicsSettings.currentRenderPipeline;
+        RenderPipelineAsset pipelineAsset = QualitySettings.renderPipeline;
         if (pipelineAsset == null)
         {
-            pipelineAsset = QualitySettings.renderPipeline;
+            pipelineAsset = GraphicsSettings.currentRenderPipeline;
         }
 
         if (pipelineAsset is not UniversalRenderPipelineAsset urpAsset)
@@ -96,8 +100,43 @@ public static class MobileGraphicsQuality
             return;
         }
 
-        // URP 手机端真正生效的是这里的 MSAA 和 Render Scale
+        // URP 手机端真正生效的是这里的 MSAA 和 Render Scale HDR 由管线资源保留
         urpAsset.msaaSampleCount = profile.msaaSamples;
         urpAsset.renderScale = profile.renderScale;
+    }
+
+    private static void ApplyUnityQualityLevel(MobileGraphicsPreset preset)
+    {
+        string qualityName = preset == MobileGraphicsPreset.Smooth
+            ? PerformantQualityName
+            : BalancedQualityName;
+
+        int qualityIndex = FindQualityLevel(qualityName);
+        if (qualityIndex < 0)
+        {
+            return;
+        }
+
+        if (QualitySettings.GetQualityLevel() == qualityIndex)
+        {
+            return;
+        }
+
+        // 编辑器和真机都切到同一个移动端质量档 避免编辑器误用 High Fidelity
+        QualitySettings.SetQualityLevel(qualityIndex, true);
+    }
+
+    private static int FindQualityLevel(string qualityName)
+    {
+        string[] names = QualitySettings.names;
+        for (int i = 0; i < names.Length; i++)
+        {
+            if (names[i] == qualityName)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }

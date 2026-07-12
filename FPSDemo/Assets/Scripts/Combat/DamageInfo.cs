@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Combat
 {
+    ///伤害数据
     public struct DamageInfo
     {
         public float baseDamage;

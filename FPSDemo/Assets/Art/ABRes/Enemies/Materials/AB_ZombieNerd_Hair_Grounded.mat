@@ -117,7 +117,7 @@ Material:
     m_Floats:
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _AmbientLift: 0.76
+    - _AmbientLift: 0.48
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BloodAmount: 0.05
@@ -126,13 +126,13 @@ Material:
     - _CavityInk: 0
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColdRimStrength: 0.58
+    - _ColdRimStrength: 0.22
     - _Cull: 2
     - _Cutoff: 0.5
     - _Desaturation: 0.572
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _DirtAmount: 0.05
+    - _DirtAmount: 0.08
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
@@ -142,7 +142,7 @@ Material:
     - _HeadContrastBoost: 0.16
     - _InfectionAmount: 0.04
     - _Metallic: 0
-    - _MinVisibility: 0.62
+    - _MinVisibility: 0.52
     - _Mode: 2
     - _NormalScale: 1
     - _OcclusionStrength: 1
@@ -150,8 +150,8 @@ Material:
     - _PromoContrast: 0.06
     - _PromoPale: 0
     - _QueueOffset: 0
-    - _ReceiveShadows: 1
-    - _RimDamp: 0.20
+    - _ReceiveShadows: 0
+    - _RimDamp: 0.12
     - _Smoothness: 0.08
     - _SmoothnessTextureChannel: 0
     - _Smothness: 1
@@ -161,7 +161,7 @@ Material:
     - _SrcBlendAlpha: 1
     - _Surface: 0
     - _UVSec: 0
-    - _Wetness: 0.06
+    - _Wetness: 0.04
     - _WorkflowMode: 1
     - _WoundGlowIntensity: 0
     - _WoundGlowSpread: 0

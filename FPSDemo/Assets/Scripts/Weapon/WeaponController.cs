@@ -248,6 +248,12 @@ namespace Weapon
             return Mathf.Max(1, _config.pelletCount);
         }
 
+        /// <summary>
+        /// 开枪
+        /// </summary>
+        /// <param name="raycastCamera"></param>
+        /// <param name="pelletIndex"></param>
+        /// <param name="pelletCount"></param>
         private void FireSingleRaycastPellet(Camera raycastCamera, int pelletIndex, int pelletCount)
         {
             Vector3 direction = CreatePelletDirection(raycastCamera, pelletIndex, pelletCount);
@@ -270,7 +276,8 @@ namespace Weapon
                 hit.point,
                 hit.normal);
 
-            bool hitEnemy = TryApplyEnemyDamage(hit.collider, ref damageInfo);
+            bool hitEnemy = CombatLayerNames.IsEnemyLayer(hit.collider.gameObject.layer)
+                            && TryApplyEnemyDamage(hit.collider, ref damageInfo);
 
             EventCenter.Instance.EventTrigger(GameEvent.WeaponHit, new WeaponHitEventData(damageInfo, hitEnemy, _config));
 
@@ -299,6 +306,13 @@ namespace Weapon
             return (spreadRotation * cameraTransform.forward).normalized;
         }
 
+
+        /// <summary>
+        /// 触发伤害
+        /// </summary>
+        /// <param name="hitCollider"></param>
+        /// <param name="damageInfo"></param>
+        /// <returns></returns>
         private bool TryApplyEnemyDamage(Collider hitCollider, ref DamageInfo damageInfo)
         {
             if (hitCollider == null)

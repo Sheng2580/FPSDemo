@@ -40,11 +40,13 @@ MonoBehaviour:
     explosionFalloff: 1
     hitLayerMask:
       serializedVersion: 2
-      m_Bits: 115
+      m_Bits: 16321
     tracerPrefabKey: ""
     impactEffectKey: KriptoFX Concrete Impact
     muzzleFlashEffectKey: KriptoFX Pistol Muzzle Flash
     muzzleSmokeEffectKey: None
+    muzzleSmokeInterval: 0.22
+    muzzleSmokeIntensity: 0.35
     fireAudioKey: Pistol_1 Fire
     fireVolume: 1
     firePitchRandom: 0.04
@@ -83,7 +85,7 @@ MonoBehaviour:
       decalLifeTime: 8
       decalScale: 1
     - surfaceType: 5
-      impactEffectKey: KriptoFX Concrete Impact
+      impactEffectKey: KriptoFX Glass Impact
       impactAudioKey: Impact Glass
       decalKey: ""
       decalLifeTime: 8

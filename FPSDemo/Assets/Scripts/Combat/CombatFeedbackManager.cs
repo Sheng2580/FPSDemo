@@ -18,10 +18,11 @@ namespace Combat
         private const string SmokeParticleName = "Smoke";
         private const string DistortionObjectName = "Distortion";
         private const string MuzzleFlashKeyToken = "Muzzle Flash";
-        private const int MobileSmokeMaxParticles = 24;
+        private const string MuzzleSmokeKeyToken = "Muzzle Smoke";
+        private const int MobileSmokeMaxParticles = 12;
         private const int MobileEffectMaxParticles = 64;
-        private const float MobileSmokeEmissionMultiplier = 0.45f;
-        private const float MobileSmokeLifetimeMultiplier = 0.65f;
+        private const float MobileSmokeEmissionMultiplier = 0.25f;
+        private const float MobileSmokeLifetimeMultiplier = 0.45f;
 #if UNITY_EDITOR
         private const string EditorResourceLibraryPath = "Assets/Art/ABRes/CombatFeedback/CombatFeedbackResources.asset";
 #endif
@@ -41,6 +42,8 @@ namespace Combat
             public Vector3 position;
             public Quaternion rotation;
             public float intensity;
+            public float smokeInterval;
+            public float smokeIntensity;
         }
 
         private struct AudioPlayRequest
@@ -65,7 +68,7 @@ namespace Combat
 
         [Header("性能保护")]
         [SerializeField] private float muzzleEffectFallbackLifeTime = 0.9f;
-        [SerializeField] private float muzzleSmokeMinInterval = 0.09f;
+        [SerializeField] private float muzzleSmokeMinInterval = 0.18f;
         [SerializeField] private int maxPlayingMuzzleEffectsPerKey = 8;
         [SerializeField] private int maxPlayingEffectsPerKey = 24;
 
@@ -165,10 +168,16 @@ namespace Combat
             float pitchRandom = config != null && config.firePitchRandom >= 0f ? config.firePitchRandom : WeaponConfig.DefaultFirePitchRandom;
             float audioCooldown = config != null && config.fireAudioCooldown >= 0f ? config.fireAudioCooldown : WeaponConfig.DefaultFireAudioCooldown;
             float intensity = config != null && config.fireFeedbackIntensity > 0f ? config.fireFeedbackIntensity : WeaponConfig.DefaultFireFeedbackIntensity;
+            float smokeInterval = ResolveMuzzleSmokeInterval(config);
+            float smokeIntensity = ResolveMuzzleSmokeIntensity(config);
 
-            LogWeaponFireFeedback(eventData, muzzleFlashKey, muzzleSmokeKey, fireAudioKey);
-            PlayEffect(muzzleFlashKey, eventData.muzzlePosition, eventData.muzzleRotation, intensity);
-            PlayEffect(muzzleSmokeKey, eventData.muzzlePosition, eventData.muzzleRotation, intensity);
+            LogWeaponFireFeedback(eventData, muzzleFlashKey, muzzleSmokeKey, fireAudioKey, smokeInterval, smokeIntensity);
+            PlayEffect(muzzleFlashKey, eventData.muzzlePosition, eventData.muzzleRotation, intensity, smokeInterval, smokeIntensity);
+            if (smokeIntensity > 0f)
+            {
+                PlayEffect(muzzleSmokeKey, eventData.muzzlePosition, eventData.muzzleRotation, intensity * smokeIntensity, smokeInterval, smokeIntensity);
+            }
+
             PlayAudio(fireAudioKey, eventData.muzzlePosition, volume, pitchRandom, audioCooldown, fireAudioSpatialBlend);
         }
 
@@ -285,7 +294,7 @@ namespace Combat
             return effectRoot;
         }
 
-        private void PlayEffect(string key, Vector3 position, Quaternion rotation, float intensity)
+        private void PlayEffect(string key, Vector3 position, Quaternion rotation, float intensity, float smokeInterval = -1f, float smokeIntensity = 1f)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -294,15 +303,15 @@ namespace Combat
 
             if (_loadedEffectPrefabs.TryGetValue(key, out GameObject prefab) && prefab != null)
             {
-                SpawnEffect(key, prefab, position, rotation, intensity);
+                SpawnEffect(key, prefab, position, rotation, intensity, smokeInterval, smokeIntensity);
                 return;
             }
 
-            QueuePendingEffect(key, position, rotation, intensity);
+            QueuePendingEffect(key, position, rotation, intensity, smokeInterval, smokeIntensity);
             BeginLoadEffectPrefab(key);
         }
 
-        private void SpawnEffect(string key, GameObject prefab, Vector3 position, Quaternion rotation, float intensity)
+        private void SpawnEffect(string key, GameObject prefab, Vector3 position, Quaternion rotation, float intensity, float smokeInterval = -1f, float smokeIntensity = 1f)
         {
             EnforcePlayingEffectLimit(key);
 
@@ -319,7 +328,7 @@ namespace Combat
             effectTransform.rotation = rotation;
             effectTransform.localScale = prefab.transform.localScale * Mathf.Max(0.01f, intensity);
 
-            bool smokeActive = ShouldEnableSmokeForSpawn(key);
+            bool smokeActive = ShouldEnableSmokeForSpawn(key, smokeInterval, smokeIntensity);
             SetNamedEffectObjects(effectObject.transform, SmokeParticleName, smokeActive);
             effectObject.SetActive(true);
             LogEffectPlayback(key, prefab);
@@ -434,7 +443,7 @@ namespace Combat
             return true;
         }
 
-        private void QueuePendingEffect(string key, Vector3 position, Quaternion rotation, float intensity)
+        private void QueuePendingEffect(string key, Vector3 position, Quaternion rotation, float intensity, float smokeInterval = -1f, float smokeIntensity = 1f)
         {
             if (!_pendingEffectRequests.TryGetValue(key, out List<EffectPlayRequest> requests))
             {
@@ -446,7 +455,9 @@ namespace Combat
             {
                 position = position,
                 rotation = rotation,
-                intensity = intensity
+                intensity = intensity,
+                smokeInterval = smokeInterval,
+                smokeIntensity = smokeIntensity
             });
         }
 
@@ -466,7 +477,7 @@ namespace Combat
             for (int i = 0; i < requests.Count; i++)
             {
                 EffectPlayRequest request = requests[i];
-                SpawnEffect(key, prefab, request.position, request.rotation, request.intensity);
+                SpawnEffect(key, prefab, request.position, request.rotation, request.intensity, request.smokeInterval, request.smokeIntensity);
             }
         }
 
@@ -480,7 +491,7 @@ namespace Combat
             Debug.Log($"[CombatFeedback] 播放特效 Key={key} Prefab={prefab.name}", prefab);
         }
 
-        private void LogWeaponFireFeedback(WeaponFiredEventData eventData, string muzzleFlashKey, string muzzleSmokeKey, string fireAudioKey)
+        private void LogWeaponFireFeedback(WeaponFiredEventData eventData, string muzzleFlashKey, string muzzleSmokeKey, string fireAudioKey, float smokeInterval, float smokeIntensity)
         {
             if (!debugFeedback)
             {
@@ -488,7 +499,7 @@ namespace Combat
             }
 
             string weaponName = string.IsNullOrEmpty(eventData.weaponName) ? "Unknown" : eventData.weaponName;
-            string logKey = $"{eventData.weaponId}|{weaponName}|{muzzleFlashKey}|{muzzleSmokeKey}|{fireAudioKey}";
+            string logKey = $"{eventData.weaponId}|{weaponName}|{muzzleFlashKey}|{muzzleSmokeKey}|{fireAudioKey}|{smokeInterval:0.###}|{smokeIntensity:0.##}";
             if (!_weaponFireDebugLogs.Add(logKey))
             {
                 return;
@@ -496,7 +507,7 @@ namespace Combat
 
             string muzzleName = eventData.muzzleTransform != null ? eventData.muzzleTransform.name : "None";
             Debug.Log(
-                $"[CombatFeedback] 开火表现 Weapon={weaponName} Id={eventData.weaponId} FlashKey={FormatDebugKey(muzzleFlashKey)} SmokeKey={FormatDebugKey(muzzleSmokeKey)} AudioKey={FormatDebugKey(fireAudioKey)} Muzzle={muzzleName}",
+                $"[CombatFeedback] 开火表现 Weapon={weaponName} Id={eventData.weaponId} FlashKey={FormatDebugKey(muzzleFlashKey)} SmokeKey={FormatDebugKey(muzzleSmokeKey)} SmokeInterval={smokeInterval:0.###} SmokeIntensity={smokeIntensity:0.##} AudioKey={FormatDebugKey(fireAudioKey)} Muzzle={muzzleName}",
                 eventData.weaponView);
         }
 
@@ -523,31 +534,62 @@ namespace Combat
             return string.IsNullOrEmpty(key) ? "None" : key;
         }
 
-        private bool ShouldEnableSmokeForSpawn(string key)
+        private float ResolveMuzzleSmokeInterval(WeaponConfig config)
         {
-            if (!IsMuzzleFlashEffectKey(key) || muzzleSmokeMinInterval <= 0f)
+            if (config != null && config.muzzleSmokeInterval > 0f)
+            {
+                return config.muzzleSmokeInterval;
+            }
+
+            return muzzleSmokeMinInterval;
+        }
+
+        private float ResolveMuzzleSmokeIntensity(WeaponConfig config)
+        {
+            if (config == null)
+            {
+                return WeaponConfig.DefaultPistolMuzzleSmokeIntensity;
+            }
+
+            return Mathf.Clamp01(config.muzzleSmokeIntensity);
+        }
+
+        private bool ShouldEnableSmokeForSpawn(string key, float smokeInterval, float smokeIntensity)
+        {
+            if (smokeIntensity <= 0f)
+            {
+                return false;
+            }
+
+            if (!IsMuzzleSmokeControlledEffectKey(key))
+            {
+                return true;
+            }
+
+            float resolvedInterval = smokeInterval > 0f ? smokeInterval : muzzleSmokeMinInterval;
+            if (resolvedInterval <= 0f)
             {
                 return true;
             }
 
             if (_nextSmokeTimes.TryGetValue(key, out float nextTime) && Time.time < nextTime)
             {
-                LogSmokeThrottle(key);
+                LogSmokeThrottle(key, resolvedInterval);
                 return false;
             }
 
-            _nextSmokeTimes[key] = Time.time + muzzleSmokeMinInterval;
+            _nextSmokeTimes[key] = Time.time + resolvedInterval;
             return true;
         }
 
-        private void LogSmokeThrottle(string key)
+        private void LogSmokeThrottle(string key, float interval)
         {
             if (!debugFeedback || !_smokeThrottleLogs.Add(key))
             {
                 return;
             }
 
-            Debug.Log($"[CombatFeedback] 枪口烟雾节流 Key={key} Interval={muzzleSmokeMinInterval:0.###}s", this);
+            Debug.Log($"[CombatFeedback] 枪口烟雾节流 Key={key} Interval={interval:0.###}s", this);
         }
 
         private void SetNamedEffectObjects(Transform root, string objectName, bool isActive)
@@ -627,6 +669,13 @@ namespace Combat
         {
             return !string.IsNullOrEmpty(key)
                    && key.IndexOf(MuzzleFlashKeyToken, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private bool IsMuzzleSmokeControlledEffectKey(string key)
+        {
+            return !string.IsNullOrEmpty(key)
+                   && (key.IndexOf(MuzzleFlashKeyToken, StringComparison.OrdinalIgnoreCase) >= 0
+                       || key.IndexOf(MuzzleSmokeKeyToken, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         private bool IsSameEffectKey(string left, string right)
@@ -984,15 +1033,12 @@ namespace Combat
 
         private HitSurfaceType ResolveSurfaceType(Collider hitCollider, bool hitEnemy)
         {
-            // 敌人命中统一当作 Flesh 没有标记的墙体走默认石头效果
             if (hitEnemy)
             {
                 return HitSurfaceType.Flesh;
             }
 
-            HitSurface hitSurface = hitCollider.GetComponentInParent<HitSurface>();
-            hitSurface ??= hitCollider.GetComponentInChildren<HitSurface>();
-            return hitSurface != null ? hitSurface.SurfaceType : HitSurfaceType.Default;
+            return CombatLayerNames.ResolveSurfaceType(hitCollider.gameObject.layer);
         }
 
         private string ResolveImpactEffectKey(WeaponConfig config, HitSurfaceType surfaceType)

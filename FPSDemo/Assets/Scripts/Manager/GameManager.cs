@@ -70,7 +70,8 @@ public class GameManager : MonoBehaviour
 
     private void ApplyMobileGraphicsSettings()
     {
-#if UNITY_ANDROID || UNITY_IOS
+#if UNITY_ANDROID || UNITY_IOS || UNITY_EDITOR
+        // 编辑器也应用移动端默认画质 方便用同一套画面压力测试 Combat
         MobileGraphicsQuality.ApplyDefaultMobileProfile();
 #endif
     }

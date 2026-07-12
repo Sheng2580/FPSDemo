@@ -71,8 +71,6 @@ Shader "FPSDemo/Enemy/S_ZombieInfectedMobile"
             #pragma target 2.0
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -240,8 +238,7 @@ Shader "FPSDemo/Enemy/S_ZombieInfectedMobile"
                 half3 bitangentWS = cross(input.normalWS, input.tangentWS.xyz) * input.tangentWS.w;
                 half3 normalWS = normalize(TransformTangentToWorld(normalTS, half3x3(input.tangentWS.xyz, bitangentWS, input.normalWS)));
 
-                float4 shadowCoord = TransformWorldToShadowCoord(input.positionWS);
-                Light mainLight = GetMainLight(shadowCoord);
+                Light mainLight = GetMainLight();
                 half ndl = saturate(dot(normalWS, mainLight.direction));
                 half wrappedLight = saturate(ndl * 0.72h + 0.28h);
                 half shadowAtten = mainLight.shadowAttenuation * mainLight.distanceAttenuation;

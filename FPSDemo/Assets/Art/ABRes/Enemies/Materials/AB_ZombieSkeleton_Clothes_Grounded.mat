@@ -143,7 +143,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _QueueOffset: 0
-    - _ReceiveShadows: 1
+    - _ReceiveShadows: 0
     - _Smoothness: 0.12
     - _SmoothnessTextureChannel: 0
     - _Smothness: 1
@@ -156,26 +156,26 @@ Material:
     - _ZWrite: 1
     - __dirty: 0
     - _Desaturation: 0.16
-    - _DirtAmount: 0.12
+    - _DirtAmount: 0.18
     - _InfectionAmount: 0.1
     - _BloodAmount: 0.08
-    - _Wetness: 0.05
+    - _Wetness: 0.04
     - _CavityDarkness: 0.2
     - _HeadContrastBoost: 0.20
-    - _RimDamp: 0.24
+    - _RimDamp: 0.14
     - _SpecularStrength: 0.035
     - _PromoContrast: 0.08
     - _PromoPale: 0
-    - _ColdRimStrength: 0.60
+    - _ColdRimStrength: 0.24
     - _WoundRedBoost: 0.04
-    - _WoundGlowIntensity: 0.10
+    - _WoundGlowIntensity: 0
     - _WoundGlowSpread: 0.22
     - _CavityInk: 0
-    - _MinVisibility: 0.64
-    - _AmbientLift: 0.76
-    - _CharacterFillStrength: 0.16
-    - _FocusLift: 0.16
-    - _ContactShadowStrength: 0.12
+    - _MinVisibility: 0.54
+    - _AmbientLift: 0.50
+    - _CharacterFillStrength: 0.12
+    - _FocusLift: 0.11
+    - _ContactShadowStrength: 0.14
     - _GroundBlendHeight: 0.86
     - _GroundDirtStrength: 0.46
     - _GroundShadowStrength: 0.10

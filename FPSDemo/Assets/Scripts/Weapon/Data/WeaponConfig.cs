@@ -108,7 +108,15 @@ namespace Weapon.Data
         public const string DefaultAssaultRifleMuzzleFlashEffectKey = "KriptoFX Assault Rifle Muzzle Flash";
         public const string DefaultShotgunMuzzleFlashEffectKey = "KriptoFX Shotgun Muzzle Flash";
         public const string DefaultMuzzleSmokeEffectKey = "None";
+        public const float DefaultMuzzleSmokeInterval = 0.22f;
+        public const float DefaultPistolMuzzleSmokeInterval = 0.22f;
+        public const float DefaultAssaultRifleMuzzleSmokeInterval = 0.35f;
+        public const float DefaultShotgunMuzzleSmokeInterval = 0.45f;
+        public const float DefaultPistolMuzzleSmokeIntensity = 0.35f;
+        public const float DefaultAssaultRifleMuzzleSmokeIntensity = 0f;
+        public const float DefaultShotgunMuzzleSmokeIntensity = 0.6f;
         public const string DefaultImpactEffectKey = "KriptoFX Concrete Impact";
+        public const string DefaultGlassImpactEffectKey = "KriptoFX Glass Impact";
         public const string DefaultPistolFireAudioKey = "Pistol_1 Fire";
         public const string DefaultAssaultRifleFireAudioKey = "Assault Rifle_1 Fire";
         public const string DefaultShotgunFireAudioKey = "Shotgun_1 Fire";
@@ -164,6 +172,8 @@ namespace Weapon.Data
         // 战斗表现数据 只提供资源 key 表现层负责播放
         public string muzzleFlashEffectKey;
         public string muzzleSmokeEffectKey;
+        public float muzzleSmokeInterval;
+        public float muzzleSmokeIntensity;
         public string fireAudioKey;
         public float fireVolume;
         public float firePitchRandom;
@@ -247,6 +257,8 @@ namespace Weapon.Data
                 impactEffectKey = DefaultImpactEffectKey,
                 muzzleFlashEffectKey = DefaultPistolMuzzleFlashEffectKey,
                 muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
+                muzzleSmokeInterval = DefaultPistolMuzzleSmokeInterval,
+                muzzleSmokeIntensity = DefaultPistolMuzzleSmokeIntensity,
                 fireAudioKey = DefaultPistolFireAudioKey,
                 fireVolume = DefaultFireVolume,
                 firePitchRandom = DefaultFirePitchRandom,
@@ -321,6 +333,8 @@ namespace Weapon.Data
                 impactEffectKey = DefaultImpactEffectKey,
                 muzzleFlashEffectKey = DefaultAssaultRifleMuzzleFlashEffectKey,
                 muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
+                muzzleSmokeInterval = DefaultAssaultRifleMuzzleSmokeInterval,
+                muzzleSmokeIntensity = DefaultAssaultRifleMuzzleSmokeIntensity,
                 fireAudioKey = DefaultAssaultRifleFireAudioKey,
                 fireVolume = DefaultFireVolume,
                 firePitchRandom = DefaultFirePitchRandom,
@@ -395,6 +409,8 @@ namespace Weapon.Data
                 impactEffectKey = DefaultImpactEffectKey,
                 muzzleFlashEffectKey = DefaultShotgunMuzzleFlashEffectKey,
                 muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey,
+                muzzleSmokeInterval = DefaultShotgunMuzzleSmokeInterval,
+                muzzleSmokeIntensity = DefaultShotgunMuzzleSmokeIntensity,
                 fireAudioKey = DefaultShotgunFireAudioKey,
                 fireVolume = DefaultFireVolume,
                 firePitchRandom = DefaultFirePitchRandom,
@@ -533,6 +549,13 @@ namespace Weapon.Data
                 muzzleSmokeEffectKey = DefaultMuzzleSmokeEffectKey;
             }
 
+            if (muzzleSmokeInterval <= 0f)
+            {
+                muzzleSmokeInterval = ResolveDefaultMuzzleSmokeInterval();
+            }
+
+            muzzleSmokeIntensity = Mathf.Max(0f, muzzleSmokeIntensity);
+
             if (string.IsNullOrEmpty(fireAudioKey))
             {
                 fireAudioKey = ResolveDefaultFireAudioKey();
@@ -610,6 +633,26 @@ namespace Weapon.Data
             }
 
             return DefaultPistolMuzzleFlashEffectKey;
+        }
+
+        private float ResolveDefaultMuzzleSmokeInterval()
+        {
+            if (weaponId == 3 || attackType == WeaponAttackType.MultiHitscan)
+            {
+                return DefaultShotgunMuzzleSmokeInterval;
+            }
+
+            if (weaponId == 2 || fireMode == WeaponFireMode.FullAuto)
+            {
+                return DefaultAssaultRifleMuzzleSmokeInterval;
+            }
+
+            if (weaponId == 1 || fireMode == WeaponFireMode.SemiAuto)
+            {
+                return DefaultPistolMuzzleSmokeInterval;
+            }
+
+            return DefaultMuzzleSmokeInterval;
         }
 
         private void ApplyMissingCrosshairDefaults()
@@ -726,7 +769,7 @@ namespace Weapon.Data
                 case HitSurfaceType.Flesh:
                     return "Blood Impact";
                 case HitSurfaceType.Glass:
-                    return DefaultImpactEffectKey;
+                    return DefaultGlassImpactEffectKey;
                 case HitSurfaceType.Stone:
                 case HitSurfaceType.Default:
                 default:
