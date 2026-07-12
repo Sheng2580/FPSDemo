@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e505b3de21654aa28792fbc6303b6983, type: 3}
+  m_Name: PlayerDamageVolumeEffectConfig
+  m_EditorClassIdentifier: 
+  config:
+    effectType: 0
+    effectKey: CombatVolume_PlayerDamage
+    fadeInTime: 0.08
+    holdTime: 0.08
+    fadeOutTime: 0.32
+    minIntensity: 0.35
+    damageToIntensityScale: 0.08
+    missingHpIntensityScale: 0.35
+    colorFilter: {r: 1, g: 0.52, b: 0.48, a: 1}
+    vignetteColor: {r: 0.42, g: 0.02, b: 0.01, a: 1}
+    vignetteIntensityBoost: 0.32
+    vignetteSmoothnessBoost: 0.12
+    postExposureOffset: -0.35
+    saturationOffset: -24
+    bloomIntensityBoost: 0.25
+    bloomTintBlend: 0.35
+    enableBloomPulse: 1

@@ -332,6 +332,7 @@ namespace Enemy
             motor ??= GetComponent<EnemyMotor>();
             attack ??= GetComponent<EnemyAttack>();
             view ??= GetComponent<EnemyView>();
+            view ??= GetComponentInChildren<EnemyView>(true);
             stateMachine ??= GetComponent<EnemyStateMachine>();
         }
     }

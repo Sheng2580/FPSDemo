@@ -1,6 +1,5 @@
 using UnityEngine.Rendering;
 using UnityEngine;
-using UnityEngine.Rendering.PostProcessing;
 
 namespace Akila.FPSFramework.Examples
 {
@@ -62,9 +61,12 @@ namespace Akila.FPSFramework.Examples
         {
             float finalAmount = 1;
 
-            PostProcessVolume volume = FindAnyObjectByType<PostProcessVolume>();
-
-            //if (volume == null) return;
+            Volume volume = FindFirstObjectByType<Volume>();
+            if (volume == null)
+            {
+                Debug.LogWarning("没有找到场景 Volume，旧后处理设置已跳过");
+                return;
+            }
 
             if (value == 0) finalAmount = 1;
             if (value == 1) finalAmount = 0.8f;

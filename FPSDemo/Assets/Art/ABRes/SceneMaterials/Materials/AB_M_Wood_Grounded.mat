@@ -266,6 +266,8 @@ Material:
     - _RequireSplitLighting: 0
     - _Roughness: 2
     - _Saturation: 0.92
+    - _ShadowFloor: 0.13
+    - _ShadowLift: 0.58
     - _Smoothness: 0.22
     - _SmoothnessRemapMax: 1
     - _SmoothnessRemapMin: 0
@@ -313,8 +315,6 @@ Material:
     - _ZTestTransparent: 4
     - _ZWrite: 1
     - _ZWriteControl: 0
-    - _ShadowLift: 0.58
-    - _ShadowFloor: 0.13
     m_Colors:
     - _BaseColor: {r: 0.26415092, g: 0.26415092, b: 0.26415092, a: 1}
     - _BaseColorMap_MipInfo: {r: 0, g: 0, b: 0, a: 0}

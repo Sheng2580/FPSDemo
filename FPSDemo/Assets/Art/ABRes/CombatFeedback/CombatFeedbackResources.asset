@@ -15,8 +15,8 @@ MonoBehaviour:
   effectEntries:
   - key: Muzzle Flash
     assetBundleName: combat_feedback
-    assetName: Muzzle Flash
-    prefab: {fileID: 1000010254994808, guid: 9defeac88977c0d448aa4541073ee9e4, type: 3}
+    assetName: Bullet_BlazingRed_Small_MuzzleFlare
+    prefab: {fileID: 1000012903210382, guid: 2cc07ac0b88fafc40b730713b6dac672, type: 3}
   - key: Muzzle Smoke
     assetBundleName: combat_feedback
     assetName: Muzzle Smoke
@@ -27,44 +27,44 @@ MonoBehaviour:
     prefab: {fileID: 733209293663125264, guid: fcd27e9b64f619746991b41c831fd719, type: 3}
   - key: Stone Impact
     assetBundleName: combat_feedback
-    assetName: Stone Impact
-    prefab: {fileID: 1000010844420130, guid: 4edabb1c0dde62743b137378c7d22980, type: 3}
+    assetName: Bullet_BlazingRed_Medium_Impact
+    prefab: {fileID: 1879272669879180, guid: 28a5d36d40e9f284584928405ba6a36a, type: 3}
   - key: Metal Impact
     assetBundleName: combat_feedback
-    assetName: Metal Impact
-    prefab: {fileID: 1000010355441670, guid: 02a509a7fa70ed740ba4197e20c5d32d, type: 3}
+    assetName: Bullet_BlazingRed_Medium_Impact
+    prefab: {fileID: 1879272669879180, guid: 28a5d36d40e9f284584928405ba6a36a, type: 3}
   - key: Wood Impact
     assetBundleName: combat_feedback
-    assetName: Wood Impact
-    prefab: {fileID: 1000011190285628, guid: beb3acff7ab73944fb8f470f24d74ed3, type: 3}
+    assetName: Bullet_BlazingRed_Medium_Impact
+    prefab: {fileID: 1879272669879180, guid: 28a5d36d40e9f284584928405ba6a36a, type: 3}
   - key: KriptoFX Pistol Muzzle Flash
     assetBundleName: combat_feedback
-    assetName: MuzzleFlash1
-    prefab: {fileID: 124018, guid: fdac2b543efe1164abc20e40e85905c2, type: 3}
+    assetName: Bullet_BlazingRed_Small_MuzzleFlare
+    prefab: {fileID: 1000012903210382, guid: 2cc07ac0b88fafc40b730713b6dac672, type: 3}
   - key: KriptoFX Assault Rifle Muzzle Flash
     assetBundleName: combat_feedback
-    assetName: MuzzleFlash8
-    prefab: {fileID: 141106, guid: 5cdf043766019ab49a66cea4cfdc047b, type: 3}
+    assetName: Bullet_BlazingRed_Medium_MuzzleFlare
+    prefab: {fileID: 1584403288528622, guid: 722795f4bd4886a438dbd4c6ff443394, type: 3}
   - key: KriptoFX Shotgun Muzzle Flash
     assetBundleName: combat_feedback
-    assetName: MuzzleFlash7
-    prefab: {fileID: 179846, guid: 15d0eae3002f3f247b110cd7610d81b6, type: 3}
+    assetName: Bullet_BlazingRed_Big_MuzzleFlare
+    prefab: {fileID: 1584403288528622, guid: f54bb1ec5b694b74ba4f1ff9c5556eee, type: 3}
   - key: KriptoFX Concrete Impact
     assetBundleName: combat_feedback
-    assetName: ConcreteImpact
-    prefab: {fileID: 108086, guid: 9b475351faeb4560ad4524b0dcb527bd, type: 3}
+    assetName: Bullet_BlazingRed_Medium_Impact
+    prefab: {fileID: 1879272669879180, guid: 28a5d36d40e9f284584928405ba6a36a, type: 3}
   - key: KriptoFX Metal Impact
     assetBundleName: combat_feedback
-    assetName: MetalImpact
-    prefab: {fileID: 180772, guid: cbd4c481f5a44ae0b90c832a50a63d5c, type: 3}
+    assetName: Bullet_BlazingRed_Medium_Impact
+    prefab: {fileID: 1879272669879180, guid: 28a5d36d40e9f284584928405ba6a36a, type: 3}
   - key: KriptoFX Wood Impact
     assetBundleName: combat_feedback
-    assetName: WoodImpact
-    prefab: {fileID: 138412, guid: ef8017abe0614c3e984b0536c671e9a4, type: 3}
+    assetName: Bullet_BlazingRed_Medium_Impact
+    prefab: {fileID: 1879272669879180, guid: 28a5d36d40e9f284584928405ba6a36a, type: 3}
   - key: KriptoFX Glass Impact
     assetBundleName: combat_feedback
-    assetName: GlassImpact
-    prefab: {fileID: 168394, guid: 29883cba811c414aa88853635f3c339c, type: 3}
+    assetName: Bullet_BlazingRed_Medium_Impact
+    prefab: {fileID: 1879272669879180, guid: 28a5d36d40e9f284584928405ba6a36a, type: 3}
   audioEntries:
   - key: Pistol_1 Fire
     assetBundleName: combat_feedback

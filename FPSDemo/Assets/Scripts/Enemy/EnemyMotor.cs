@@ -940,6 +940,7 @@ namespace Enemy
             agent ??= GetComponent<NavMeshAgent>();
             characterController ??= GetComponent<CharacterController>();
             view ??= GetComponent<EnemyView>();
+            view ??= GetComponentInChildren<EnemyView>(true);
         }
     }
 }

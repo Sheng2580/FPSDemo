@@ -63,7 +63,7 @@
 | Default Assault Rifle | KriptoFX Assault Rifle Muzzle Flash | None | 0.35 | 0 | Assault Rifle_1 Fire | 1 | 0.04 | 0.03 | 1 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
 | Default Shotgun | KriptoFX Shotgun Muzzle Flash | None | 0.45 | 0.6 | Shotgun_1 Fire | 1 | 0.04 | 0.03 | 1.25 | KriptoFX Concrete Impact | `CombatFeedbackManager` 按 key 异步加载表现资源 |
 
-规则：武器表现只由 `WeaponConfig` 维护 key 和枪口烟雾参数，表现层只按 key 播放；不得在 `WeaponController`、`WeaponView` 或 ShotgunView prefab 中硬写特效/音效资源引用。`muzzleSmokeEffectKey` 目前保持 `None`，因为 KriptoFX 枪口火光 prefab 内部自带 `Smoke` 子物体；`muzzleSmokeIntensity <= 0` 表示关闭该枪口火光内嵌烟雾。步枪默认关闭烟雾，避免高射速连续透明粒子造成 GPU 过绘；手枪保留少量烟，霰弹枪保留更明显但受节流控制的短烟。散弹枪当前使用专用 key，资源项已登记在 `CombatFeedbackResources.asset`；后续替换散弹枪音效或枪口火光时只改资源表和本快速表。
+规则：武器表现只由 `WeaponConfig` 维护 key 和枪口烟雾参数，表现层只按 key 播放；不得在 `WeaponController`、`WeaponView` 或 ShotgunView prefab 中硬写特效/音效资源引用。`muzzleSmokeEffectKey` 目前保持 `None`，烟雾开关和节流仍由现有 `muzzleSmokeInterval / muzzleSmokeIntensity` 控制；本次只替换枪口火光和非敌人命中特效资源，不改烟雾逻辑。步枪默认关闭烟雾，避免高射速连续透明粒子造成 GPU 过绘；手枪保留少量烟，霰弹枪保留更明显但受节流控制的短烟。散弹枪当前使用专用 key，资源项已登记在 `CombatFeedbackResources.asset`；后续替换散弹枪音效或枪口火光时只改资源表和本快速表。
 
 ## 命中表面数据
 
@@ -82,29 +82,52 @@
 
 备注：`decalKey` 目前留空，后续有弹孔贴花资源再补。`Surface_Glass` 已使用独立 `KriptoFX Glass Impact`，不再复用混凝土命中特效。
 
-## CombatFeedback ABRes 资源表
+## CombatFeedback 资源表
 
-来源：`FPSDemo/Assets/Art/ABRes/CombatFeedback`
+来源：`FPSDemo/Assets/Art/ABRes/CombatFeedback/CombatFeedbackResources.asset`。兼容旧数据 key，枪口火光和非敌人命中特效当前实际绑定到 `FPSDemo/Assets/EffectCore` 的 `Bullet_BlazingRed` prefab，并打入 `combat_feedback` 包。
 
 | key | assetBundleName | assetName | 文件 |
 | --- | --- | --- | --- |
-| Muzzle Flash | combat_feedback | Muzzle Flash | `Effects/Muzzle Flash.prefab` |
+| Muzzle Flash | combat_feedback | Bullet_BlazingRed_Small_MuzzleFlare | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Small_BlazingRed/Bullet_BlazingRed_Small_MuzzleFlare.prefab` |
 | Muzzle Smoke | combat_feedback | Muzzle Smoke | `Effects/Muzzle Smoke.prefab` |
 | Blood Impact | combat_feedback | Blood Impact | `Effects/Blood Impact.prefab` |
-| Stone Impact | combat_feedback | Stone Impact | `Effects/Stone Impact.prefab` |
-| Metal Impact | combat_feedback | Metal Impact | `Effects/Metal Impact.prefab` |
-| Wood Impact | combat_feedback | Wood Impact | `Effects/Wood Impact.prefab` |
-| KriptoFX Pistol Muzzle Flash | combat_feedback | MuzzleFlash1 | `Effects/MuzzleFlashes/MuzzleFlash1.prefab` |
-| KriptoFX Assault Rifle Muzzle Flash | combat_feedback | MuzzleFlash8 | `Effects/MuzzleFlashes/MuzzleFlash8.prefab` |
-| KriptoFX Shotgun Muzzle Flash | combat_feedback | MuzzleFlash7 | `Effects/MuzzleFlashes/MuzzleFlash7.prefab` |
-| KriptoFX Concrete Impact | combat_feedback | ConcreteImpact | `Effects/Impacts/ConcreteImpact.prefab` |
-| KriptoFX Metal Impact | combat_feedback | MetalImpact | `Effects/Impacts/MetalImpact.prefab` |
-| KriptoFX Wood Impact | combat_feedback | WoodImpact | `Effects/Impacts/WoodImpact.prefab` |
-| KriptoFX Glass Impact | combat_feedback | GlassImpact | `Effects/Impacts/GlassImpact.prefab` |
+| Stone Impact | combat_feedback | Bullet_BlazingRed_Medium_Impact | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_Impact.prefab` |
+| Metal Impact | combat_feedback | Bullet_BlazingRed_Medium_Impact | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_Impact.prefab` |
+| Wood Impact | combat_feedback | Bullet_BlazingRed_Medium_Impact | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_Impact.prefab` |
+| KriptoFX Pistol Muzzle Flash | combat_feedback | Bullet_BlazingRed_Small_MuzzleFlare | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Small_BlazingRed/Bullet_BlazingRed_Small_MuzzleFlare.prefab` |
+| KriptoFX Assault Rifle Muzzle Flash | combat_feedback | Bullet_BlazingRed_Medium_MuzzleFlare | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_MuzzleFlare.prefab` |
+| KriptoFX Shotgun Muzzle Flash | combat_feedback | Bullet_BlazingRed_Big_MuzzleFlare | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Big_BlazingRed/Bullet_BlazingRed_Big_MuzzleFlare.prefab` |
+| KriptoFX Concrete Impact | combat_feedback | Bullet_BlazingRed_Medium_Impact | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_Impact.prefab` |
+| KriptoFX Metal Impact | combat_feedback | Bullet_BlazingRed_Medium_Impact | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_Impact.prefab` |
+| KriptoFX Wood Impact | combat_feedback | Bullet_BlazingRed_Medium_Impact | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_Impact.prefab` |
+| KriptoFX Glass Impact | combat_feedback | Bullet_BlazingRed_Medium_Impact | `Assets/EffectCore/packs/StylizedProjectilePack1/prefabs/Bullet/Bullet_BlazingRed/Bullet_Medium_BlazingRed/Bullet_BlazingRed_Medium_Impact.prefab` |
 | Pistol_1 Fire | combat_feedback | Pistol_1 Fire | `Audio/Pistol_1 Fire.wav` |
 | Assault Rifle_1 Fire | combat_feedback | Assault Rifle_1 Fire | `Audio/Assault Rifle_1 Fire.wav` |
 | Shotgun_1 Fire | combat_feedback | Shotgun_1 Fire | `Audio/Shotgun_1 Fire.wav` |
 | Hitmarker | combat_feedback | Hitmarker | `Audio/Hitmarker.wav` |
+
+## CombatVolume 后处理效果配置
+
+来源目录：`FPSDemo/Assets/Resources/CombatVolumeEffectConfigs`
+
+| 效果 | 来源文件 | effectType | effectKey | fadeIn / hold / fadeOut | minIntensity | damageScale | missingHpScale | enableBloomPulse | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Player Damage | `PlayerDamageVolumeEffectConfig.asset` | PlayerDamage | CombatVolume_PlayerDamage | 0.08 / 0.08 / 0.32 | 0.35 | 0.08 | 0.35 | true | `CombatVolumeManager` 监听玩家受伤后按配置淡入、保持、淡出 |
+
+### CombatVolume PlayerDamage 默认数值
+
+| 字段 | 当前值 | 来源 | 备注 |
+| --- | --- | --- | --- |
+| colorFilter | `(1, 0.52, 0.48, 1)` | `CombatVolumeEffectConfig.CreateDefaultPlayerDamage()` | 玩家受伤红色滤镜 |
+| vignetteColor | `(0.42, 0.02, 0.01, 1)` | `CombatVolumeEffectConfig.CreateDefaultPlayerDamage()` | 玩家受伤暗角颜色 |
+| vignetteIntensityBoost | 0.32 | `PlayerDamageVolumeEffectConfig.asset` | 在基础 Volume 上叠加强度 |
+| vignetteSmoothnessBoost | 0.12 | `PlayerDamageVolumeEffectConfig.asset` | 在基础 Volume 上叠加平滑度 |
+| postExposureOffset | -0.35 | `PlayerDamageVolumeEffectConfig.asset` | 受伤瞬间降低曝光 |
+| saturationOffset | -24 | `PlayerDamageVolumeEffectConfig.asset` | 受伤瞬间降低饱和度 |
+| bloomIntensityBoost | 0.25 | `PlayerDamageVolumeEffectConfig.asset` | Bloom 脉冲增量 |
+| bloomTintBlend | 0.35 | `PlayerDamageVolumeEffectConfig.asset` | Bloom 染色混合强度 |
+
+规则：CombatVolume 数据层只维护淡入淡出时间、强度计算参数、颜色和后处理数值，不硬引用场景 `Volume`、材质、Shader 或 prefab 实例。表现层只按 `CombatVolumeEffectConfigAsset` 消费配置，`Dodge / Push / Grenade` 类型先在 `CombatVolumeEffectType` 中预留，具体资源和数值后续需要时再补。
 
 ## 玩家技能配置
 
@@ -232,24 +255,27 @@
 
 | prefabResourceKey | 文件 | 当前使用者 | 备注 |
 | --- | --- | --- | --- |
-| Enemy_ZombieSkeleton_LOD2 | `Enemy_ZombieSkeleton_LOD2.prefab` | Zombie Skeleton OneHanded | 已在 `enemy_prefabs` 包 |
-| Enemy_ZombieNerd_LOD2 | `Enemy_ZombieNerd_LOD2.prefab` | Zombie Nerd OneHanded | 已在 `enemy_prefabs` 包，key 与文件名一致 |
-| Enemy_ZombieOldCrone_LOD2 | `Enemy_ZombieOldCrone_LOD2.prefab` | Zombie Old Crone OneHanded | 已在 `enemy_prefabs` 包，key 与文件名一致 |
+| Enemy_ZombieSkeleton_LOD2 | `Enemy_ZombieSkeleton_LOD2.prefab` | Zombie Skeleton OneHanded | 已在 `enemy_prefabs` 包，视觉模型替换为 Polygon Slobber，当前不自动绑定手持武器 |
+| Enemy_ZombieNerd_LOD2 | `Enemy_ZombieNerd_LOD2.prefab` | Zombie Nerd OneHanded | 已在 `enemy_prefabs` 包，视觉模型替换为 Polygon Wretch，key 与文件名一致 |
+| Enemy_ZombieOldCrone_LOD2 | `Enemy_ZombieOldCrone_LOD2.prefab` | Zombie Old Crone OneHanded | 已在 `enemy_prefabs` 包，视觉模型替换为 Polygon Brute，当前不自动绑定手持武器 |
+
+视觉替换规则：敌人 `prefabResourceKey` 没有变化，刷怪、波次、对象池仍读取同一批 ABRes prefab。Prefab 内部只替换可视模型、Animator 绑定、CharacterController 尺寸和部位判定盒；手持武器由用户后续手动绑定。重生成入口为 `FPSDemo/Enemy/替换普通敌人为 PolygonBossZombies 模型`，工具文件在 `FPSDemo/Assets/Scripts/Editor/PolygonBossZombieEnemyBuildTools.cs`。
 
 ## ABRes 敌人与场景表现材质
 
-敌人材质来源：`FPSDemo/Assets/Art/ABRes/Enemies/Materials`，AssetBundle：`enemy_prefabs`
+敌人旧材质来源：`FPSDemo/Assets/Art/ABRes/Enemies/Materials`，AssetBundle：`enemy_prefabs`
 
-| 用途 | ABRes 材质 | 当前引用 |
+| 用途 | ABRes 材质或资源 | 当前引用 |
 | --- | --- | --- |
-| Skeleton 皮肤 / 衣服 / 头发 | `AB_ZombieSkeleton_Skin_Grounded.mat` / `AB_ZombieSkeleton_Clothes_Grounded.mat` / `AB_ZombieSkeleton_Hair_Grounded.mat` | `Enemy_ZombieSkeleton_LOD2.prefab` |
-| Nerd 身体 / 衣服 / 头发 | `AB_ZombieNerd_Body_Grounded.mat` / `AB_ZombieNerd_Clothes_Grounded.mat` / `AB_ZombieNerd_Hair_Grounded.mat` | `Enemy_ZombieNerd_LOD2.prefab` |
-| Old Crone 皮肤 / 衣服 / 头发 | `AB_ZombieOldCrone_Skin_Grounded.mat` / `AB_ZombieOldCrone_Clothes_Grounded.mat` / `AB_ZombieOldCrone_Hair_Grounded.mat` | `Enemy_ZombieOldCrone_LOD2.prefab` |
-| 敌人手持武器 | `AB_Enemy_Axe_Grimy.mat` / `AB_Enemy_Sickle1_Grimy.mat` / `AB_Enemy_Sickle2_Grimy.mat` | 当前 ABRes 敌人 prefab 按模型引用 |
+| Skeleton 视觉 | `Assets/PolygonBossZombies/Prefabs/SM_Chr_ZombieBoss_Slobber_01.prefab` | `Enemy_ZombieSkeleton_LOD2.prefab` |
+| Nerd 视觉 | `Assets/PolygonBossZombies/Prefabs/SM_Chr_ZombieBoss_Wretch_01.prefab` | `Enemy_ZombieNerd_LOD2.prefab` |
+| Old Crone 视觉 | `Assets/PolygonBossZombies/Prefabs/SM_Chr_ZombieBoss_Brute_01.prefab` | `Enemy_ZombieOldCrone_LOD2.prefab` |
+| 敌人手持武器 | 用户后续手动绑定 | 当前三种运行时普通敌人 prefab 不再由生成工具自动挂武器 |
+| 旧 Zombie Collection 材质 | `AB_ZombieSkeleton_*` / `AB_ZombieNerd_*` / `AB_ZombieOldCrone_*` | 目前不再被三种运行时普通敌人 prefab 直接引用，后续保留为旧资源或回退参考 |
 
 敌人材质移动端优化：当前敌人材质已从“强补光强边缘光”调整为更脏、更压暗的移动端版本。皮肤 / 身体材质当前 `_MinVisibility 0.50`、`_AmbientLift 0.46`、`_ColdRimStrength 0.34`、`_RimDamp 0.22`、`_EyeGlowIntensity 0.72`、`_WoundGlowIntensity 0.45`、`_DirtAmount 0.24`、`_Wetness 0.18`；衣服材质当前 `_MinVisibility 0.54`、`_AmbientLift 0.50`、`_ColdRimStrength 0.24`、`_CharacterFillStrength 0.12`、`_FocusLift 0.11`、`_WoundGlowIntensity 0`；头发材质当前 `_MinVisibility 0.52`、`_AmbientLift 0.48`、`_ColdRimStrength 0.22`；敌人手持武器当前 `_MinVisibility 0.44`、`_AmbientLift 0.40`、`_ColdRimStrength 0.28`。敌人 shader 保留主光方向、SH 环境光、雾融合、法线和脏污/湿润细节，但已取消实时主光阴影采样和阴影变体，适配烘焙场景与大量敌人同屏。
 
-敌人 Prefab 渲染开关：`Enemy_ZombieSkeleton_LOD2`、`Enemy_ZombieNerd_LOD2`、`Enemy_ZombieOldCrone_LOD2` 的渲染器已关闭动态投影、接收实时阴影、运动向量、Skinned Motion Vectors 和反射探针；保留 Light Probe，用于移动敌人在烘焙场景中获得环境光过渡。后续如果需要近景 Boss 投影，建议单独给 Boss 开启，不要恢复到普通杂兵 prefab。
+敌人 Prefab 渲染开关：`Enemy_ZombieSkeleton_LOD2`、`Enemy_ZombieNerd_LOD2`、`Enemy_ZombieOldCrone_LOD2` 的渲染器已关闭动态投影、接收实时阴影、运动向量、Skinned Motion Vectors 和反射探针；保留 Light Probe，用于移动敌人在烘焙场景中获得环境光过渡。当前 PolygonBossZombies 视觉替换工具也会对新模型和手持道具应用同一套低成本渲染开关。后续如果需要近景 Boss 投影，建议单独给 Boss 开启，不要恢复到普通杂兵 prefab。
 
 场景材质来源：`FPSDemo/Assets/Art/ABRes/SceneMaterials`，AssetBundle：`scene_materials`
 
