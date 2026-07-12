@@ -151,10 +151,13 @@ namespace Enemy
             _blackboard.lastDamageInfo = damageInfo;
             if (!damageInfo.forceFullHitReaction && Time.time < _blackboard.nextFullHitReactionTime)
             {
-                // 轻受击只保留 Debug 和扣血，不强制重播受击动画
-                Debug.Log(
-                    $"[EnemyHitState] {controller.name} 轻受击 Damage={damageInfo.finalDamage:0.##}",
-                    controller);
+                if (debugBrainState)
+                {
+                    // 轻受击只保留调试和扣血 不强制重播受击动画
+                    Debug.Log(
+                        $"[EnemyHitState] {controller.name} 轻受击 Damage={damageInfo.finalDamage:0.##}",
+                        controller);
+                }
                 return;
             }
 

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Enemy
 {
     /// <summary>
-    /// 敌人生命模块，只负责扣血、死亡判断、伤害事件和 Debug 输出
+    /// 敌人生命模块，只负责扣血、死亡判断、伤害事件和调试输出
     /// </summary>
     public class EnemyHealth : MonoBehaviour
     {
@@ -14,6 +14,10 @@ namespace Enemy
 
         [Header("引用")]
         [SerializeField] private EnemyController controller;
+
+        [Header("调试")]
+        [Tooltip("高频受伤日志 默认关闭 避免连发武器拖慢编辑器")]
+        [SerializeField] private bool debugDamageLog;
 
         private bool _dead;
 
@@ -58,9 +62,12 @@ namespace Enemy
             }
 
             currentHealth = Mathf.Max(0f, currentHealth - damage);
-            Debug.Log(
-                $"[EnemyDamage] {name} Damage={damage:0.##} HP={currentHealth:0.##}/{maxHealth:0.##} Part={damageInfo.hitPart} Critical={damageInfo.isCritical}",
-                this);
+            if (debugDamageLog)
+            {
+                Debug.Log(
+                    $"[EnemyDamage] {name} Damage={damage:0.##} HP={currentHealth:0.##}/{maxHealth:0.##} Part={damageInfo.hitPart} Critical={damageInfo.isCritical}",
+                    this);
+            }
 
             EventCenter.Instance.EventTrigger(
                 GameEvent.EnemyDamaged,

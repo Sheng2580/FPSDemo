@@ -24,7 +24,8 @@ namespace Weapon
         [SerializeField] private WeaponConfig fallbackConfig = WeaponConfig.CreateDefaultPistol();
 
         [Header("调试")]
-        [SerializeField] private bool debugWeaponHit = true;
+        [Tooltip("高频命中日志 默认关闭 避免编辑器测试卡顿")]
+        [SerializeField] private bool debugWeaponHit;
         [SerializeField] private bool infiniteAmmoForTest = true;
 
         private readonly Dictionary<WeaponStateType, WeaponState> _states = new Dictionary<WeaponStateType, WeaponState>();

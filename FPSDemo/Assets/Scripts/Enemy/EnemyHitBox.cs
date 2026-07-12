@@ -14,6 +14,10 @@ namespace Enemy
         [Header("引用")]
         [SerializeField] private EnemyHealth health;
 
+        [Header("调试")]
+        [Tooltip("高频部位命中日志 默认关闭 避免霰弹枪多弹丸刷屏")]
+        [SerializeField] private bool debugHitBoxLog;
+
         public EnemyHitBodyPart BodyPart => bodyPart;
         public float DamageMultiplier => damageMultiplier;
         public bool CriticalPart => criticalPart;
@@ -38,9 +42,12 @@ namespace Enemy
 
             damageInfo.ApplyBodyPart(bodyPart, damageMultiplier, criticalPart);
             health.TakeDamage(damageInfo);
-            Debug.Log(
-                $"[EnemyHitBox] {health.name} Part={bodyPart} Multiplier={damageMultiplier:0.##} Damage={damageInfo.finalDamage:0.##}",
-                health);
+            if (debugHitBoxLog)
+            {
+                Debug.Log(
+                    $"[EnemyHitBox] {health.name} Part={bodyPart} Multiplier={damageMultiplier:0.##} Damage={damageInfo.finalDamage:0.##}",
+                    health);
+            }
             return true;
         }
 

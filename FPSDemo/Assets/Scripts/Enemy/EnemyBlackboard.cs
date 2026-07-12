@@ -57,6 +57,7 @@ namespace Enemy
         public EnemyStateType currentState = EnemyStateType.None;
         public EnemyStateType requestedState = EnemyStateType.None;
         public bool hasRequestedState;
+        public bool debugHitStateLog;
 
         public EnemyPerformanceTier performanceTier = EnemyPerformanceTier.Near;
         public float nextThinkTime;
@@ -102,6 +103,7 @@ namespace Enemy
             currentState = EnemyStateType.None;
             requestedState = EnemyStateType.None;
             hasRequestedState = false;
+            debugHitStateLog = false;
             isHitStunned = false;
             hitStunEndTime = 0f;
             nextFullHitReactionTime = 0f;
@@ -156,6 +158,7 @@ namespace Enemy
             currentState = EnemyStateType.None;
             requestedState = EnemyStateType.None;
             hasRequestedState = false;
+            debugHitStateLog = false;
             isHitStunned = false;
             hitStunEndTime = 0f;
             nextFullHitReactionTime = 0f;
@@ -270,6 +273,7 @@ namespace Enemy
             performanceTier = EnemyPerformanceTier.Sleep;
             hasChaseSlot = false;
             chaseSlotRank = -1;
+            debugHitStateLog = false;
         }
     }
 }

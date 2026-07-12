@@ -95,7 +95,8 @@ namespace Enemy
 #endif
 
         [Header("调试")]
-        [SerializeField] private bool debugSpawnState = true;
+        [Tooltip("波次和出生点日志 默认关闭 需要排查刷怪时再打开")]
+        [SerializeField] private bool debugSpawnState;
         [SerializeField] private float debugSpawnStateInterval = 2f;
 
         private readonly List<EnemyController> _activeEnemies = new List<EnemyController>();
@@ -343,9 +344,7 @@ namespace Enemy
 
             if (spawnedCount > 0)
             {
-                Debug.Log(
-                    $"[EnemySpawn] 自动 B 点分散批量生成 Spawned={spawnedCount}/{targetCount}",
-                    this);
+                DebugSpawn($"[EnemySpawn] 自动 B 点分散批量生成 Spawned={spawnedCount}/{targetCount}", false);
                 return spawnedCount;
             }
 

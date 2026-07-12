@@ -13,6 +13,10 @@ namespace Enemy
         [SerializeField] private EnemyAttack attack;
         [SerializeField] private EnemyView view;
 
+        [Header("调试")]
+        [Tooltip("高频受击状态日志 默认关闭 避免连发命中刷屏")]
+        [SerializeField] private bool debugHitStateLog;
+
         private EnemyBlackboard _blackboard;
         private EnemyState _currentState;
         private EnemyIdleState _idleState;
@@ -45,6 +49,7 @@ namespace Enemy
             motor = enemyMotor;
             attack = enemyAttack;
             view = enemyView;
+            _blackboard.debugHitStateLog = debugHitStateLog;
 
             _idleState = new EnemyIdleState(_blackboard, motor, view);
             _chaseState = new EnemyChaseState(_blackboard, motor, view);
@@ -495,9 +500,12 @@ namespace Enemy
         public override void Enter()
         {
             base.Enter();
-            Debug.Log(
-                $"[EnemyHitState] {blackboard.controller.name} Enter Hit Damage={blackboard.lastDamageInfo.finalDamage:0.##} Knockback={blackboard.hitKnockbackDistance:0.##}",
-                blackboard.controller);
+            if (blackboard.debugHitStateLog)
+            {
+                Debug.Log(
+                    $"[EnemyHitState] {blackboard.controller.name} Enter Hit Damage={blackboard.lastDamageInfo.finalDamage:0.##} Knockback={blackboard.hitKnockbackDistance:0.##}",
+                    blackboard.controller);
+            }
             if (model != null)
             {
                 PlayAnimation(model.DamageStateName, model.HitTransition, true);

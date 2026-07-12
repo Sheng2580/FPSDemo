@@ -255,7 +255,7 @@ MonoBehaviour:
     fireTransition: 0.03
     reloadTransition: 0.08
     equipTransition: 0.1
-  debugWeaponHit: 1
+  debugWeaponHit: 0
 --- !u!114 &3008036074051731131
 MonoBehaviour:
   m_ObjectHideFlags: 0

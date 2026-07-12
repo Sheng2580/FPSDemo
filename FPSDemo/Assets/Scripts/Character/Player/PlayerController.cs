@@ -8,6 +8,10 @@ public class PlayerController : CharacterBase<PlayerModel>
     [SerializeField] private PlayerDefaultConfigAsset defaultConfigAsset;
     [SerializeField] private PlayerInventory inventory;
 
+    [Header("调试")]
+    [Tooltip("玩家受伤日志 默认关闭 避免被围攻时刷屏")]
+    [SerializeField] private bool debugDamageLog;
+
     private PlayerStateType _currentStateType;
     private PlayerStateType _previousStateType;
     private float _jumpBufferTimer;
@@ -182,7 +186,10 @@ public class PlayerController : CharacterBase<PlayerModel>
         EventCenter.Instance.EventTrigger(
             GameEvent.PlayerDamaged,
             new PlayerDamagedEventData(this, damageAmount, Stats.RuntimeData.currentHp, Stats.RuntimeData.maxHp));
-        Debug.Log($"玩家受到伤害 {damageAmount} 当前生命 {Stats.RuntimeData.currentHp}", this);
+        if (debugDamageLog)
+        {
+            Debug.Log($"玩家受到伤害 {damageAmount} 当前生命 {Stats.RuntimeData.currentHp}", this);
+        }
     }
 
     public void SetVerticalVelocity(float velocity)
