@@ -129,6 +129,35 @@
 
 规则：CombatVolume 数据层只维护淡入淡出时间、强度计算参数、颜色和后处理数值，不硬引用场景 `Volume`、材质、Shader 或 prefab 实例。表现层只按 `CombatVolumeEffectConfigAsset` 消费配置，`Dodge / Push / Grenade` 类型先在 `CombatVolumeEffectType` 中预留，具体资源和数值后续需要时再补。
 
+## 玩家局内能量配置
+
+来源目录：`FPSDemo/Assets/Resources/PlayerEnergyConfigs`
+
+| 配置 | 来源文件 | maxEnergy | startLevel | damageToEnergyRate | autoLevelUp | onlyGainFromPlayerDamage | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Default Player Energy | `DefaultPlayerEnergyConfig.asset` | 100 | 1 | 0.05 | false | true | `PlayerEnergyRuntime` 监听 `EnemyDamaged` 后把玩家造成的伤害转为局内能量 |
+
+## 玩家局内能量运行时数据
+
+| 字段 | 默认值 | 来源 | 用法 |
+| --- | --- | --- | --- |
+| currentEnergy | 0 | `PlayerEnergyRuntimeData.InitForNewRun` | 当前局能量，范围 0 到 `maxEnergy` |
+| maxEnergy | 100 | `DefaultPlayerEnergyConfig.asset` | 能量满值，第一版固定 100 |
+| level | 1 | `DefaultPlayerEnergyConfig.asset` | 当前能量等级，后续祝福选择或自动升级后递增 |
+| energyGainMultiplier | 1 | `PlayerEnergyRuntimeData` | Buff 可叠加倍率，最终能量 = `finalDamage * damageToEnergyRate * energyGainMultiplier` |
+| autoLevelUp | false | `DefaultPlayerEnergyConfig.asset` | 当前先不自动升级，满能量后触发升级准备事件 |
+| isLevelUpReady | false | `PlayerEnergyRuntimeData` | 满能量且等待祝福选择时为 true |
+
+## 玩家局内能量事件
+
+| 事件 | 参数 | 触发者 | 用法 |
+| --- | --- | --- | --- |
+| PlayerEnergyChanged | `PlayerEnergyChangedEventData(currentEnergy, targetEnergy, level, deltaEnergy, maxEnergy, normalizedEnergy)` | `PlayerEnergyRuntime` | HUD EnergyCentre 更新目标能量数字和进度 |
+| PlayerEnergyLevelUpReady | `PlayerEnergyLevelUpEventData(level, currentEnergy, maxEnergy, autoLevelUp)` | `PlayerEnergyRuntime` | 能量满 100 且非自动升级时触发，后续用于打开祝福选择 |
+| PlayerEnergyLevelUp | `PlayerEnergyLevelUpEventData(level, currentEnergy, maxEnergy, autoLevelUp)` | `PlayerEnergyRuntime` | 自动升级或祝福确认后触发 |
+
+规则：HUD 只监听 `EnemyDamaged` 显示伤害数字、监听 `PlayerEnergyChanged` 显示能量变化，不计算能量成长数值。能量增长来源当前监听 `EnemyDamaged`，只统计 `DamageInfo.attacker` 属于玩家的伤害；后续如果统一伤害结算事件稳定，可以切换到 `DamageResolved`。
+
 ## 玩家技能配置
 
 来源目录：`FPSDemo/Assets/Resources/PlayerSkillConfigs`

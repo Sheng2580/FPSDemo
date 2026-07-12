@@ -11,6 +11,8 @@ public static class FPSDemoBuildTools
 {
     private const string TouchCanvasPath = "Assets/Art/ABRes/UI/TounchControllerCanvas.prefab";
     private const string TestCanvasPath = "Assets/Art/ABRes/UI/TestCanvas.prefab";
+    private const string HUDCanvasPath = "Assets/Art/ABRes/UI/HUDCanvas.prefab";
+    private const string EnemyLifebarCanvasPath = "Assets/Art/ABRes/UI/EnemyLifebarCanvas.prefab";
     private const string TouchCanvasBundleName = "uipanel";
     private const string PlayerRuntimeBundleName = "player_runtime";
     private const string CombatFeedbackBundleName = "combat_feedback";
@@ -47,7 +49,9 @@ public static class FPSDemoBuildTools
     private static readonly string[] UIAssetPaths =
     {
         TouchCanvasPath,
-        TestCanvasPath
+        TestCanvasPath,
+        HUDCanvasPath,
+        EnemyLifebarCanvasPath
     };
 
     private static readonly string[] PlayerRuntimeAssetPaths =

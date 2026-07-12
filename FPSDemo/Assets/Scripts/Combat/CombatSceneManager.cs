@@ -51,6 +51,8 @@ namespace Combat
         [SerializeField] private string combatSceneName = CombatSceneName;
         [SerializeField] private string spawnPointName = DefaultSpawnPointName;
         [SerializeField] private bool openTouchCanvasOnStart = true;
+        [SerializeField] private bool openHUDCanvasOnStart = true;
+        [SerializeField] private bool openEnemyLifebarCanvasOnStart = true;
 
         [Header("玩家")]
         [SerializeField] private string playerAssetBundleName = DefaultPlayerBundleName;
@@ -180,6 +182,16 @@ namespace Combat
             if (openTouchCanvasOnStart)
             {
                 UIManager.Instance.OpenPanelAsy<global::TounchControllerCanvas>();
+            }
+
+            if (openHUDCanvasOnStart)
+            {
+                UIManager.Instance.OpenPanelAsy<global::HUDCanvas>();
+            }
+
+            if (openEnemyLifebarCanvasOnStart)
+            {
+                UIManager.Instance.OpenPanelAsy<global::EnemyLifebarCanvas>();
             }
 
             if (useScenePlayerIfExists && TryUseScenePlayer(out playerInstance))

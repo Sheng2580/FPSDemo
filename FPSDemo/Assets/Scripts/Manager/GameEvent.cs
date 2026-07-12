@@ -47,7 +47,10 @@ public enum GameEvent
     SkillHitEnemy,
     SkillVisualStarted,
     SkillCooldownChanged,
-    SkillChargeChanged
+    SkillChargeChanged,
+    PlayerEnergyChanged,
+    PlayerEnergyLevelUpReady,
+    PlayerEnergyLevelUp
 }
 
 public readonly struct PlayerWeaponChangedEventData
@@ -95,6 +98,51 @@ public readonly struct PlayerBattleGoldChangedEventData
     public PlayerBattleGoldChangedEventData(int battleGold)
     {
         this.battleGold = battleGold;
+    }
+}
+
+public readonly struct PlayerEnergyChangedEventData
+{
+    public readonly float currentEnergy;
+    public readonly float targetEnergy;
+    public readonly int level;
+    public readonly float deltaEnergy;
+    public readonly float maxEnergy;
+    public readonly float normalizedEnergy;
+
+    public PlayerEnergyChangedEventData(
+        float currentEnergy,
+        float targetEnergy,
+        int level,
+        float deltaEnergy,
+        float maxEnergy)
+    {
+        this.maxEnergy = Mathf.Max(1f, maxEnergy);
+        this.currentEnergy = Mathf.Clamp(currentEnergy, 0f, this.maxEnergy);
+        this.targetEnergy = Mathf.Clamp(targetEnergy, 0f, this.maxEnergy);
+        this.level = Mathf.Max(1, level);
+        this.deltaEnergy = deltaEnergy;
+        normalizedEnergy = Mathf.Clamp01(this.currentEnergy / this.maxEnergy);
+    }
+}
+
+public readonly struct PlayerEnergyLevelUpEventData
+{
+    public readonly int level;
+    public readonly float currentEnergy;
+    public readonly float maxEnergy;
+    public readonly bool autoLevelUp;
+
+    public PlayerEnergyLevelUpEventData(
+        int level,
+        float currentEnergy,
+        float maxEnergy,
+        bool autoLevelUp)
+    {
+        this.level = Mathf.Max(1, level);
+        this.maxEnergy = Mathf.Max(1f, maxEnergy);
+        this.currentEnergy = Mathf.Clamp(currentEnergy, 0f, this.maxEnergy);
+        this.autoLevelUp = autoLevelUp;
     }
 }
 
