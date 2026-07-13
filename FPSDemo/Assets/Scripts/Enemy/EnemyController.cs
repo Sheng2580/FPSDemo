@@ -82,7 +82,7 @@ namespace Enemy
             _deathNotified = false;
 
             health?.Init(definition.maxHealth);
-            view?.ResetView();
+            view?.ResetView(enemyName);
             motor?.Init(target, this, definition.moveSpeed, definition.angularSpeed, definition.acceleration, definition.attackDistance);
             attack?.Init(target, this, definition.attackDamage, definition.attackDistance, definition.attackInterval, definition.attackHitDelay);
             brain?.Init(this, target, definition);
@@ -119,7 +119,7 @@ namespace Enemy
 
             view?.ApplyRuntimeStats(runtimeStats);
             health?.Init(runtimeStats.maxHealth);
-            view?.ResetView();
+            view?.ResetView(enemyName);
             ApplyHitBoxRuntimeStats(runtimeStats);
             motor?.Init(target, this, runtimeStats.moveSpeed, runtimeStats.angularSpeed, runtimeStats.acceleration, runtimeStats.attackDistance);
             attack?.Init(target, this, runtimeStats.attackDamage, runtimeStats.attackDistance, runtimeStats.attackInterval, runtimeStats.attackHitDelay);

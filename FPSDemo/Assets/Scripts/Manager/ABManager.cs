@@ -404,7 +404,7 @@ public class ABManager : UnitySingleTonMono<ABManager>
 
         if (ShouldUseWebRequestForStreamingAssets)
         {
-            using UnityWebRequest request = UnityWebRequestAssetBundle.GetAssetBundle(bundlePath);
+            using UnityWebRequest request = UnityWebRequest.Get(bundlePath);
             yield return request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success)
@@ -414,13 +414,49 @@ public class ABManager : UnitySingleTonMono<ABManager>
                 yield break;
             }
 
-            callback?.Invoke(DownloadHandlerAssetBundle.GetContent(request));
+            byte[] bundleBytes = request.downloadHandler != null ? request.downloadHandler.data : null;
+            if (bundleBytes == null || bundleBytes.Length == 0)
+            {
+                Debug.LogError($"[ABManager] AB bytes empty: {abName} Path={bundlePath}");
+                callback?.Invoke(null);
+                yield break;
+            }
+
+            AssetBundleCreateRequest createRequest = AssetBundle.LoadFromMemoryAsync(bundleBytes);
+            yield return createRequest;
+            AssetBundle loadedBundle = createRequest.assetBundle;
+            LogAndroidBundleLoad(abName, bundlePath, bundleBytes.Length, loadedBundle);
+            callback?.Invoke(loadedBundle);
             yield break;
         }
 
         AssetBundleCreateRequest fileRequest = AssetBundle.LoadFromFileAsync(bundlePath);
         yield return fileRequest;
         callback?.Invoke(fileRequest.assetBundle);
+    }
+
+    private void LogAndroidBundleLoad(string abName, string bundlePath, int byteLength, AssetBundle bundle)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (bundle == null)
+        {
+            Debug.LogError($"[ABManager] Android AB load failed after bytes: {abName} Bytes={byteLength} Path={bundlePath}");
+            return;
+        }
+
+        if (!string.Equals(NormalizeABName(abName), "enemy_prefabs", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(NormalizeABName(abName), MainName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        string[] assetNames = bundle.GetAllAssetNames();
+        int sampleCount = Mathf.Min(assetNames.Length, 12);
+        string sample = sampleCount > 0
+            ? string.Join(", ", assetNames, 0, sampleCount)
+            : "None";
+        Debug.Log($"[ABManager] Android AB loaded Name={abName} Bytes={byteLength} AssetCount={assetNames.Length} Sample={sample}");
+#endif
     }
 
     private void ExecuteCallbacks(string abName)

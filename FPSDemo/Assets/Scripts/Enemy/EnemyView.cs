@@ -11,9 +11,9 @@ namespace Enemy
     {
         public Animator Animator => animator;
 
-        public void ResetView()
+        public void ResetView(string contextName = null)
         {
-            ResetModel();
+            ResetModel(contextName);
         }
     }
 }

@@ -15,6 +15,7 @@ public static class FPSDemoBuildTools
     private const string HpAndWeaponCanvasPath = "Assets/Art/ABRes/UI/HpAndWeaponCanvas.prefab";
     private const string EnemyLifebarCanvasPath = "Assets/Art/ABRes/UI/EnemyLifebarCanvas.prefab";
     private const string BlessingSelectCanvasPath = "Assets/Art/ABRes/UI/BlessingSelectCanvas.prefab";
+    private const string CombatCanvasPath = "Assets/Art/ABRes/UI/CombatCanvas.prefab";
     private const string WeaponItemPath = "Assets/Art/ABRes/UI/Item/WeaponItem.prefab";
     private const string TouchCanvasBundleName = "uipanel";
     private const string UIItemBundleName = "uiitem";
@@ -57,7 +58,8 @@ public static class FPSDemoBuildTools
         HUDCanvasPath,
         HpAndWeaponCanvasPath,
         EnemyLifebarCanvasPath,
-        BlessingSelectCanvasPath
+        BlessingSelectCanvasPath,
+        CombatCanvasPath
     };
 
     private static readonly string[] UIItemAssetPaths =
@@ -113,7 +115,26 @@ public static class FPSDemoBuildTools
 
     private static readonly string[] EnemyPrefabAssetPaths =
     {
-        "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieSkeleton_LOD2.prefab"
+        "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieSkeleton_LOD2.prefab",
+        "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieNerd_LOD2.prefab",
+        "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieOldCrone_LOD2.prefab"
+    };
+
+    private static readonly string[] PickupRollbackAssetPaths =
+    {
+        "Assets/Art/ABRes/UI/TipCanvas.prefab",
+        "Assets/Art/ABRes/Prop/HpProp.prefab",
+        "Assets/Art/ABRes/Prop/BulletProp.prefab",
+        "Assets/Art/ABRes/Prop/bombProp.prefab",
+        "Assets/Art/ABRes/Prop/RageProp.prefab",
+        "Assets/Powerup FX/Materials/Symbol/SymbolEmissive.mat",
+        "Assets/Powerup FX/Materials/Cube/CubeBloom.mat",
+        "Assets/Powerup FX/Materials/GlowAtlas/GlowAtlasNew.mat",
+        "Assets/Powerup FX/Materials/Symbol/SymbolNeon.mat",
+        "Assets/Art/SymbolNeon 1.mat",
+        "Assets/Art/SymbolNeon 2.mat",
+        "Assets/Art/Shaders/S_PickupOpaqueMobile.shader",
+        "Assets/Art/Shaders/S_PickupTransparentGlowMobile.shader"
     };
 
     private static readonly string[] RequiredRuntimeBundleNames =
@@ -201,11 +222,7 @@ public static class FPSDemoBuildTools
             throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
 
-        string editorMainBundleName = GetMainBundleName(EditorUserBuildSettings.activeBuildTarget);
-        BuildAssetBundles(EditorUserBuildSettings.activeBuildTarget);
-        ValidateStreamingBundle(editorMainBundleName, true);
-
-        BuildAssetBundles(BuildTarget.Android);
+        BuildAssetBundles(BuildTarget.Android, true);
         ValidateStreamingBundle("Android", true);
     }
 
@@ -506,7 +523,8 @@ public static class FPSDemoBuildTools
         success &= TrySetAssetBundleNames(UIItemAssetPaths, UIItemBundleName, ref changed);
         success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
-        success &= TrySetAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName, ref changed);
+        success &= TrySetAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName, ref changed);
+        success &= TryClearAssetBundleNames(PickupRollbackAssetPaths, ref changed);
         success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
         success &= TryClearAssetBundleNames(SceneMaterialAssetPaths, ref changed);
 
@@ -609,7 +627,7 @@ public static class FPSDemoBuildTools
         isValid &= ValidateAssetBundleNames(UIItemAssetPaths, UIItemBundleName);
         isValid &= ValidateAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName);
         isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
-        isValid &= ValidateAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName);
+        isValid &= ValidateAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName);
 
         if (logResult && isValid)
         {
@@ -629,6 +647,52 @@ public static class FPSDemoBuildTools
         }
 
         return isValid;
+    }
+
+    private static IEnumerable<string> GetEnemyRuntimeAssetPaths()
+    {
+        HashSet<string> assetPaths = new HashSet<string>(EnemyPrefabAssetPaths);
+        string[] dependencies = AssetDatabase.GetDependencies(EnemyPrefabAssetPaths, true);
+        for (int i = 0; i < dependencies.Length; i++)
+        {
+            string dependency = NormalizeAssetPath(dependencies[i]);
+            if (ShouldPackEnemyDependency(dependency))
+            {
+                assetPaths.Add(dependency);
+            }
+        }
+
+        return assetPaths;
+    }
+
+    private static bool ShouldPackEnemyDependency(string assetPath)
+    {
+        if (string.IsNullOrEmpty(assetPath))
+        {
+            return false;
+        }
+
+        string extension = Path.GetExtension(assetPath).ToLowerInvariant();
+        if (extension == ".cs" || extension == ".asmdef" || extension == ".dll" || extension == ".unity" || extension == ".lighting")
+        {
+            return false;
+        }
+
+        // 敌人是 Prefab Variant 加外部 AnimatorController 的组合
+        // Android 包必须显式带上源 prefab 模型 Avatar Controller 动画 FBX 和材质贴图
+        return assetPath.StartsWith("Assets/Art/ABRes/Enemies/", StringComparison.Ordinal)
+               || assetPath.StartsWith("Assets/Art/EnemyTextures/", StringComparison.Ordinal)
+               || assetPath.StartsWith("Assets/Art/Shaders/S_Zombie", StringComparison.Ordinal)
+               || assetPath.StartsWith("Assets/Art/Shaders/S_Enemy", StringComparison.Ordinal)
+               || assetPath.StartsWith("Assets/Knife/Zombie Collection/", StringComparison.Ordinal)
+               || assetPath.StartsWith("Assets/PolygonBossZombies/", StringComparison.Ordinal);
+    }
+
+    private static string NormalizeAssetPath(string assetPath)
+    {
+        return string.IsNullOrEmpty(assetPath)
+            ? assetPath
+            : assetPath.Replace("\\", "/");
     }
 
     private static bool Check(bool condition, string message)

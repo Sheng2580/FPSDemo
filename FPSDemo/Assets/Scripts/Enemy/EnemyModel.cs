@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Enemy.Data;
 using UnityEngine;
 
@@ -9,6 +10,9 @@ namespace Enemy
     /// </summary>
     public class EnemyModel : CharacterModleBase
     {
+        private const string DefaultLayerName = "Base Layer";
+        private static readonly HashSet<string> LoggedAnimatorKeys = new HashSet<string>();
+
         [Header("根运动")]
         [SerializeField] private bool useRootMotion = true;
 
@@ -47,10 +51,11 @@ namespace Enemy
             ApplyRootMotionSetting();
         }
 
-        public void ResetModel()
+        public void ResetModel(string contextName = null)
         {
             ClearRootMotionAction();
             ApplyRootMotionSetting();
+            PrepareAnimatorForSpawn(contextName);
         }
 
         public void SetRootMotionEnabled(bool enabled)
@@ -92,6 +97,24 @@ namespace Enemy
             return targetAnimator != null;
         }
 
+        public void PrepareAnimatorForSpawn(string contextName = null)
+        {
+            if (!TryGetAnimator(out Animator targetAnimator))
+            {
+                Debug.LogError($"[EnemyAnimRuntime] {ResolveContextName(contextName)} Animator=None", this);
+                return;
+            }
+
+            targetAnimator.enabled = true;
+            targetAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            targetAnimator.applyRootMotion = useRootMotion;
+            targetAnimator.updateMode = AnimatorUpdateMode.Normal;
+            targetAnimator.Rebind();
+            targetAnimator.Update(0f);
+
+            LogAnimatorRuntimeState(targetAnimator, ResolveContextName(contextName));
+        }
+
         private void ApplyRootMotionSetting()
         {
             if (!TryGetAnimator(out Animator targetAnimator))
@@ -99,7 +122,62 @@ namespace Enemy
                 return;
             }
 
+            // 手机端可见性裁剪偶发会让敌人停在初始 T 动作，敌人数量由 AI 分层控制
+            targetAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             targetAnimator.applyRootMotion = useRootMotion;
+        }
+
+        private void LogAnimatorRuntimeState(Animator targetAnimator, string contextName)
+        {
+            RuntimeAnimatorController controller = targetAnimator.runtimeAnimatorController;
+            Avatar avatar = targetAnimator.avatar;
+            string controllerName = controller != null ? controller.name : "None";
+            string avatarName = avatar != null ? avatar.name : "None";
+            int clipCount = controller != null && controller.animationClips != null
+                ? controller.animationClips.Length
+                : 0;
+            bool hasIdle = HasAnimatorState(targetAnimator, idleStateName);
+            bool hasRun = HasAnimatorState(targetAnimator, runStateName);
+            bool hasAttack = HasAnimatorState(targetAnimator, attackStateName);
+            bool avatarValid = avatar != null && avatar.isValid;
+            bool avatarHuman = avatar != null && avatar.isHuman;
+
+            string logKey = $"{contextName}|{controllerName}|{avatarName}|{clipCount}|{hasIdle}|{hasRun}|{hasAttack}|{avatarValid}";
+            if (!LoggedAnimatorKeys.Add(logKey))
+            {
+                return;
+            }
+
+            string message =
+                $"[EnemyAnimRuntime] {contextName} Animator={targetAnimator.name} Enabled={targetAnimator.enabled} " +
+                $"Controller={controllerName} Avatar={avatarName} AvatarValid={avatarValid} AvatarHuman={avatarHuman} " +
+                $"Clips={clipCount} HasIdle={hasIdle} HasRun={hasRun} HasAttack={hasAttack} " +
+                $"Idle={idleStateName} Run={runStateName} Attack={attackStateName}";
+
+            if (controller == null || avatar == null || !avatarValid || clipCount <= 0 || !hasIdle || !hasRun || !hasAttack)
+            {
+                Debug.LogError(message, targetAnimator);
+                return;
+            }
+
+            Debug.Log(message, targetAnimator);
+        }
+
+        private bool HasAnimatorState(Animator targetAnimator, string stateName)
+        {
+            if (targetAnimator == null || string.IsNullOrEmpty(stateName))
+            {
+                return false;
+            }
+
+            int layer = 0;
+            return targetAnimator.HasState(layer, Animator.StringToHash(stateName))
+                   || targetAnimator.HasState(layer, Animator.StringToHash($"{DefaultLayerName}.{stateName}"));
+        }
+
+        private string ResolveContextName(string contextName)
+        {
+            return string.IsNullOrEmpty(contextName) ? name : contextName;
         }
     }
 }
