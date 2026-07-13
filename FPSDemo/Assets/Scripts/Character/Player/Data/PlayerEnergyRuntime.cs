@@ -28,6 +28,7 @@ namespace PlayerData
 
         public PlayerEnergyConfig Config => _config;
         public PlayerEnergyRuntimeData RuntimeData => _runtimeData;
+        public PlayerEnergyState CurrentState => _runtimeData != null ? _runtimeData.state : PlayerEnergyState.Charging;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureRuntimeInstance()
@@ -49,11 +50,17 @@ namespace PlayerData
         private void OnEnable()
         {
             EventCenter.Instance.AddEventListener<EnemyDamagedEventData>(GameEvent.EnemyDamaged, OnEnemyDamaged);
+            EventCenter.Instance.AddEventListener(GameEvent.PlayerEnergyBlessingSelectRequested, OnBlessingSelectRequested);
+            EventCenter.Instance.AddEventListener(GameEvent.PlayerEnergyBlessingSelectCanceled, OnBlessingSelectCanceled);
+            EventCenter.Instance.AddEventListener<PlayerEnergyBlessingSelectedEventData>(GameEvent.PlayerEnergyBlessingSelected, OnBlessingSelected);
         }
 
         private void OnDisable()
         {
             EventCenter.Instance.RemoveEventListener<EnemyDamagedEventData>(GameEvent.EnemyDamaged, OnEnemyDamaged);
+            EventCenter.Instance.RemoveEventListener(GameEvent.PlayerEnergyBlessingSelectRequested, OnBlessingSelectRequested);
+            EventCenter.Instance.RemoveEventListener(GameEvent.PlayerEnergyBlessingSelectCanceled, OnBlessingSelectCanceled);
+            EventCenter.Instance.RemoveEventListener<PlayerEnergyBlessingSelectedEventData>(GameEvent.PlayerEnergyBlessingSelected, OnBlessingSelected);
         }
 
         private void Update()
@@ -72,6 +79,7 @@ namespace PlayerData
             _runtimeData = new PlayerEnergyRuntimeData();
             _runtimeData.InitForNewRun(_config);
             TriggerEnergyChanged(0f);
+            TriggerStateChanged(PlayerEnergyState.Charging, true);
         }
 
         public void SetEnergyGainMultiplier(float multiplier)
@@ -99,6 +107,7 @@ namespace PlayerData
             _runtimeData.LevelUpAndReset();
             TriggerEnergyChanged(-_runtimeData.maxEnergy);
             TriggerLevelUp(GameEvent.PlayerEnergyLevelUp);
+            TriggerStateChanged(PlayerEnergyState.Charging);
 
             if (debugLog)
             {
@@ -151,6 +160,11 @@ namespace PlayerData
                 InitRuntimeData();
             }
 
+            if (_runtimeData.state != PlayerEnergyState.Charging)
+            {
+                return;
+            }
+
             if (_config.onlyGainFromPlayerDamage && !IsPlayerDamage(eventData.damageInfo))
             {
                 return;
@@ -175,11 +189,53 @@ namespace PlayerData
                 _runtimeData.LevelUpAndReset();
                 TriggerEnergyChanged(-_runtimeData.maxEnergy);
                 TriggerLevelUp(GameEvent.PlayerEnergyLevelUp);
+                TriggerStateChanged(PlayerEnergyState.Charging, true);
                 return;
             }
 
             _runtimeData.MarkLevelUpReady();
+            TriggerStateChanged(PlayerEnergyState.LevelUpReady);
             TriggerLevelUp(GameEvent.PlayerEnergyLevelUpReady);
+        }
+
+        private void OnBlessingSelectRequested()
+        {
+            if (_runtimeData == null)
+            {
+                InitRuntimeData();
+            }
+
+            if (_runtimeData.state != PlayerEnergyState.LevelUpReady)
+            {
+                if (debugLog)
+                {
+                    Debug.Log($"[PlayerEnergy] 当前状态不能选择祝福 State={_runtimeData.state}", this);
+                }
+
+                return;
+            }
+
+            TriggerStateChanged(PlayerEnergyState.BlessingSelecting);
+        }
+
+        private void OnBlessingSelectCanceled()
+        {
+            if (_runtimeData == null || _runtimeData.state != PlayerEnergyState.BlessingSelecting)
+            {
+                return;
+            }
+
+            TriggerStateChanged(PlayerEnergyState.LevelUpReady);
+        }
+
+        private void OnBlessingSelected(PlayerEnergyBlessingSelectedEventData eventData)
+        {
+            if (_runtimeData == null || _runtimeData.state != PlayerEnergyState.BlessingSelecting)
+            {
+                return;
+            }
+
+            ConfirmLevelUp();
         }
 
         private bool IsPlayerDamage(DamageInfo damageInfo)
@@ -213,6 +269,30 @@ namespace PlayerData
                     _runtimeData.currentEnergy,
                     _runtimeData.maxEnergy,
                     _runtimeData.autoLevelUp));
+        }
+
+        private void TriggerStateChanged(PlayerEnergyState targetState, bool force = false)
+        {
+            if (_runtimeData == null)
+            {
+                return;
+            }
+
+            PlayerEnergyState previousState = _runtimeData.state;
+            if (!force && previousState == targetState)
+            {
+                return;
+            }
+
+            _runtimeData.state = targetState;
+            EventCenter.Instance.EventTrigger(
+                GameEvent.PlayerEnergyStateChanged,
+                new PlayerEnergyStateChangedEventData(
+                    previousState,
+                    targetState,
+                    _runtimeData.level,
+                    _runtimeData.currentEnergy,
+                    _runtimeData.maxEnergy));
         }
     }
 }

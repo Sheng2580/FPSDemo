@@ -1,3 +1,6 @@
+using System.Collections;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Weapon.Data;
@@ -20,6 +23,9 @@ namespace Weapon
         [SerializeField] private Transform muzzlePoint;
         [SerializeField] private Transform shellPoint;
         [SerializeField] private bool disableViewModelShadows = true;
+        [SerializeField] private WeaponSkillAnimationLibrary skillAnimationLibrary;
+        [SerializeField] private string skillAnimationLibraryResourcePath = "SkillAnimationConfigs/DefaultWeaponSkillAnimationLibrary";
+        [SerializeField] private float skillAnimationFadeOutTime = 0.08f;
 
         private WeaponConfig _config;
         private Vector3 _defaultViewLocalPosition;
@@ -38,6 +44,9 @@ namespace Weapon
         private float _adsAmount;
         private float _lastAdsAmount;
         private bool _hasCachedDefaultTransform;
+        private PlayableGraph _skillAnimationGraph;
+        private AnimationMixerPlayable _skillAnimationMixer;
+        private Coroutine _skillAnimationRoutine;
 
         public Animator Animator => animator;
         public Transform MuzzlePoint => muzzlePoint;
@@ -59,6 +68,11 @@ namespace Weapon
         private void LateUpdate()
         {
             UpdateViewPose();
+        }
+
+        private void OnDisable()
+        {
+            StopSkillAnimationPlayback(true);
         }
 
         public void Init(WeaponConfig config)
@@ -92,6 +106,41 @@ namespace Weapon
         {
             ApplyReloadAnimationSpeed(reloadDuration);
             CrossFade(_config?.reloadStateName, _config != null ? _config.reloadTransition : 0f);
+        }
+
+        public bool TryPlaySkillAnimation(string stateName, float skillDuration, float transitionDuration = 0.05f)
+        {
+            if (animator == null || string.IsNullOrEmpty(stateName))
+            {
+                return false;
+            }
+
+            if (TryPlayAnimatorSkillState(stateName, skillDuration, transitionDuration))
+            {
+                return true;
+            }
+
+            AnimationClip skillClip = ResolveSkillAnimationClip(stateName);
+            if (skillClip == null)
+            {
+                return false;
+            }
+
+            PlaySkillClip(skillClip, skillDuration, transitionDuration);
+            return true;
+        }
+
+        private bool TryPlayAnimatorSkillState(string stateName, float skillDuration, float transitionDuration)
+        {
+            int stateHash = Animator.StringToHash(stateName);
+            if (!animator.HasState(0, stateHash))
+            {
+                return false;
+            }
+
+            ApplySkillAnimationSpeed(stateName, skillDuration);
+            animator.CrossFade(stateHash, Mathf.Max(0f, transitionDuration));
+            return true;
         }
 
         public void ResetAnimationSpeed()
@@ -173,6 +222,7 @@ namespace Weapon
         {
             CacheReferences();
             CacheDefaultTransform(false);
+            StopSkillAnimationPlayback(true);
 
             _adsAmount = 0f;
             _lastAdsAmount = 0f;
@@ -396,6 +446,159 @@ namespace Weapon
             float clipLength = GetAnimationClipLength(_config.reloadStateName, reloadDuration);
             float speed = clipLength / reloadDuration;
             animator.speed = Mathf.Clamp(speed, MinReloadAnimationSpeed, MaxReloadAnimationSpeed);
+        }
+
+        private void ApplySkillAnimationSpeed(string stateName, float skillDuration)
+        {
+            if (animator == null || skillDuration <= 0f)
+            {
+                ResetAnimationSpeed();
+                return;
+            }
+
+            // 技能动画速度跟随技能持续时间 避免技能判定和手部动作脱节
+            float clipLength = GetAnimationClipLength(stateName, skillDuration);
+            float speed = clipLength / skillDuration;
+            animator.speed = Mathf.Clamp(speed, MinReloadAnimationSpeed, MaxReloadAnimationSpeed);
+        }
+
+        private AnimationClip ResolveSkillAnimationClip(string stateName)
+        {
+            WeaponSkillAnimationLibrary library = ResolveSkillAnimationLibrary();
+            if (library == null)
+            {
+                return null;
+            }
+
+            return library.TryGetClip(stateName, out AnimationClip clip) ? clip : null;
+        }
+
+        private WeaponSkillAnimationLibrary ResolveSkillAnimationLibrary()
+        {
+            if (skillAnimationLibrary == null && !string.IsNullOrEmpty(skillAnimationLibraryResourcePath))
+            {
+                skillAnimationLibrary = Resources.Load<WeaponSkillAnimationLibrary>(skillAnimationLibraryResourcePath);
+            }
+
+            return skillAnimationLibrary;
+        }
+
+        private void PlaySkillClip(AnimationClip clip, float skillDuration, float fadeInTime)
+        {
+            StopSkillAnimationPlayback(true);
+            ResetAnimationSpeed();
+            _skillAnimationRoutine = StartCoroutine(SkillClipRoutine(clip, skillDuration, fadeInTime));
+        }
+
+        private IEnumerator SkillClipRoutine(AnimationClip clip, float skillDuration, float fadeInTime)
+        {
+            if (animator == null || clip == null)
+            {
+                _skillAnimationRoutine = null;
+                yield break;
+            }
+
+            float duration = skillDuration > 0f ? skillDuration : clip.length;
+            float safeFadeIn = Mathf.Clamp(fadeInTime, 0f, duration * 0.45f);
+            float safeFadeOut = Mathf.Clamp(skillAnimationFadeOutTime, 0f, duration * 0.45f);
+            RuntimeAnimatorController controller = animator.runtimeAnimatorController;
+
+            _skillAnimationGraph = PlayableGraph.Create($"{name} Skill Animation");
+            _skillAnimationGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+
+            AnimationPlayableOutput output = AnimationPlayableOutput.Create(_skillAnimationGraph, "Skill Animation", animator);
+            AnimationClipPlayable clipPlayable = AnimationClipPlayable.Create(_skillAnimationGraph, clip);
+            clipPlayable.SetTime(0f);
+            clipPlayable.SetApplyFootIK(false);
+            clipPlayable.SetApplyPlayableIK(false);
+
+            bool useMixer = controller != null;
+            if (useMixer)
+            {
+                AnimatorControllerPlayable controllerPlayable = AnimatorControllerPlayable.Create(_skillAnimationGraph, controller);
+                _skillAnimationMixer = AnimationMixerPlayable.Create(_skillAnimationGraph, 2);
+                _skillAnimationGraph.Connect(controllerPlayable, 0, _skillAnimationMixer, 0);
+                _skillAnimationGraph.Connect(clipPlayable, 0, _skillAnimationMixer, 1);
+                SetSkillPlayableWeight(0f);
+                output.SetSourcePlayable(_skillAnimationMixer);
+            }
+            else
+            {
+                output.SetSourcePlayable(clipPlayable);
+            }
+
+            _skillAnimationGraph.Play();
+
+            if (useMixer && safeFadeIn > 0f)
+            {
+                yield return FadeSkillPlayableWeight(0f, 1f, safeFadeIn);
+            }
+            else
+            {
+                SetSkillPlayableWeight(1f);
+            }
+
+            float holdTime = Mathf.Max(0.01f, duration - safeFadeIn - safeFadeOut);
+            float elapsed = 0f;
+            while (elapsed < holdTime && _skillAnimationGraph.IsValid())
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (useMixer && safeFadeOut > 0f)
+            {
+                yield return FadeSkillPlayableWeight(1f, 0f, safeFadeOut);
+            }
+
+            StopSkillAnimationPlayback(false);
+            PlayIdle(skillAnimationFadeOutTime);
+        }
+
+        private IEnumerator FadeSkillPlayableWeight(float from, float to, float duration)
+        {
+            duration = Mathf.Max(0.001f, duration);
+            float elapsed = 0f;
+
+            while (elapsed < duration && _skillAnimationMixer.IsValid())
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float smoothT = t * t * (3f - 2f * t);
+                SetSkillPlayableWeight(Mathf.Lerp(from, to, smoothT));
+                yield return null;
+            }
+
+            SetSkillPlayableWeight(to);
+        }
+
+        private void SetSkillPlayableWeight(float clipWeight)
+        {
+            if (!_skillAnimationMixer.IsValid())
+            {
+                return;
+            }
+
+            clipWeight = Mathf.Clamp01(clipWeight);
+            _skillAnimationMixer.SetInputWeight(0, 1f - clipWeight);
+            _skillAnimationMixer.SetInputWeight(1, clipWeight);
+        }
+
+        private void StopSkillAnimationPlayback(bool stopCoroutine)
+        {
+            if (stopCoroutine && _skillAnimationRoutine != null)
+            {
+                StopCoroutine(_skillAnimationRoutine);
+            }
+
+            _skillAnimationRoutine = null;
+
+            if (_skillAnimationGraph.IsValid())
+            {
+                _skillAnimationGraph.Destroy();
+            }
+
+            _skillAnimationMixer = default;
         }
 
         private float GetAnimationClipLength(string stateName, float fallbackLength)

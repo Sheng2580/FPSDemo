@@ -19,9 +19,9 @@ namespace Weapon.State
             }
 
             _timer = controller.Config.fireInterval;
-            if (controller.InfiniteAmmoForTest)
+            if (controller.InfiniteAmmoActive)
             {
-                // 临时无限弹药测试 保持弹匣满方便持续测试武器和技能
+                // 无限弹药状态下保持弹匣可开火 道具限时效果也走这里
                 controller.RuntimeData.currentAmmoInMagazine = controller.Config.magazineSize;
             }
             else
@@ -33,6 +33,7 @@ namespace Weapon.State
 
             controller.CurrentWeaponView?.PlayFire();
             controller.CurrentWeaponView?.SetAmmo(controller.RuntimeData.currentAmmoInMagazine);
+            controller.TriggerWeaponAmmoChanged();
             // 只在扣弹成功后通知表现系统
             controller.TriggerWeaponFired();
             controller.FireRaycast();

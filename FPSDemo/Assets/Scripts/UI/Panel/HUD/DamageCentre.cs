@@ -158,10 +158,7 @@ public class DamageCentre : MonoBehaviour
             _followTargets[item] = followTarget;
         }
 
-        if (debugLog)
-        {
-            Debug.Log($"[HUDDamage] 生成伤害数字 Damage={damageInfo.finalDamage:0.#} Critical={damageInfo.isCritical} Pos={startPosition}", this);
-        }
+      
     }
 
     private DamageNumberItem TakeItem(bool isCritical)

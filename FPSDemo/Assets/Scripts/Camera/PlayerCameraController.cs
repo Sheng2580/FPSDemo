@@ -1,3 +1,5 @@
+using System.Collections;
+using PlayerData;
 using UnityEngine;
 
 public class PlayerCameraController : MonoBehaviour
@@ -22,6 +24,17 @@ public class PlayerCameraController : MonoBehaviour
     [Header("开镜FOV参数")]
     [SerializeField] private float aimFovSmoothTime = 0.06f;
 
+    [Header("技能FOV表现")]
+    [SerializeField] private float dodgeFovBoost = 9f;
+    [SerializeField] private float dodgeFovFadeInTime = 0.045f;
+    [SerializeField] private float dodgeFovHoldTime = 0.035f;
+    [SerializeField] private float dodgeFovFadeOutTime = 0.18f;
+
+    [Header("技能视差表现")]
+    [SerializeField] private float dodgeForwardParallax = 0.055f;
+    [SerializeField] private float dodgeSideParallax = 0.035f;
+    [SerializeField] private float dodgeDownParallax = 0.025f;
+
     [Header("后坐力参数")]
     [SerializeField] private Vector2 recoilOffset;
     [SerializeField] private float recoilKickMultiplier = 0.2f;
@@ -42,6 +55,11 @@ public class PlayerCameraController : MonoBehaviour
     private float _smoothedAimFovAmount;
     private float _aimFovAmountVelocity;
     private bool _hasCachedDefaultFov;
+    private Vector3 _defaultCameraRootLocalPosition;
+    private bool _hasCachedDefaultCameraRootPosition;
+    private float _skillFovOffset;
+    private Vector3 _skillParallaxOffset;
+    private Coroutine _skillCameraRoutine;
     private Vector2 _recoilTarget;
     private Vector2 _recoilVelocity;
 
@@ -63,16 +81,20 @@ public class PlayerCameraController : MonoBehaviour
         AutoBindReferences();
         CacheInitialAngles();
         CacheDefaultFov();
+        CacheDefaultCameraRootPosition();
     }
 
     private void OnEnable()
     {
         EventCenter.Instance.AddEventListener<WeaponAimCameraEventData>(GameEvent.WeaponAimCameraChanged, OnWeaponAimCameraChanged);
+        EventCenter.Instance.AddEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
     }
 
     private void OnDisable()
     {
         EventCenter.Instance.RemoveEventListener<WeaponAimCameraEventData>(GameEvent.WeaponAimCameraChanged, OnWeaponAimCameraChanged);
+        EventCenter.Instance.RemoveEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
+        StopSkillCameraPulse();
     }
 
     private void OnValidate()
@@ -87,6 +109,13 @@ public class PlayerCameraController : MonoBehaviour
         recoilTargetReturnSpeed = Mathf.Max(0f, recoilTargetReturnSpeed);
         maxRecoilPitchOffset = Mathf.Max(0f, maxRecoilPitchOffset);
         maxRecoilYawOffset = Mathf.Max(0f, maxRecoilYawOffset);
+        dodgeFovBoost = Mathf.Max(0f, dodgeFovBoost);
+        dodgeFovFadeInTime = Mathf.Max(0.001f, dodgeFovFadeInTime);
+        dodgeFovHoldTime = Mathf.Max(0f, dodgeFovHoldTime);
+        dodgeFovFadeOutTime = Mathf.Max(0.001f, dodgeFovFadeOutTime);
+        dodgeForwardParallax = Mathf.Max(0f, dodgeForwardParallax);
+        dodgeSideParallax = Mathf.Max(0f, dodgeSideParallax);
+        dodgeDownParallax = Mathf.Max(0f, dodgeDownParallax);
     }
 
     private void Start()
@@ -94,6 +123,7 @@ public class PlayerCameraController : MonoBehaviour
         AutoBindReferences();
         CacheInitialAngles();
         CacheDefaultFov();
+        CacheDefaultCameraRootPosition();
         SetCursorLock(lockCursorOnStart);
     }
 
@@ -124,6 +154,7 @@ public class PlayerCameraController : MonoBehaviour
 
         // 玩家根节点只处理 Y 轴旋转 避免影响角色直立和重力逻辑
         playerRoot.localRotation = Quaternion.Euler(0f, finalYaw, 0f);
+        ApplySkillParallax();
         // CameraRoot 只处理 X 轴俯仰 Main Camera 保持作为其子物体
         cameraRoot.localRotation = Quaternion.Euler(finalPitch, 0f, 0f);
 
@@ -209,6 +240,90 @@ public class PlayerCameraController : MonoBehaviour
         }
     }
 
+    private void OnSkillCastStarted(SkillCastEventData eventData)
+    {
+        if (eventData.skillType != SkillType.Dodge || string.IsNullOrEmpty(eventData.fovEffectKey))
+        {
+            return;
+        }
+
+        PlayDodgeCameraPulse(eventData.direction);
+    }
+
+    private void PlayDodgeCameraPulse(Vector3 worldDirection)
+    {
+        StopSkillCameraPulse();
+        _skillCameraRoutine = StartCoroutine(DodgeCameraPulseRoutine(worldDirection));
+    }
+
+    private IEnumerator DodgeCameraPulseRoutine(Vector3 worldDirection)
+    {
+        Vector3 targetParallax = ResolveDodgeParallax(worldDirection);
+
+        yield return FadeSkillCamera(Vector3.zero, targetParallax, 0f, dodgeFovBoost, dodgeFovFadeInTime);
+
+        float holdTimer = 0f;
+        while (holdTimer < dodgeFovHoldTime)
+        {
+            holdTimer += Time.deltaTime;
+            _skillParallaxOffset = targetParallax;
+            _skillFovOffset = dodgeFovBoost;
+            yield return null;
+        }
+
+        yield return FadeSkillCamera(targetParallax, Vector3.zero, dodgeFovBoost, 0f, dodgeFovFadeOutTime);
+        _skillCameraRoutine = null;
+    }
+
+    private IEnumerator FadeSkillCamera(
+        Vector3 fromParallax,
+        Vector3 toParallax,
+        float fromFov,
+        float toFov,
+        float duration)
+    {
+        duration = Mathf.Max(0.001f, duration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Smooth01(elapsed / duration);
+            _skillParallaxOffset = Vector3.Lerp(fromParallax, toParallax, t);
+            _skillFovOffset = Mathf.Lerp(fromFov, toFov, t);
+            yield return null;
+        }
+
+        _skillParallaxOffset = toParallax;
+        _skillFovOffset = toFov;
+    }
+
+    private Vector3 ResolveDodgeParallax(Vector3 worldDirection)
+    {
+        Vector3 safeDirection = worldDirection.sqrMagnitude > 0.0001f ? worldDirection.normalized : Vector3.forward;
+        Vector3 localDirection = playerRoot != null
+            ? playerRoot.InverseTransformDirection(safeDirection)
+            : safeDirection;
+
+        return new Vector3(
+            -localDirection.x * dodgeSideParallax,
+            -dodgeDownParallax,
+            -Mathf.Max(0.25f, Mathf.Abs(localDirection.z)) * dodgeForwardParallax);
+    }
+
+    private void StopSkillCameraPulse()
+    {
+        if (_skillCameraRoutine != null)
+        {
+            StopCoroutine(_skillCameraRoutine);
+            _skillCameraRoutine = null;
+        }
+
+        _skillFovOffset = 0f;
+        _skillParallaxOffset = Vector3.zero;
+        ApplySkillParallax();
+    }
+
     private void AutoBindReferences()
     {
         // 玩家根节点默认使用脚本所在物体
@@ -271,6 +386,28 @@ public class PlayerCameraController : MonoBehaviour
         }
     }
 
+    private void CacheDefaultCameraRootPosition()
+    {
+        if (cameraRoot == null || _hasCachedDefaultCameraRootPosition)
+        {
+            return;
+        }
+
+        _defaultCameraRootLocalPosition = cameraRoot.localPosition;
+        _hasCachedDefaultCameraRootPosition = true;
+    }
+
+    private void ApplySkillParallax()
+    {
+        if (cameraRoot == null)
+        {
+            return;
+        }
+
+        CacheDefaultCameraRootPosition();
+        cameraRoot.localPosition = _defaultCameraRootLocalPosition + _skillParallaxOffset;
+    }
+
     private void CacheInitialAngles()
     {
         if (playerRoot != null)
@@ -322,7 +459,13 @@ public class PlayerCameraController : MonoBehaviour
             _aimFovAmountVelocity = 0f;
         }
 
-        playerCamera.fieldOfView = Mathf.Lerp(_defaultFov, _targetAimFov, _smoothedAimFovAmount);
+        playerCamera.fieldOfView = Mathf.Max(1f, Mathf.Lerp(_defaultFov, _targetAimFov, _smoothedAimFovAmount) + _skillFovOffset);
+    }
+
+    private static float Smooth01(float value)
+    {
+        value = Mathf.Clamp01(value);
+        return value * value * (3f - 2f * value);
     }
 
     private bool HasRequiredReferences()

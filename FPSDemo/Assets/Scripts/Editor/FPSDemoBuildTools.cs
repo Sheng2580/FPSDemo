@@ -12,8 +12,12 @@ public static class FPSDemoBuildTools
     private const string TouchCanvasPath = "Assets/Art/ABRes/UI/TounchControllerCanvas.prefab";
     private const string TestCanvasPath = "Assets/Art/ABRes/UI/TestCanvas.prefab";
     private const string HUDCanvasPath = "Assets/Art/ABRes/UI/HUDCanvas.prefab";
+    private const string HpAndWeaponCanvasPath = "Assets/Art/ABRes/UI/HpAndWeaponCanvas.prefab";
     private const string EnemyLifebarCanvasPath = "Assets/Art/ABRes/UI/EnemyLifebarCanvas.prefab";
+    private const string BlessingSelectCanvasPath = "Assets/Art/ABRes/UI/BlessingSelectCanvas.prefab";
+    private const string WeaponItemPath = "Assets/Art/ABRes/UI/Item/WeaponItem.prefab";
     private const string TouchCanvasBundleName = "uipanel";
+    private const string UIItemBundleName = "uiitem";
     private const string PlayerRuntimeBundleName = "player_runtime";
     private const string CombatFeedbackBundleName = "combat_feedback";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
@@ -51,7 +55,14 @@ public static class FPSDemoBuildTools
         TouchCanvasPath,
         TestCanvasPath,
         HUDCanvasPath,
-        EnemyLifebarCanvasPath
+        HpAndWeaponCanvasPath,
+        EnemyLifebarCanvasPath,
+        BlessingSelectCanvasPath
+    };
+
+    private static readonly string[] UIItemAssetPaths =
+    {
+        WeaponItemPath
     };
 
     private static readonly string[] PlayerRuntimeAssetPaths =
@@ -108,6 +119,7 @@ public static class FPSDemoBuildTools
     private static readonly string[] RequiredRuntimeBundleNames =
     {
         TouchCanvasBundleName,
+        UIItemBundleName,
         PlayerRuntimeBundleName,
         CombatFeedbackBundleName,
         EnemyPrefabBundleName
@@ -491,6 +503,7 @@ public static class FPSDemoBuildTools
         bool success = true;
 
         success &= TrySetAssetBundleNames(UIAssetPaths, TouchCanvasBundleName, ref changed);
+        success &= TrySetAssetBundleNames(UIItemAssetPaths, UIItemBundleName, ref changed);
         success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
         success &= TrySetAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName, ref changed);
@@ -593,6 +606,7 @@ public static class FPSDemoBuildTools
     {
         bool isValid = true;
         isValid &= ValidateAssetBundleNames(UIAssetPaths, TouchCanvasBundleName);
+        isValid &= ValidateAssetBundleNames(UIItemAssetPaths, UIItemBundleName);
         isValid &= ValidateAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName);
         isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
         isValid &= ValidateAssetBundleNames(EnemyPrefabAssetPaths, EnemyPrefabBundleName);

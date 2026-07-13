@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Combat;
 using Enemy;
+using PlayerData;
 using UnityEngine;
 using Weapon.Data;
 using Weapon.State;
@@ -26,7 +27,6 @@ namespace Weapon
         [Header("调试")]
         [Tooltip("高频命中日志 默认关闭 避免编辑器测试卡顿")]
         [SerializeField] private bool debugWeaponHit;
-        [SerializeField] private bool infiniteAmmoForTest = true;
 
         private readonly Dictionary<WeaponStateType, WeaponState> _states = new Dictionary<WeaponStateType, WeaponState>();
         private WeaponState _currentState;
@@ -43,6 +43,9 @@ namespace Weapon
         private bool _isPlayerActionLocked;
         private int _recoilShotIndex;
         private float _lastRecoilTime;
+        private int _pushAnimationIndex;
+        private float _infiniteAmmoEndTime = -1f;
+        private PlayerController _player;
 
         public WeaponView CurrentWeaponView => currentWeaponView;
         public CarriedWeaponSlot CurrentWeaponSlot => _currentWeaponSlot;
@@ -55,7 +58,8 @@ namespace Weapon
         public bool ReloadInput => _reloadInput;
         public bool AimInput => _aimInput;
         public float ADSAmount => _adsAmount;
-        public bool InfiniteAmmoForTest => infiniteAmmoForTest;
+        public bool InfiniteAmmoActive => Time.time < _infiniteAmmoEndTime;
+        public float InfiniteAmmoRemainingTime => Mathf.Max(0f, _infiniteAmmoEndTime - Time.time);
 
         private void Reset()
         {
@@ -64,6 +68,7 @@ namespace Weapon
 
         private void Awake()
         {
+            ClearRuntimeInfiniteAmmo();
             CacheReferences();
             InitStateMachine();
             InitCurrentWeapon();
@@ -73,6 +78,7 @@ namespace Weapon
         {
             EventCenter.Instance.AddEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
             EventCenter.Instance.AddEventListener<PlayerActionLockEventData>(GameEvent.PlayerActionLockChanged, OnPlayerActionLockChanged);
+            EventCenter.Instance.AddEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
         }
 
         private void Start()
@@ -96,6 +102,7 @@ namespace Weapon
         {
             EventCenter.Instance.RemoveEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
             EventCenter.Instance.RemoveEventListener<PlayerActionLockEventData>(GameEvent.PlayerActionLockChanged, OnPlayerActionLockChanged);
+            EventCenter.Instance.RemoveEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
             ResetAimVisuals();
         }
 
@@ -127,13 +134,13 @@ namespace Weapon
                    && !_isPlayerActionLocked
                    && RuntimeData.isEquipped
                    && !RuntimeData.isReloading
-                   && (infiniteAmmoForTest || RuntimeData.currentAmmoInMagazine > 0)
+                   && (InfiniteAmmoActive || RuntimeData.currentAmmoInMagazine > 0)
                    && Time.time >= RuntimeData.nextFireTime;
         }
 
         public bool CanReload()
         {
-            if (infiniteAmmoForTest)
+            if (InfiniteAmmoActive)
             {
                 return false;
             }
@@ -151,10 +158,65 @@ namespace Weapon
         public bool CanAutoReloadOnFire()
         {
             // 只有弹夹真正空了才允许开火键触发自动换弹 避免射速冷却中误换弹
-            return !infiniteAmmoForTest
+            return !InfiniteAmmoActive
                    && RuntimeData != null
                    && RuntimeData.currentAmmoInMagazine <= 0
                    && CanReload();
+        }
+
+        public void ActivateInfiniteAmmo(float duration)
+        {
+            if (duration <= 0f)
+            {
+                return;
+            }
+
+            _infiniteAmmoEndTime = Mathf.Max(_infiniteAmmoEndTime, Time.time + duration);
+
+            if (_config != null && RuntimeData != null && RuntimeData.currentAmmoInMagazine <= 0)
+            {
+                RuntimeData.currentAmmoInMagazine = _config.magazineSize;
+                currentWeaponView?.SetAmmo(RuntimeData.currentAmmoInMagazine);
+                TriggerWeaponAmmoChanged();
+            }
+        }
+
+        public void ClearRuntimeInfiniteAmmo()
+        {
+            _infiniteAmmoEndTime = -1f;
+        }
+
+        public void RefreshCurrentWeaponRuntimeView()
+        {
+            if (currentWeaponView == null || RuntimeData == null)
+            {
+                return;
+            }
+
+            // 只刷新表现参数 不重新触发装备流程
+            currentWeaponView.SetAmmo(RuntimeData.currentAmmoInMagazine);
+            currentWeaponView.SetReloading(RuntimeData.isReloading);
+            TriggerWeaponAmmoChanged();
+        }
+
+        public void TriggerWeaponAmmoChanged()
+        {
+            if (_config == null || RuntimeData == null)
+            {
+                return;
+            }
+
+            int weaponIndex = playerInventory != null ? playerInventory.CurrentWeaponIndex : 0;
+            EventCenter.Instance.EventTrigger(
+                GameEvent.PlayerWeaponAmmoChanged,
+                new PlayerWeaponAmmoChangedEventData(
+                    weaponIndex,
+                    _config.weaponId,
+                    _config.weaponName,
+                    RuntimeData.currentAmmoInMagazine,
+                    RuntimeData.currentReserveAmmo,
+                    _config.magazineSize,
+                    _config.maxReserveAmmo));
         }
 
         public void ApplyRecoil()
@@ -358,6 +420,7 @@ namespace Weapon
         {
             cameraController ??= GetComponent<PlayerCameraController>();
             playerInventory ??= GetComponent<PlayerInventory>();
+            _player ??= GetComponent<PlayerController>();
             currentWeaponView ??= GetComponentInChildren<WeaponView>(true);
 
             if (cameraController != null)
@@ -557,6 +620,35 @@ namespace Weapon
             _fireInput = false;
             _reloadInput = false;
             _aimInput = false;
+        }
+
+        private void OnSkillCastStarted(SkillCastEventData eventData)
+        {
+            if (eventData.skillType != SkillType.Push || currentWeaponView == null)
+            {
+                return;
+            }
+
+            if (eventData.player != null && _player != null && eventData.player != _player)
+            {
+                return;
+            }
+
+            string primaryState = eventData.animationKey;
+            string alternateState = eventData.alternateAnimationKey;
+            string firstState = _pushAnimationIndex % 2 == 0 || string.IsNullOrEmpty(alternateState)
+                ? primaryState
+                : alternateState;
+            string fallbackState = firstState == primaryState ? alternateState : primaryState;
+            _pushAnimationIndex++;
+
+            float duration = eventData.config != null ? eventData.config.duration : 0.45f;
+            if (currentWeaponView.TryPlaySkillAnimation(firstState, duration))
+            {
+                return;
+            }
+
+            currentWeaponView.TryPlaySkillAnimation(fallbackState, duration);
         }
 
         private void UpdateInput()

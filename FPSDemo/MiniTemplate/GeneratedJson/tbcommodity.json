@@ -1,0 +1,47 @@
+[
+  {
+    "CommodityID": 1,
+    "CommodityPrice": 9999,
+    "CommodityName": "攻击力+",
+    "CommodityImageName": "攻击力",
+    "CommodityDetailedInformationText": "攻击力增加10",
+    "CommodityType": 1,
+    "weight": 0.4
+  },
+  {
+    "CommodityID": 2,
+    "CommodityPrice": 10000,
+    "CommodityName": "恢复药剂",
+    "CommodityImageName": "恢复药",
+    "CommodityDetailedInformationText": "恢复10%生命",
+    "CommodityType": 2,
+    "weight": 2
+  },
+  {
+    "CommodityID": 3,
+    "CommodityPrice": 10000,
+    "CommodityName": "攻击力++",
+    "CommodityImageName": "攻击力",
+    "CommodityDetailedInformationText": "增加攻击力20",
+    "CommodityType": 1,
+    "weight": 0.2
+  },
+  {
+    "CommodityID": 4,
+    "CommodityPrice": 9999,
+    "CommodityName": "生命值+",
+    "CommodityImageName": "生命",
+    "CommodityDetailedInformationText": "生命值加10",
+    "CommodityType": 1,
+    "weight": 0.4
+  },
+  {
+    "CommodityID": 5,
+    "CommodityPrice": 10000,
+    "CommodityName": "生命值++",
+    "CommodityImageName": "生命",
+    "CommodityDetailedInformationText": "生命值加20",
+    "CommodityType": 1,
+    "weight": 0.2
+  }
+]

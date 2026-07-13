@@ -69,6 +69,78 @@ namespace Combat
             };
         }
 
+        public static CombatVolumeEffectConfig CreateDefaultDodge()
+        {
+            return new CombatVolumeEffectConfig
+            {
+                effectType = CombatVolumeEffectType.Dodge,
+                effectKey = "Skill_Dodge_SprintPulse",
+                fadeInTime = 0.045f,
+                holdTime = 0.04f,
+                fadeOutTime = 0.18f,
+                minIntensity = 0.65f,
+                damageToIntensityScale = 0f,
+                missingHpIntensityScale = 0f,
+                colorFilter = new Color(0.86f, 0.93f, 1f, 1f),
+                vignetteColor = new Color(0.08f, 0.16f, 0.24f, 1f),
+                vignetteIntensityBoost = 0.16f,
+                vignetteSmoothnessBoost = 0.08f,
+                postExposureOffset = 0.08f,
+                saturationOffset = -8f,
+                bloomIntensityBoost = 0.08f,
+                bloomTintBlend = 0.2f,
+                enableBloomPulse = false
+            };
+        }
+
+        public static CombatVolumeEffectConfig CreateDefaultPush()
+        {
+            return new CombatVolumeEffectConfig
+            {
+                effectType = CombatVolumeEffectType.Push,
+                effectKey = "Skill_Push_ImpactPulse",
+                fadeInTime = 0.035f,
+                holdTime = 0.05f,
+                fadeOutTime = 0.16f,
+                minIntensity = 0.55f,
+                damageToIntensityScale = 0f,
+                missingHpIntensityScale = 0f,
+                colorFilter = new Color(1f, 0.88f, 0.72f, 1f),
+                vignetteColor = new Color(0.32f, 0.18f, 0.06f, 1f),
+                vignetteIntensityBoost = 0.12f,
+                vignetteSmoothnessBoost = 0.06f,
+                postExposureOffset = 0.12f,
+                saturationOffset = -4f,
+                bloomIntensityBoost = 0.12f,
+                bloomTintBlend = 0.25f,
+                enableBloomPulse = true
+            };
+        }
+
+        public static CombatVolumeEffectConfig CreateDefaultGrenade()
+        {
+            return new CombatVolumeEffectConfig
+            {
+                effectType = CombatVolumeEffectType.Grenade,
+                effectKey = "Skill_Grenade_ExplosionPulse",
+                fadeInTime = 0.04f,
+                holdTime = 0.06f,
+                fadeOutTime = 0.22f,
+                minIntensity = 0.7f,
+                damageToIntensityScale = 0f,
+                missingHpIntensityScale = 0f,
+                colorFilter = new Color(1f, 0.76f, 0.52f, 1f),
+                vignetteColor = new Color(0.42f, 0.16f, 0.04f, 1f),
+                vignetteIntensityBoost = 0.18f,
+                vignetteSmoothnessBoost = 0.08f,
+                postExposureOffset = 0.18f,
+                saturationOffset = -6f,
+                bloomIntensityBoost = 0.18f,
+                bloomTintBlend = 0.3f,
+                enableBloomPulse = true
+            };
+        }
+
         public CombatVolumeEffectConfig Clone()
         {
             return (CombatVolumeEffectConfig)MemberwiseClone();

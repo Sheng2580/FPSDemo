@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "minEnergyLevel": 1,
+    "normalWeight": 100,
+    "plusWeight": 0,
+    "plusPlusWeight": 0,
+    "comment": "Lv1"
+  },
+  {
+    "id": 2,
+    "minEnergyLevel": 2,
+    "normalWeight": 80,
+    "plusWeight": 20,
+    "plusPlusWeight": 0,
+    "comment": "Lv2"
+  },
+  {
+    "id": 3,
+    "minEnergyLevel": 3,
+    "normalWeight": 65,
+    "plusWeight": 30,
+    "plusPlusWeight": 5,
+    "comment": "Lv3"
+  },
+  {
+    "id": 4,
+    "minEnergyLevel": 4,
+    "normalWeight": 50,
+    "plusWeight": 40,
+    "plusPlusWeight": 10,
+    "comment": "Lv4"
+  },
+  {
+    "id": 5,
+    "minEnergyLevel": 5,
+    "normalWeight": 40,
+    "plusWeight": 45,
+    "plusPlusWeight": 15,
+    "comment": "Lv5+"
+  }
+]

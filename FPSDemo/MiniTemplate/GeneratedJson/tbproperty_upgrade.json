@@ -1,0 +1,542 @@
+[
+  {
+    "id": 1,
+    "statType": "Attack",
+    "level": 1,
+    "addType": "Flat",
+    "addValue": 10,
+    "costGold": 100,
+    "maxLevel": 10
+  },
+  {
+    "id": 2,
+    "statType": "Attack",
+    "level": 2,
+    "addType": "Flat",
+    "addValue": 10,
+    "costGold": 200,
+    "maxLevel": 10
+  },
+  {
+    "id": 3,
+    "statType": "Attack",
+    "level": 3,
+    "addType": "Flat",
+    "addValue": 20,
+    "costGold": 300,
+    "maxLevel": 10
+  },
+  {
+    "id": 4,
+    "statType": "Attack",
+    "level": 4,
+    "addType": "Flat",
+    "addValue": 20,
+    "costGold": 400,
+    "maxLevel": 10
+  },
+  {
+    "id": 5,
+    "statType": "Attack",
+    "level": 5,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 500,
+    "maxLevel": 10
+  },
+  {
+    "id": 6,
+    "statType": "Attack",
+    "level": 6,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 600,
+    "maxLevel": 10
+  },
+  {
+    "id": 7,
+    "statType": "Attack",
+    "level": 7,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 700,
+    "maxLevel": 10
+  },
+  {
+    "id": 8,
+    "statType": "Attack",
+    "level": 8,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 800,
+    "maxLevel": 10
+  },
+  {
+    "id": 9,
+    "statType": "Attack",
+    "level": 9,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 900,
+    "maxLevel": 10
+  },
+  {
+    "id": 10,
+    "statType": "Attack",
+    "level": 10,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 1000,
+    "maxLevel": 10
+  },
+  {
+    "id": 11,
+    "statType": "Defense",
+    "level": 1,
+    "addType": "Flat",
+    "addValue": 10,
+    "costGold": 100,
+    "maxLevel": 10
+  },
+  {
+    "id": 12,
+    "statType": "Defense",
+    "level": 2,
+    "addType": "Flat",
+    "addValue": 10,
+    "costGold": 200,
+    "maxLevel": 10
+  },
+  {
+    "id": 13,
+    "statType": "Defense",
+    "level": 3,
+    "addType": "Flat",
+    "addValue": 20,
+    "costGold": 300,
+    "maxLevel": 10
+  },
+  {
+    "id": 14,
+    "statType": "Defense",
+    "level": 4,
+    "addType": "Flat",
+    "addValue": 20,
+    "costGold": 400,
+    "maxLevel": 10
+  },
+  {
+    "id": 15,
+    "statType": "Defense",
+    "level": 5,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 500,
+    "maxLevel": 10
+  },
+  {
+    "id": 16,
+    "statType": "Defense",
+    "level": 6,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 600,
+    "maxLevel": 10
+  },
+  {
+    "id": 17,
+    "statType": "Defense",
+    "level": 7,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 700,
+    "maxLevel": 10
+  },
+  {
+    "id": 18,
+    "statType": "Defense",
+    "level": 8,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 800,
+    "maxLevel": 10
+  },
+  {
+    "id": 19,
+    "statType": "Defense",
+    "level": 9,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 900,
+    "maxLevel": 10
+  },
+  {
+    "id": 20,
+    "statType": "Defense",
+    "level": 10,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 1000,
+    "maxLevel": 10
+  },
+  {
+    "id": 21,
+    "statType": "MaxHp",
+    "level": 1,
+    "addType": "Flat",
+    "addValue": 10,
+    "costGold": 100,
+    "maxLevel": 10
+  },
+  {
+    "id": 22,
+    "statType": "MaxHp",
+    "level": 2,
+    "addType": "Flat",
+    "addValue": 10,
+    "costGold": 200,
+    "maxLevel": 10
+  },
+  {
+    "id": 23,
+    "statType": "MaxHp",
+    "level": 3,
+    "addType": "Flat",
+    "addValue": 20,
+    "costGold": 300,
+    "maxLevel": 10
+  },
+  {
+    "id": 24,
+    "statType": "MaxHp",
+    "level": 4,
+    "addType": "Flat",
+    "addValue": 20,
+    "costGold": 400,
+    "maxLevel": 10
+  },
+  {
+    "id": 25,
+    "statType": "MaxHp",
+    "level": 5,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 500,
+    "maxLevel": 10
+  },
+  {
+    "id": 26,
+    "statType": "MaxHp",
+    "level": 6,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 600,
+    "maxLevel": 10
+  },
+  {
+    "id": 27,
+    "statType": "MaxHp",
+    "level": 7,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 700,
+    "maxLevel": 10
+  },
+  {
+    "id": 28,
+    "statType": "MaxHp",
+    "level": 8,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 800,
+    "maxLevel": 10
+  },
+  {
+    "id": 29,
+    "statType": "MaxHp",
+    "level": 9,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 900,
+    "maxLevel": 10
+  },
+  {
+    "id": 30,
+    "statType": "MaxHp",
+    "level": 10,
+    "addType": "Flat",
+    "addValue": 30,
+    "costGold": 1000,
+    "maxLevel": 10
+  },
+  {
+    "id": 31,
+    "statType": "CritRate",
+    "level": 1,
+    "addType": "Flat",
+    "addValue": 0.05,
+    "costGold": 100,
+    "maxLevel": 10
+  },
+  {
+    "id": 32,
+    "statType": "CritRate",
+    "level": 2,
+    "addType": "Flat",
+    "addValue": 0.05,
+    "costGold": 200,
+    "maxLevel": 10
+  },
+  {
+    "id": 33,
+    "statType": "CritRate",
+    "level": 3,
+    "addType": "Flat",
+    "addValue": 0.1,
+    "costGold": 300,
+    "maxLevel": 10
+  },
+  {
+    "id": 34,
+    "statType": "CritRate",
+    "level": 4,
+    "addType": "Flat",
+    "addValue": 0.1,
+    "costGold": 400,
+    "maxLevel": 10
+  },
+  {
+    "id": 35,
+    "statType": "CritRate",
+    "level": 5,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 500,
+    "maxLevel": 10
+  },
+  {
+    "id": 36,
+    "statType": "CritRate",
+    "level": 6,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 600,
+    "maxLevel": 10
+  },
+  {
+    "id": 37,
+    "statType": "CritRate",
+    "level": 7,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 700,
+    "maxLevel": 10
+  },
+  {
+    "id": 38,
+    "statType": "CritRate",
+    "level": 8,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 800,
+    "maxLevel": 10
+  },
+  {
+    "id": 39,
+    "statType": "CritRate",
+    "level": 9,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 900,
+    "maxLevel": 10
+  },
+  {
+    "id": 40,
+    "statType": "CritRate",
+    "level": 10,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 1000,
+    "maxLevel": 10
+  },
+  {
+    "id": 41,
+    "statType": "CritDamage",
+    "level": 1,
+    "addType": "Flat",
+    "addValue": 0.1,
+    "costGold": 100,
+    "maxLevel": 10
+  },
+  {
+    "id": 42,
+    "statType": "CritDamage",
+    "level": 2,
+    "addType": "Flat",
+    "addValue": 0.1,
+    "costGold": 200,
+    "maxLevel": 10
+  },
+  {
+    "id": 43,
+    "statType": "CritDamage",
+    "level": 3,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 300,
+    "maxLevel": 10
+  },
+  {
+    "id": 44,
+    "statType": "CritDamage",
+    "level": 4,
+    "addType": "Flat",
+    "addValue": 0.2,
+    "costGold": 400,
+    "maxLevel": 10
+  },
+  {
+    "id": 45,
+    "statType": "CritDamage",
+    "level": 5,
+    "addType": "Flat",
+    "addValue": 0.5,
+    "costGold": 500,
+    "maxLevel": 10
+  },
+  {
+    "id": 46,
+    "statType": "CritDamage",
+    "level": 6,
+    "addType": "Flat",
+    "addValue": 0.5,
+    "costGold": 600,
+    "maxLevel": 10
+  },
+  {
+    "id": 47,
+    "statType": "CritDamage",
+    "level": 7,
+    "addType": "Flat",
+    "addValue": 0.5,
+    "costGold": 700,
+    "maxLevel": 10
+  },
+  {
+    "id": 48,
+    "statType": "CritDamage",
+    "level": 8,
+    "addType": "Flat",
+    "addValue": 0.5,
+    "costGold": 800,
+    "maxLevel": 10
+  },
+  {
+    "id": 49,
+    "statType": "CritDamage",
+    "level": 9,
+    "addType": "Flat",
+    "addValue": 0.5,
+    "costGold": 900,
+    "maxLevel": 10
+  },
+  {
+    "id": 50,
+    "statType": "CritDamage",
+    "level": 10,
+    "addType": "Flat",
+    "addValue": 0.5,
+    "costGold": 1000,
+    "maxLevel": 10
+  },
+  {
+    "id": 51,
+    "statType": "EnergyGainEfficiency",
+    "level": 1,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 100,
+    "maxLevel": 10
+  },
+  {
+    "id": 52,
+    "statType": "EnergyGainEfficiency",
+    "level": 2,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 200,
+    "maxLevel": 10
+  },
+  {
+    "id": 53,
+    "statType": "EnergyGainEfficiency",
+    "level": 3,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 300,
+    "maxLevel": 10
+  },
+  {
+    "id": 54,
+    "statType": "EnergyGainEfficiency",
+    "level": 4,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 400,
+    "maxLevel": 10
+  },
+  {
+    "id": 55,
+    "statType": "EnergyGainEfficiency",
+    "level": 5,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 500,
+    "maxLevel": 10
+  },
+  {
+    "id": 56,
+    "statType": "EnergyGainEfficiency",
+    "level": 6,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 600,
+    "maxLevel": 10
+  },
+  {
+    "id": 57,
+    "statType": "EnergyGainEfficiency",
+    "level": 7,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 700,
+    "maxLevel": 10
+  },
+  {
+    "id": 58,
+    "statType": "EnergyGainEfficiency",
+    "level": 8,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 800,
+    "maxLevel": 10
+  },
+  {
+    "id": 59,
+    "statType": "EnergyGainEfficiency",
+    "level": 9,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 900,
+    "maxLevel": 10
+  },
+  {
+    "id": 60,
+    "statType": "EnergyGainEfficiency",
+    "level": 10,
+    "addType": "Flat",
+    "addValue": 0.08,
+    "costGold": 1000,
+    "maxLevel": 10
+  }
+]

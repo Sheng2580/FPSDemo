@@ -85,6 +85,66 @@ public class JsonMgr:SingleTon<JsonMgr>
         //把对象返回出去
         return data;
     }
+
+    // 读取 Json 原始文本 给 Luban 表和特殊表结构复用
+    public bool TryLoadJsonText(
+        string fileName,
+        out string jsonStr,
+        string directPath = "",
+        string resourcesFolder = "",
+        params string[] extraDirectories)
+    {
+        jsonStr = "";
+        string jsonFileName = fileName.EndsWith(".json") ? fileName : fileName + ".json";
+        string resourceName = Path.GetFileNameWithoutExtension(jsonFileName);
+
+        if (!string.IsNullOrEmpty(resourcesFolder))
+        {
+            string resourcePath = Path.Combine(resourcesFolder, resourceName).Replace("\\", "/");
+            TextAsset textAsset = Resources.Load<TextAsset>(resourcePath);
+            if (textAsset != null && !string.IsNullOrWhiteSpace(textAsset.text))
+            {
+                jsonStr = textAsset.text;
+                return true;
+            }
+        }
+
+        if (TryReadLocalJson(Path.Combine(Application.streamingAssetsPath, directPath, jsonFileName), out jsonStr))
+        {
+            return true;
+        }
+
+        if (TryReadLocalJson(Path.Combine(Application.persistentDataPath, directPath, jsonFileName), out jsonStr))
+        {
+            return true;
+        }
+
+        if (extraDirectories != null)
+        {
+            for (int i = 0; i < extraDirectories.Length; i++)
+            {
+                if (TryReadLocalJson(Path.Combine(extraDirectories[i], jsonFileName), out jsonStr))
+                {
+                    return true;
+                }
+            }
+        }
+
+        jsonStr = "";
+        return false;
+    }
+
+    private bool TryReadLocalJson(string path, out string jsonStr)
+    {
+        jsonStr = "";
+        if (string.IsNullOrEmpty(path) || path.Contains("://") || !File.Exists(path))
+        {
+            return false;
+        }
+
+        jsonStr = File.ReadAllText(path);
+        return !string.IsNullOrWhiteSpace(jsonStr);
+    }
     
     /// <summary>
     /// 获取指定文件夹下所有的 JSON 文件名（不带后缀）

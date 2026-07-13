@@ -1,0 +1,83 @@
+[
+  {
+    "id": 1,
+    "statType": "Attack",
+    "name": "攻击力",
+    "iconName": "攻击力",
+    "baseValue": 10,
+    "displayFormat": "0",
+    "sortOrder": 1
+  },
+  {
+    "id": 2,
+    "statType": "Defense",
+    "name": "防御力",
+    "iconName": "防御",
+    "baseValue": 0,
+    "displayFormat": "0",
+    "sortOrder": 2
+  },
+  {
+    "id": 3,
+    "statType": "MaxHp",
+    "name": "生命值",
+    "iconName": "生命",
+    "baseValue": 100,
+    "displayFormat": "0",
+    "sortOrder": 3
+  },
+  {
+    "id": 4,
+    "statType": "CritRate",
+    "name": "暴击率",
+    "iconName": "暴击率",
+    "baseValue": 0.1,
+    "displayFormat": "P0",
+    "sortOrder": 4
+  },
+  {
+    "id": 5,
+    "statType": "CritDamage",
+    "name": "暴击伤害",
+    "iconName": "暴击伤害",
+    "baseValue": 1.5,
+    "displayFormat": "P0",
+    "sortOrder": 5
+  },
+  {
+    "id": 6,
+    "statType": "EnergyGainEfficiency",
+    "name": "能量充能效率",
+    "iconName": "能量恢复效率",
+    "baseValue": 0,
+    "displayFormat": "P0",
+    "sortOrder": 6
+  },
+  {
+    "id": 7,
+    "statType": "EnergyCostReduction",
+    "name": "能量消耗减少",
+    "iconName": "能量恢复效率",
+    "baseValue": 0,
+    "displayFormat": "P0",
+    "sortOrder": 7
+  },
+  {
+    "id": 8,
+    "statType": "LifeSteal",
+    "name": "吸血",
+    "iconName": "攻击力",
+    "baseValue": 0,
+    "displayFormat": "P0",
+    "sortOrder": 8
+  },
+  {
+    "id": 9,
+    "statType": "DamageBonus",
+    "name": "伤害加成",
+    "iconName": "攻击力",
+    "baseValue": 0,
+    "displayFormat": "P0",
+    "sortOrder": 9
+  }
+]

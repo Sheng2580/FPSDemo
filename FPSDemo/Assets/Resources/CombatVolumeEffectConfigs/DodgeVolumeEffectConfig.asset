@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e505b3de21654aa28792fbc6303b6983, type: 3}
+  m_Name: DodgeVolumeEffectConfig
+  m_EditorClassIdentifier: 
+  config:
+    effectType: 1
+    effectKey: Skill_Dodge_SprintPulse
+    fadeInTime: 0.045
+    holdTime: 0.04
+    fadeOutTime: 0.18
+    minIntensity: 0.65
+    damageToIntensityScale: 0
+    missingHpIntensityScale: 0
+    colorFilter: {r: 0.86, g: 0.93, b: 1, a: 1}
+    vignetteColor: {r: 0.08, g: 0.16, b: 0.24, a: 1}
+    vignetteIntensityBoost: 0.16
+    vignetteSmoothnessBoost: 0.08
+    postExposureOffset: 0.08
+    saturationOffset: -8
+    bloomIntensityBoost: 0.08
+    bloomTintBlend: 0.2
+    enableBloomPulse: 0

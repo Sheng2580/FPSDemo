@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Collections.Generic;
 using Combat;
+using PlayerData;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -28,8 +30,19 @@ public class CombatVolumeManager : MonoBehaviour
     [SerializeField] private CombatVolumeEffectConfigAsset playerDamageConfigAsset;
     [SerializeField] private string playerDamageConfigResourcePath = "CombatVolumeEffectConfigs/PlayerDamageVolumeEffectConfig";
 
+    [Header("技能后处理配置")]
+    [SerializeField] private CombatVolumeEffectConfigAsset dodgeConfigAsset;
+    [SerializeField] private string dodgeConfigResourcePath = "CombatVolumeEffectConfigs/DodgeVolumeEffectConfig";
+    [SerializeField] private CombatVolumeEffectConfigAsset pushConfigAsset;
+    [SerializeField] private string pushConfigResourcePath = "CombatVolumeEffectConfigs/PushVolumeEffectConfig";
+    [SerializeField] private CombatVolumeEffectConfigAsset grenadeConfigAsset;
+    [SerializeField] private string grenadeConfigResourcePath = "CombatVolumeEffectConfigs/GrenadeVolumeEffectConfig";
+
     private VolumeProfile runtimeProfile;
+    private readonly Dictionary<CombatVolumeEffectType, CombatVolumeEffectConfig> skillEffectConfigs =
+        new Dictionary<CombatVolumeEffectType, CombatVolumeEffectConfig>();
     private CombatVolumeEffectConfig playerDamageConfig;
+    private CombatVolumeEffectConfig activeSkillConfig;
     private Vignette vignette;
     private ColorAdjustments colorAdjustments;
     private Bloom bloom;
@@ -47,7 +60,9 @@ public class CombatVolumeManager : MonoBehaviour
     private float damageTarget;
     private float damageBlend;
     private float damageHoldEndTime;
+    private float skillBlend;
     private Coroutine damagePulseRoutine;
+    private Coroutine skillPulseRoutine;
     private Coroutine cameraRefreshRoutine;
     private bool usingRuntimeCreatedVolume;
 
@@ -122,6 +137,9 @@ public class CombatVolumeManager : MonoBehaviour
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
         EventCenter.Instance.AddEventListener<PlayerDamagedEventData>(GameEvent.PlayerDamaged, OnPlayerDamaged);
+        EventCenter.Instance.AddEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
+        EventCenter.Instance.AddEventListener<SkillHitEnemyEventData>(GameEvent.SkillHitEnemy, OnSkillHitEnemy);
+        EventCenter.Instance.AddEventListener<SkillVisualEventData>(GameEvent.SkillVisualStarted, OnSkillVisualStarted);
         EnsurePlayerDamageConfig();
         EnsureCombatVolume(false);
         StartCameraRefreshRoutine();
@@ -131,7 +149,11 @@ public class CombatVolumeManager : MonoBehaviour
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
         EventCenter.Instance.RemoveEventListener<PlayerDamagedEventData>(GameEvent.PlayerDamaged, OnPlayerDamaged);
+        EventCenter.Instance.RemoveEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
+        EventCenter.Instance.RemoveEventListener<SkillHitEnemyEventData>(GameEvent.SkillHitEnemy, OnSkillHitEnemy);
+        EventCenter.Instance.RemoveEventListener<SkillVisualEventData>(GameEvent.SkillVisualStarted, OnSkillVisualStarted);
         StopDamagePulseRoutine();
+        StopSkillPulseRoutine();
         StopCameraRefreshRoutine();
         RestoreBaseValues();
     }
@@ -219,6 +241,37 @@ public class CombatVolumeManager : MonoBehaviour
         PlayPlayerDamagePulse(finalPulse);
     }
 
+    private void OnSkillCastStarted(SkillCastEventData eventData)
+    {
+        if (string.IsNullOrEmpty(eventData.postProcessKey))
+        {
+            return;
+        }
+
+        float intensity = eventData.skillType == SkillType.Push ? 0.45f : 1f;
+        PlaySkillPulse(eventData.skillType, eventData.postProcessKey, intensity);
+    }
+
+    private void OnSkillHitEnemy(SkillHitEnemyEventData eventData)
+    {
+        if (eventData.skillType != SkillType.Push)
+        {
+            return;
+        }
+
+        PlaySkillPulse(eventData.skillType, "Skill_Push_ImpactPulse", 0.85f);
+    }
+
+    private void OnSkillVisualStarted(SkillVisualEventData eventData)
+    {
+        if (eventData.skillType != SkillType.Grenade || string.IsNullOrEmpty(eventData.postProcessKey))
+        {
+            return;
+        }
+
+        PlaySkillPulse(eventData.skillType, eventData.postProcessKey, eventData.intensity);
+    }
+
     private CombatVolumeEffectConfig EnsurePlayerDamageConfig()
     {
         if (playerDamageConfig != null)
@@ -244,6 +297,115 @@ public class CombatVolumeManager : MonoBehaviour
         }
 
         return playerDamageConfig;
+    }
+
+    private CombatVolumeEffectConfig EnsureSkillEffectConfig(CombatVolumeEffectType effectType)
+    {
+        if (skillEffectConfigs.TryGetValue(effectType, out CombatVolumeEffectConfig cachedConfig))
+        {
+            return cachedConfig;
+        }
+
+        CombatVolumeEffectConfigAsset configAsset = ResolveSkillConfigAsset(effectType);
+        CombatVolumeEffectConfig config = configAsset != null
+            ? configAsset.CreateRuntimeConfig()
+            : CreateDefaultSkillConfig(effectType);
+
+        config?.ApplyMissingDefaults();
+        if (config != null)
+        {
+            skillEffectConfigs[effectType] = config;
+        }
+
+        return config;
+    }
+
+    private CombatVolumeEffectConfigAsset ResolveSkillConfigAsset(CombatVolumeEffectType effectType)
+    {
+        switch (effectType)
+        {
+            case CombatVolumeEffectType.Dodge:
+                if (dodgeConfigAsset == null && !string.IsNullOrEmpty(dodgeConfigResourcePath))
+                {
+                    dodgeConfigAsset = Resources.Load<CombatVolumeEffectConfigAsset>(dodgeConfigResourcePath);
+                }
+
+                return dodgeConfigAsset;
+            case CombatVolumeEffectType.Push:
+                if (pushConfigAsset == null && !string.IsNullOrEmpty(pushConfigResourcePath))
+                {
+                    pushConfigAsset = Resources.Load<CombatVolumeEffectConfigAsset>(pushConfigResourcePath);
+                }
+
+                return pushConfigAsset;
+            case CombatVolumeEffectType.Grenade:
+                if (grenadeConfigAsset == null && !string.IsNullOrEmpty(grenadeConfigResourcePath))
+                {
+                    grenadeConfigAsset = Resources.Load<CombatVolumeEffectConfigAsset>(grenadeConfigResourcePath);
+                }
+
+                return grenadeConfigAsset;
+            default:
+                return null;
+        }
+    }
+
+    private CombatVolumeEffectConfig CreateDefaultSkillConfig(CombatVolumeEffectType effectType)
+    {
+        switch (effectType)
+        {
+            case CombatVolumeEffectType.Dodge:
+                return CombatVolumeEffectConfig.CreateDefaultDodge();
+            case CombatVolumeEffectType.Push:
+                return CombatVolumeEffectConfig.CreateDefaultPush();
+            case CombatVolumeEffectType.Grenade:
+                return CombatVolumeEffectConfig.CreateDefaultGrenade();
+            default:
+                return null;
+        }
+    }
+
+    private void PlaySkillPulse(SkillType skillType, string effectKey, float intensity)
+    {
+        CombatVolumeEffectType effectType = ResolveSkillVolumeEffectType(skillType);
+        CombatVolumeEffectConfig config = EnsureSkillEffectConfig(effectType);
+        EnsureCombatVolume();
+        if (config == null || combatVolume == null || !hasSnapshot)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(effectKey) && !string.Equals(config.effectKey, effectKey))
+        {
+            return;
+        }
+
+        if (skillPulseRoutine != null)
+        {
+            StopCoroutine(skillPulseRoutine);
+        }
+
+        activeSkillConfig = config;
+        skillPulseRoutine = StartCoroutine(SkillPulseRoutine(Mathf.Clamp01(Mathf.Max(config.minIntensity, intensity))));
+
+        if (debugLog)
+        {
+            Debug.Log($"[CombatVolume] 技能画面反馈 Type={skillType} Intensity={intensity:0.00}", this);
+        }
+    }
+
+    private CombatVolumeEffectType ResolveSkillVolumeEffectType(SkillType skillType)
+    {
+        switch (skillType)
+        {
+            case SkillType.Push:
+                return CombatVolumeEffectType.Push;
+            case SkillType.Grenade:
+                return CombatVolumeEffectType.Grenade;
+            case SkillType.Dodge:
+            default:
+                return CombatVolumeEffectType.Dodge;
+        }
     }
 
     private void EnsureCombatVolume(bool allowRuntimeCreate = true)
@@ -456,6 +618,63 @@ public class CombatVolumeManager : MonoBehaviour
         damageBlend = 0f;
     }
 
+    private IEnumerator SkillPulseRoutine(float target)
+    {
+        CombatVolumeEffectConfig config = activeSkillConfig;
+        if (config == null)
+        {
+            skillPulseRoutine = null;
+            yield break;
+        }
+
+        yield return FadeSkillAmount(skillBlend, target, config.fadeInTime);
+
+        float holdEndTime = Time.unscaledTime + config.holdTime;
+        while (Time.unscaledTime < holdEndTime)
+        {
+            SetSkillAmount(target);
+            yield return null;
+        }
+
+        yield return FadeSkillAmount(skillBlend, 0f, config.fadeOutTime);
+        activeSkillConfig = null;
+        skillPulseRoutine = null;
+    }
+
+    private void StopSkillPulseRoutine()
+    {
+        if (skillPulseRoutine != null)
+        {
+            StopCoroutine(skillPulseRoutine);
+            skillPulseRoutine = null;
+        }
+
+        skillBlend = 0f;
+        activeSkillConfig = null;
+    }
+
+    private IEnumerator FadeSkillAmount(float from, float to, float duration)
+    {
+        duration = Mathf.Max(0.01f, duration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Smooth01(elapsed / duration);
+            SetSkillAmount(Mathf.Lerp(from, to, t));
+            yield return null;
+        }
+
+        SetSkillAmount(to);
+    }
+
+    private void SetSkillAmount(float amount)
+    {
+        skillBlend = Mathf.Clamp01(amount);
+        ApplyVolumeValues();
+    }
+
     private IEnumerator FadeDamageAmount(float from, float to, float duration)
     {
         duration = Mathf.Max(0.01f, duration);
@@ -496,24 +715,86 @@ public class CombatVolumeManager : MonoBehaviour
 
     private void ApplyVolumeValues()
     {
-        CombatVolumeEffectConfig config = EnsurePlayerDamageConfig();
-        if (config == null || !hasSnapshot || vignette == null || colorAdjustments == null)
+        if (!hasSnapshot || vignette == null || colorAdjustments == null)
         {
             return;
         }
 
-        float amount = Smooth01(damageBlend);
-        vignette.intensity.value = Mathf.Clamp01(baseVignetteIntensity + config.vignetteIntensityBoost * amount);
-        vignette.smoothness.value = Mathf.Clamp01(baseVignetteSmoothness + config.vignetteSmoothnessBoost * amount);
-        vignette.color.value = Color.Lerp(baseVignetteColor, config.vignetteColor, amount);
-        colorAdjustments.postExposure.value = basePostExposure + config.postExposureOffset * amount;
-        colorAdjustments.saturation.value = baseSaturation + config.saturationOffset * amount;
-        colorAdjustments.colorFilter.value = Color.Lerp(baseColorFilter, config.colorFilter, amount);
+        float vignetteIntensity = baseVignetteIntensity;
+        float vignetteSmoothness = baseVignetteSmoothness;
+        float postExposure = basePostExposure;
+        float saturation = baseSaturation;
+        float bloomIntensity = baseBloomIntensity;
+        Color vignetteColorValue = baseVignetteColor;
+        Color colorFilterValue = baseColorFilter;
+        Color bloomTintValue = baseBloomTint;
 
-        if (bloom != null && config.enableBloomPulse)
+        AccumulateVolumeEffect(
+            EnsurePlayerDamageConfig(),
+            Smooth01(damageBlend),
+            ref vignetteIntensity,
+            ref vignetteSmoothness,
+            ref vignetteColorValue,
+            ref postExposure,
+            ref saturation,
+            ref colorFilterValue,
+            ref bloomIntensity,
+            ref bloomTintValue);
+
+        AccumulateVolumeEffect(
+            activeSkillConfig,
+            Smooth01(skillBlend),
+            ref vignetteIntensity,
+            ref vignetteSmoothness,
+            ref vignetteColorValue,
+            ref postExposure,
+            ref saturation,
+            ref colorFilterValue,
+            ref bloomIntensity,
+            ref bloomTintValue);
+
+        vignette.intensity.value = Mathf.Clamp01(vignetteIntensity);
+        vignette.smoothness.value = Mathf.Clamp01(vignetteSmoothness);
+        vignette.color.value = vignetteColorValue;
+        colorAdjustments.postExposure.value = postExposure;
+        colorAdjustments.saturation.value = saturation;
+        colorAdjustments.colorFilter.value = colorFilterValue;
+
+        if (bloom != null)
         {
-            bloom.intensity.value = Mathf.Max(0f, baseBloomIntensity + config.bloomIntensityBoost * amount);
-            bloom.tint.value = Color.Lerp(baseBloomTint, config.colorFilter, amount * config.bloomTintBlend);
+            bloom.intensity.value = Mathf.Max(0f, bloomIntensity);
+            bloom.tint.value = bloomTintValue;
+        }
+    }
+
+    private void AccumulateVolumeEffect(
+        CombatVolumeEffectConfig config,
+        float amount,
+        ref float vignetteIntensity,
+        ref float vignetteSmoothness,
+        ref Color vignetteColorValue,
+        ref float postExposure,
+        ref float saturation,
+        ref Color colorFilterValue,
+        ref float bloomIntensity,
+        ref Color bloomTintValue)
+    {
+        if (config == null || amount <= 0f)
+        {
+            return;
+        }
+
+        vignetteIntensity += config.vignetteIntensityBoost * amount;
+        vignetteSmoothness += config.vignetteSmoothnessBoost * amount;
+        vignetteColorValue = Color.Lerp(vignetteColorValue, config.vignetteColor, amount);
+        postExposure += config.postExposureOffset * amount;
+        saturation += config.saturationOffset * amount;
+        colorFilterValue = Color.Lerp(colorFilterValue, config.colorFilter, amount);
+
+        if (config.enableBloomPulse)
+        {
+            bloomIntensity += config.bloomIntensityBoost * amount;
+            bloomTintValue = Color.Lerp(bloomTintValue, config.colorFilter, amount * config.bloomTintBlend);
         }
     }
 

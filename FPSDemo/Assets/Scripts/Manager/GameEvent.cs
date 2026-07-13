@@ -1,4 +1,5 @@
 using Combat;
+using Blessing.Data;
 using Enemy;
 using Enemy.Data;
 using PlayerData;
@@ -21,10 +22,13 @@ public enum GameEvent
     MobileSightReleased,
     MobileSightCanceled,
     MobileSwitchWeaponPressed,
+    MobileWeaponSlotPressed,
     PlayerWeaponChanged,
+    PlayerWeaponAmmoChanged,
     PlayerInventoryChanged,
     PlayerBattleGoldChanged,
     PlayerDamaged,
+    PlayerHealthChanged,
     WeaponAimCameraChanged,
     EnemySpawned,
     EnemyDamaged,
@@ -50,7 +54,11 @@ public enum GameEvent
     SkillChargeChanged,
     PlayerEnergyChanged,
     PlayerEnergyLevelUpReady,
-    PlayerEnergyLevelUp
+    PlayerEnergyLevelUp,
+    PlayerEnergyStateChanged,
+    PlayerEnergyBlessingSelectRequested,
+    PlayerEnergyBlessingSelectCanceled,
+    PlayerEnergyBlessingSelected
 }
 
 public readonly struct PlayerWeaponChangedEventData
@@ -76,6 +84,45 @@ public readonly struct PlayerWeaponChangedEventData
         this.weaponName = weaponName;
         this.currentAmmo = currentAmmo;
         this.reserveAmmo = reserveAmmo;
+    }
+}
+
+public readonly struct MobileWeaponSlotPressedEventData
+{
+    public readonly int weaponIndex;
+
+    public MobileWeaponSlotPressedEventData(int weaponIndex)
+    {
+        this.weaponIndex = Mathf.Max(0, weaponIndex);
+    }
+}
+
+public readonly struct PlayerWeaponAmmoChangedEventData
+{
+    public readonly int weaponIndex;
+    public readonly int weaponId;
+    public readonly string weaponName;
+    public readonly int currentAmmo;
+    public readonly int reserveAmmo;
+    public readonly int magazineSize;
+    public readonly int maxReserveAmmo;
+
+    public PlayerWeaponAmmoChangedEventData(
+        int weaponIndex,
+        int weaponId,
+        string weaponName,
+        int currentAmmo,
+        int reserveAmmo,
+        int magazineSize,
+        int maxReserveAmmo)
+    {
+        this.weaponIndex = Mathf.Max(0, weaponIndex);
+        this.weaponId = Mathf.Max(0, weaponId);
+        this.weaponName = weaponName ?? string.Empty;
+        this.currentAmmo = Mathf.Max(0, currentAmmo);
+        this.reserveAmmo = Mathf.Max(0, reserveAmmo);
+        this.magazineSize = Mathf.Max(1, magazineSize);
+        this.maxReserveAmmo = Mathf.Max(0, maxReserveAmmo);
     }
 }
 
@@ -146,6 +193,66 @@ public readonly struct PlayerEnergyLevelUpEventData
     }
 }
 
+public readonly struct PlayerEnergyStateChangedEventData
+{
+    public readonly PlayerEnergyState previousState;
+    public readonly PlayerEnergyState currentState;
+    public readonly int level;
+    public readonly float currentEnergy;
+    public readonly float maxEnergy;
+
+    public PlayerEnergyStateChangedEventData(
+        PlayerEnergyState previousState,
+        PlayerEnergyState currentState,
+        int level,
+        float currentEnergy,
+        float maxEnergy)
+    {
+        this.previousState = previousState;
+        this.currentState = currentState;
+        this.level = Mathf.Max(1, level);
+        this.maxEnergy = Mathf.Max(1f, maxEnergy);
+        this.currentEnergy = Mathf.Clamp(currentEnergy, 0f, this.maxEnergy);
+    }
+}
+
+public readonly struct PlayerEnergyBlessingSelectedEventData
+{
+    public readonly int cardIndex;
+    public readonly int ownedBuffCount;
+    public readonly int blessingId;
+    public readonly BlessingTier tier;
+    public readonly int stackCount;
+    public readonly float value;
+    public readonly string blessingName;
+    public readonly string description;
+
+    public PlayerEnergyBlessingSelectedEventData(int cardIndex, int ownedBuffCount)
+        : this(cardIndex, ownedBuffCount, 0, BlessingTier.Normal, 0, 0f, string.Empty, string.Empty)
+    {
+    }
+
+    public PlayerEnergyBlessingSelectedEventData(
+        int cardIndex,
+        int ownedBuffCount,
+        int blessingId,
+        BlessingTier tier,
+        int stackCount,
+        float value,
+        string blessingName,
+        string description)
+    {
+        this.cardIndex = Mathf.Max(0, cardIndex);
+        this.ownedBuffCount = Mathf.Max(0, ownedBuffCount);
+        this.blessingId = Mathf.Max(0, blessingId);
+        this.tier = tier;
+        this.stackCount = Mathf.Max(0, stackCount);
+        this.value = value;
+        this.blessingName = blessingName ?? string.Empty;
+        this.description = description ?? string.Empty;
+    }
+}
+
 public readonly struct PlayerDamagedEventData
 {
     public readonly PlayerController player;
@@ -159,6 +266,29 @@ public readonly struct PlayerDamagedEventData
         this.damage = Mathf.Max(0, damage);
         this.currentHp = Mathf.Max(0, currentHp);
         this.maxHp = Mathf.Max(1, maxHp);
+    }
+}
+
+public readonly struct PlayerHealthChangedEventData
+{
+    public readonly PlayerController player;
+    public readonly int currentHp;
+    public readonly int maxHp;
+    public readonly int hpDelta;
+    public readonly int maxHpDelta;
+
+    public PlayerHealthChangedEventData(
+        PlayerController player,
+        int currentHp,
+        int maxHp,
+        int hpDelta,
+        int maxHpDelta)
+    {
+        this.player = player;
+        this.currentHp = Mathf.Max(0, currentHp);
+        this.maxHp = Mathf.Max(1, maxHp);
+        this.hpDelta = hpDelta;
+        this.maxHpDelta = maxHpDelta;
     }
 }
 
@@ -345,6 +475,7 @@ public readonly struct SkillCastEventData
     public readonly Vector3 origin;
     public readonly Vector3 direction;
     public readonly string animationKey;
+    public readonly string alternateAnimationKey;
     public readonly string postProcessKey;
     public readonly string fovEffectKey;
     public readonly string cameraShakeKey;
@@ -359,6 +490,7 @@ public readonly struct SkillCastEventData
         this.origin = origin;
         this.direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
         animationKey = config != null ? config.animationKey : string.Empty;
+        alternateAnimationKey = config != null ? config.alternateAnimationKey : string.Empty;
         postProcessKey = config != null ? config.postProcessKey : string.Empty;
         fovEffectKey = config != null ? config.fovEffectKey : string.Empty;
         cameraShakeKey = config != null ? config.cameraShakeKey : string.Empty;

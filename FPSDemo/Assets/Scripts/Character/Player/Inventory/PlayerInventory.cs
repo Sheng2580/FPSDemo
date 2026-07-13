@@ -1,8 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerInventory : MonoBehaviour
 {
+    private const string CombatSceneName = "Combat";
+
     [Header("武器")]
     [SerializeField] private int startWeaponIndex;
     [SerializeField] private List<CarriedWeaponSlot> carriedWeapons = new List<CarriedWeaponSlot>();
@@ -13,10 +16,12 @@ public class PlayerInventory : MonoBehaviour
 
     private int _currentWeaponIndex = -1;
     private bool _initialized;
+    private float _battleGoldGainMultiplier = 1f;
 
     public int CurrentWeaponIndex => _currentWeaponIndex;
     public int WeaponCount => carriedWeapons != null ? carriedWeapons.Count : 0;
     public int BattleGold => battleGold;
+    public float BattleGoldGainMultiplier => _battleGoldGainMultiplier;
     public IReadOnlyList<CarriedWeaponSlot> CarriedWeapons => carriedWeapons;
     public IReadOnlyList<InventoryItemSlot> Items => items;
     public CarriedWeaponSlot CurrentWeapon => GetWeaponSlot(_currentWeaponIndex);
@@ -29,11 +34,13 @@ public class PlayerInventory : MonoBehaviour
     private void OnEnable()
     {
         EventCenter.Instance.AddEventListener(GameEvent.MobileSwitchWeaponPressed, OnSwitchWeaponPressed);
+        EventCenter.Instance.AddEventListener<MobileWeaponSlotPressedEventData>(GameEvent.MobileWeaponSlotPressed, OnWeaponSlotPressed);
     }
 
     private void OnDisable()
     {
         EventCenter.Instance.RemoveEventListener(GameEvent.MobileSwitchWeaponPressed, OnSwitchWeaponPressed);
+        EventCenter.Instance.RemoveEventListener<MobileWeaponSlotPressedEventData>(GameEvent.MobileWeaponSlotPressed, OnWeaponSlotPressed);
     }
 
     public void InitForNewRun()
@@ -45,6 +52,7 @@ public class PlayerInventory : MonoBehaviour
 
         carriedWeapons ??= new List<CarriedWeaponSlot>();
         items ??= new List<InventoryItemSlot>();
+        _battleGoldGainMultiplier = 1f;
 
         for (int i = 0; i < carriedWeapons.Count; i++)
         {
@@ -69,6 +77,7 @@ public class PlayerInventory : MonoBehaviour
         _initialized = false;
 
         InitForNewRun();
+        OpenHpAndWeaponCanvasWhenReady();
     }
 
     public bool SwitchNextWeapon()
@@ -130,8 +139,14 @@ public class PlayerInventory : MonoBehaviour
             return;
         }
 
-        battleGold += amount;
+        int finalAmount = Mathf.Max(1, Mathf.RoundToInt(amount * Mathf.Max(0f, _battleGoldGainMultiplier)));
+        battleGold += finalAmount;
         SendBattleGoldChangedEvent();
+    }
+
+    public void ApplyBattleGoldGainMultiplier(float multiplier)
+    {
+        _battleGoldGainMultiplier = Mathf.Max(0f, _battleGoldGainMultiplier * Mathf.Max(0f, multiplier));
     }
 
     public void AddItem(int itemId, int count)
@@ -179,6 +194,11 @@ public class PlayerInventory : MonoBehaviour
     private void OnSwitchWeaponPressed()
     {
         SwitchNextWeapon();
+    }
+
+    private void OnWeaponSlotPressed(MobileWeaponSlotPressedEventData eventData)
+    {
+        SetCurrentWeaponIndex(eventData.weaponIndex, false);
     }
 
     private CarriedWeaponSlot GetWeaponSlot(int index)
@@ -298,5 +318,52 @@ public class PlayerInventory : MonoBehaviour
         EventCenter.Instance.EventTrigger(
             GameEvent.PlayerBattleGoldChanged,
             new PlayerBattleGoldChangedEventData(battleGold));
+    }
+
+    private void OpenHpAndWeaponCanvasWhenReady()
+    {
+        if (SceneManager.GetActiveScene().name != CombatSceneName)
+        {
+            return;
+        }
+
+        int validWeaponCount = GetValidWeaponCount();
+        if (validWeaponCount <= 0)
+        {
+            Debug.LogWarning("[PlayerInventory] 武器列表还没准备好 跳过 HpAndWeaponCanvas 打开", this);
+            return;
+        }
+
+        UIManager.Instance.OpenPanelAsy<HpAndWeaponCanvas>(canvas =>
+        {
+            if (canvas == null)
+            {
+                Debug.LogError("[PlayerInventory] HpAndWeaponCanvas 打开失败", this);
+                return;
+            }
+
+            HideOtherHpAndWeaponCanvases(canvas);
+            canvas.RebuildForInventory(this);
+        });
+    }
+
+    private static void HideOtherHpAndWeaponCanvases(HpAndWeaponCanvas activeCanvas)
+    {
+        HpAndWeaponCanvas[] canvases = FindObjectsOfType<HpAndWeaponCanvas>(true);
+        if (canvases == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            HpAndWeaponCanvas canvas = canvases[i];
+            if (canvas == null || canvas == activeCanvas)
+            {
+                continue;
+            }
+
+            canvas.Hide();
+        }
     }
 }

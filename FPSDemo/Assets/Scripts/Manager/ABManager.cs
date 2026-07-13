@@ -511,12 +511,18 @@ public class ABManager : UnitySingleTonMono<ABManager>
 
         AssetBundleRequest request = ab.LoadAssetAsync<T>(resName);
         yield return request;
-        if (request.asset == null)
+        Object loadedAsset = request.asset;
+        if (loadedAsset == null)
+        {
+            yield return LoadAssetByFileNameAsync(ab, resName, typeof(T), asset => loadedAsset = asset);
+        }
+
+        if (loadedAsset == null)
         {
             Debug.LogError($"[ABManager] Raw asset load failed: {abName}/{resName}");
         }
 
-        callback?.Invoke(request.asset as T);
+        callback?.Invoke(loadedAsset as T);
     }
 
     private IEnumerator ReallyLoadAsset(string abName, string resName, Type type, UnityAction<Object> callback)
@@ -535,11 +541,55 @@ public class ABManager : UnitySingleTonMono<ABManager>
 
         AssetBundleRequest request = ab.LoadAssetAsync(resName, type);
         yield return request;
-        if (request.asset == null)
+        Object loadedAsset = request.asset;
+        if (loadedAsset == null)
+        {
+            yield return LoadAssetByFileNameAsync(ab, resName, type, asset => loadedAsset = asset);
+        }
+
+        if (loadedAsset == null)
         {
             Debug.LogError($"[ABManager] Raw asset load failed: {abName}/{resName}");
         }
 
+        callback?.Invoke(loadedAsset);
+    }
+
+    private IEnumerator LoadAssetByFileNameAsync(AssetBundle ab, string resName, Type type, UnityAction<Object> callback)
+    {
+        if (ab == null || string.IsNullOrEmpty(resName))
+        {
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        string[] assetNames = ab.GetAllAssetNames();
+        string lowerResName = resName.ToLowerInvariant();
+        string matchedAssetName = null;
+        for (int i = 0; i < assetNames.Length; i++)
+        {
+            string assetName = assetNames[i];
+            if (string.IsNullOrEmpty(assetName))
+            {
+                continue;
+            }
+
+            string fileName = Path.GetFileNameWithoutExtension(assetName);
+            if (string.Equals(fileName, lowerResName, StringComparison.OrdinalIgnoreCase))
+            {
+                matchedAssetName = assetName;
+                break;
+            }
+        }
+
+        if (string.IsNullOrEmpty(matchedAssetName))
+        {
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        AssetBundleRequest request = ab.LoadAssetAsync(matchedAssetName, type);
+        yield return request;
         callback?.Invoke(request.asset);
     }
 

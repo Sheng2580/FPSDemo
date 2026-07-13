@@ -1,0 +1,79 @@
+[
+  {
+    "id": "4",
+    "buildingid": 4,
+    "productid": "9",
+    "cost": [
+      [
+        "1",
+        10
+      ]
+    ],
+    "costingturn": 2,
+    "workerspeedup": 0.2
+  },
+  {
+    "id": "2",
+    "buildingid": 2,
+    "productid": "10",
+    "cost": [
+      [
+        "2",
+        8
+      ],
+      [
+        "3",
+        5
+      ]
+    ],
+    "costingturn": 1,
+    "workerspeedup": 0.15
+  },
+  {
+    "id": "5",
+    "buildingid": 5,
+    "productid": "11",
+    "cost": [
+      [
+        "4",
+        12
+      ],
+      [
+        "5",
+        6
+      ]
+    ],
+    "costingturn": 3,
+    "workerspeedup": 0.3
+  },
+  {
+    "id": "3",
+    "buildingid": 3,
+    "productid": "12",
+    "cost": [
+      [
+        "6",
+        15
+      ],
+      [
+        "7",
+        20
+      ]
+    ],
+    "costingturn": 4,
+    "workerspeedup": 0.4
+  },
+  {
+    "id": "1",
+    "buildingid": 1,
+    "productid": "13",
+    "cost": [
+      [
+        "8",
+        5
+      ]
+    ],
+    "costingturn": 5,
+    "workerspeedup": 0.5
+  }
+]

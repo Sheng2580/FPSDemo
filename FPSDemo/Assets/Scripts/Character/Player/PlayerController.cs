@@ -186,6 +186,9 @@ public class PlayerController : CharacterBase<PlayerModel>
         EventCenter.Instance.EventTrigger(
             GameEvent.PlayerDamaged,
             new PlayerDamagedEventData(this, damageAmount, Stats.RuntimeData.currentHp, Stats.RuntimeData.maxHp));
+        EventCenter.Instance.EventTrigger(
+            GameEvent.PlayerHealthChanged,
+            new PlayerHealthChangedEventData(this, Stats.RuntimeData.currentHp, Stats.RuntimeData.maxHp, -damageAmount, 0));
         if (debugDamageLog)
         {
             Debug.Log($"玩家受到伤害 {damageAmount} 当前生命 {Stats.RuntimeData.currentHp}", this);

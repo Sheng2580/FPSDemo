@@ -1,0 +1,202 @@
+[
+  {
+    "id": "1001",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "哟，来啦？随便逛。不着急买的话，坐会儿唠两句也行？",
+    "nextDialogueId": "",
+    "isStart": true,
+    "DialogueTabControlNum": 2
+  },
+  {
+    "id": "1002",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "害，说起来，我这两天刷游戏评论区，真给我看麻了",
+    "nextDialogueId": "1004_1",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1003",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "说起来还有个更离谱的，前阵子刷到有人天天发那种糊得不行的图，到处传着要避雷，玩个游戏搞得跟谍战对线似的",
+    "nextDialogueId": "",
+    "isStart": false,
+    "DialogueTabControlNum": 2
+  },
+  {
+    "id": "1004_1",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "本来想搜个新活动攻略，结果点进去热评全在搞“赛博贞操锁”。",
+    "nextDialogueId": "1004_2",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1004_2",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "玩这个的骂玩那个的是“电子盆栽”，玩那个的嘲讽玩这个的是“流水线罐头”。",
+    "nextDialogueId": "1004_3",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1004_3",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "恨不得给游戏公司上个牌坊，证明自己跟的是“清白名门”。",
+    "nextDialogueId": "1004_4",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1004_4",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "好家伙，不知道的还以为他们在选宗教裁判所所长呢。",
+    "nextDialogueId": "1006_1",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1005",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "哈哈哈哈行，不唠这些糟心的了。看中啥直接跟我说，都给你算老熟人价。！",
+    "nextDialogueId": "",
+    "isStart": false,
+    "DialogueTabControlNum": 1
+  },
+  {
+    "id": "1006_1",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "还有更行为艺术的。前阵子刷到俩角色，就因为刘海分界线的像素点数量差不多，评论区直接开庭了。",
+    "nextDialogueId": "1006_2",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1006_2",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "这边说“我家的神圣分割线始于三年前”，那边喊“我家的黄金比例稿子更早”，那叫一个证据确凿。",
+    "nextDialogueId": "1006_3",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1006_3",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "唉，有这劲头，居委会大妈调解家庭矛盾都没他们专业。",
+    "nextDialogueId": "1007",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1007",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "最绝的还是双标，自己喜欢的游戏出点问题，评论区全是“瑕不掩瑜”，别家有点小瑕疵，直接冲烂了骂人家业界毒瘤，也是没谁了",
+    "nextDialogueId": "1008",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1008",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "反正我是觉得，玩个游戏而已，自己开心就完了，天天撕来撕去的，多累啊。",
+    "nextDialogueId": "",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1009_1",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "你看有些厂商，那叫一个会啊。天天在社区里养蛊，放点不知真假的消息，让两波玩家自己打去。",
+    "nextDialogueId": "1009_2",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1009_2",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "今天这个“内鬼”爆个料，明天那个“舅舅党”辟个谣。玩家为了证明自己氪的金最高贵，撕得头破血流。",
+    "nextDialogueId": "1009_3",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1009_3",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "厂商在后面数着流量和流水，估计嘴都笑歪了。这不就跟看斗蛐蛐一样么？",
+    "nextDialogueId": "1010_1",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1010_1",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "最逗的是，玩家撕赢了又能咋样？是游戏公司给分红啊，还是发个“荣誉股东”的锦旗啊？",
+    "nextDialogueId": "1010_2",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1010_2",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "最后除了落一肚子气和偏头痛，啥也没捞着。还觉得自己是“为爱发电”的骑士。",
+    "nextDialogueId": "1010_3",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1010_3",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "其实在人家眼里，就是行走的KPI和免费水军，顶多算个情绪价值提款机。",
+    "nextDialogueId": "1010_4",
+    "isStart": false,
+    "DialogueTabControlNum": 0
+  },
+  {
+    "id": "1010_4",
+    "npcID": 0,
+    "name": "爱玩游戏的塔菲",
+    "occupation": "[贩卖道具]",
+    "dialogue": "啧，说多了，我这小卖部可没卖解忧药。",
+    "nextDialogueId": "",
+    "isStart": false,
+    "DialogueTabControlNum": 1
+  }
+]

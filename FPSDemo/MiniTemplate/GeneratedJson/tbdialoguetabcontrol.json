@@ -1,0 +1,58 @@
+[
+  {
+    "id": "2001",
+    "dialogueID": "1001",
+    "type": 0,
+    "text": "随便聊聊",
+    "nextDialogueId": "1002",
+    "actionKey": ""
+  },
+  {
+    "id": "2002",
+    "dialogueID": "1001",
+    "type": 0,
+    "text": "最近有啥瓜不？",
+    "nextDialogueId": "1003",
+    "actionKey": ""
+  },
+  {
+    "id": "2003",
+    "dialogueID": "1003",
+    "type": 0,
+    "text": "这也太魔怔了，还有更离谱的吗？",
+    "nextDialogueId": "1009_1",
+    "actionKey": ""
+  },
+  {
+    "id": "2006",
+    "dialogueID": "1003",
+    "type": 0,
+    "text": "算了别说了，越听越累，我要买东西",
+    "nextDialogueId": "1005",
+    "actionKey": ""
+  },
+  {
+    "id": "2004",
+    "dialogueID": "1001",
+    "type": 1,
+    "text": "我要买东西",
+    "nextDialogueId": "",
+    "actionKey": "测试参数"
+  },
+  {
+    "id": "2005",
+    "dialogueID": "1005",
+    "type": 1,
+    "text": "买东西",
+    "nextDialogueId": "",
+    "actionKey": "测试参数"
+  },
+  {
+    "id": "2007",
+    "dialogueID": "1010_4",
+    "type": 0,
+    "text": "听你这么一说，我还是花钱买点实在的吧。",
+    "nextDialogueId": "1005",
+    "actionKey": ""
+  }
+]

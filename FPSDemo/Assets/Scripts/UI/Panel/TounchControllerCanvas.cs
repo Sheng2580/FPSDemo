@@ -5,15 +5,6 @@ using UnityEngine.UI;
 [UICanvas(UILoadType.AssetBundle, UILayer.Touch)]
 public class TounchControllerCanvas : BaseCanvas
 {
-    [Header("技能按钮")]
-    [SerializeField] private bool ensureSkillButtons = true;
-    [SerializeField] private Vector2 skillButtonSize = new Vector2(86f, 86f);
-    [SerializeField] private Vector2 dodgeButtonPosition = new Vector2(40f, 30f);
-    [SerializeField] private Vector2 pushButtonPosition = new Vector2(145f, -30f);
-    [SerializeField] private Vector2 grenadeButtonPosition = new Vector2(40f, -90f);
-    [SerializeField] private Color skillButtonColor = new Color(1f, 1f, 1f, 0.82f);
-    [SerializeField] private Color skillLabelColor = new Color(1f, 1f, 1f, 0.92f);
-
     private AkilaCrosshairDriver _crosshairDriver;
     private RectTransform _rightActionGroup;
     private MoveJoystick _moveJoystick;
@@ -28,14 +19,14 @@ public class TounchControllerCanvas : BaseCanvas
         base.Awake();
         EnsureTouchRuntimeLayout();
         EnsureAkilaCrosshair();
-        EnsureSkillButtons();
+        BindSkillButtonsFromPrefab();
     }
 
     private void OnEnable()
     {
         EnsureTouchRuntimeLayout();
         EnsureAkilaCrosshair();
-        EnsureSkillButtons();
+        BindSkillButtonsFromPrefab();
     }
 
     private void EnsureTouchRuntimeLayout()
@@ -122,116 +113,39 @@ public class TounchControllerCanvas : BaseCanvas
         _crosshairDriver.EnsureBuilt();
     }
 
-    private void EnsureSkillButtons()
+    private void BindSkillButtonsFromPrefab()
     {
-        if (!ensureSkillButtons)
-        {
-            return;
-        }
-
         _rightActionGroup ??= transform.Find("RightActionGroup") as RectTransform;
         if (_rightActionGroup == null)
         {
             return;
         }
 
-        Sprite buttonSprite = FindReferenceButtonSprite();
-        CreateOrUpdateSkillButton("DodgeButton", SkillType.Dodge, "闪", dodgeButtonPosition, buttonSprite);
-        CreateOrUpdateSkillButton("PushButton", SkillType.Push, "推", pushButtonPosition, buttonSprite);
-        CreateOrUpdateSkillButton("GrenadeButton", SkillType.Grenade, "雷", grenadeButtonPosition, buttonSprite);
+        BindSkillButton("DodgeButton", SkillType.Dodge, "闪");
+        BindSkillButton("PushButton", SkillType.Push, "推");
+        BindSkillButton("GrenadeButton", SkillType.Grenade, "雷");
     }
 
-    private void CreateOrUpdateSkillButton(
-        string objectName,
-        SkillType skillType,
-        string labelText,
-        Vector2 anchoredPosition,
-        Sprite buttonSprite)
+    private void BindSkillButton(string objectName, SkillType skillType, string labelText)
     {
-        RectTransform buttonRect = FindOrCreateChildRect(_rightActionGroup, objectName);
-        buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
-        buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
-        buttonRect.pivot = new Vector2(0.5f, 0.5f);
-        buttonRect.anchoredPosition = anchoredPosition;
-        buttonRect.sizeDelta = skillButtonSize;
-        buttonRect.localScale = Vector3.one;
-        buttonRect.localRotation = Quaternion.identity;
-
-        Image buttonImage = buttonRect.GetComponent<Image>();
-        if (buttonImage == null)
+        // 技能按钮必须在预制体里配置，脚本只绑定输入和状态刷新
+        RectTransform buttonRect = _rightActionGroup.Find(objectName) as RectTransform;
+        if (buttonRect == null)
         {
-            buttonImage = buttonRect.gameObject.AddComponent<Image>();
+            Debug.LogWarning($"技能按钮 {objectName} 没有在预制体里配置", this);
+            return;
         }
 
-        buttonImage.sprite = buttonSprite;
-        buttonImage.color = skillButtonColor;
-        buttonImage.raycastTarget = true;
-
-        Text label = EnsureSkillLabel(buttonRect, labelText);
+        Image buttonImage = buttonRect.GetComponent<Image>();
+        SetImageRaycastTarget(buttonRect, true);
+        Text label = buttonRect.GetComponentInChildren<Text>(true);
         MobileSkillButton skillButton = buttonRect.GetComponent<MobileSkillButton>();
         if (skillButton == null)
         {
-            skillButton = buttonRect.gameObject.AddComponent<MobileSkillButton>();
+            Debug.LogWarning($"技能按钮 {objectName} 缺少 MobileSkillButton", this);
+            return;
         }
 
         skillButton.Configure(skillType, labelText, buttonImage, label);
-    }
-
-    private Text EnsureSkillLabel(RectTransform buttonRect, string labelText)
-    {
-        RectTransform labelRect = buttonRect.Find("Label") as RectTransform;
-        if (labelRect == null)
-        {
-            GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-            labelRect = labelObject.transform as RectTransform;
-            labelRect.SetParent(buttonRect, false);
-        }
-
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = Vector2.zero;
-        labelRect.offsetMax = Vector2.zero;
-        labelRect.localScale = Vector3.one;
-        labelRect.localRotation = Quaternion.identity;
-
-        Text label = labelRect.GetComponent<Text>();
-        label.text = labelText;
-        label.alignment = TextAnchor.MiddleCenter;
-        label.color = skillLabelColor;
-        label.fontSize = 32;
-        label.resizeTextForBestFit = true;
-        label.resizeTextMinSize = 18;
-        label.resizeTextMaxSize = 34;
-        label.raycastTarget = false;
-        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        return label;
-    }
-
-    private RectTransform FindOrCreateChildRect(RectTransform parent, string objectName)
-    {
-        Transform child = parent.Find(objectName);
-        RectTransform rect = child as RectTransform;
-        if (rect != null)
-        {
-            return rect;
-        }
-
-        GameObject obj = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        rect = obj.transform as RectTransform;
-        rect.SetParent(parent, false);
-        obj.layer = parent.gameObject.layer;
-        return rect;
-    }
-
-    private Sprite FindReferenceButtonSprite()
-    {
-        Image reloadImage = transform.Find("RightActionGroup/ReloadButton")?.GetComponent<Image>();
-        if (reloadImage != null && reloadImage.sprite != null)
-        {
-            return reloadImage.sprite;
-        }
-
-        Image jumpImage = transform.Find("RightActionGroup/JumpButton")?.GetComponent<Image>();
-        return jumpImage != null ? jumpImage.sprite : null;
     }
 }

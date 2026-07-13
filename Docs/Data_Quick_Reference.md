@@ -2,7 +2,7 @@
 
 用途：快速查看当前已经应用到项目里的数据值、来源、用法和维护位置。数据层每次改武器、敌人、波次、AI Profile、ABRes key、掉落、金币、Buff、道具或存档数据时，都必须同步更新本表。
 
-更新时间：2026-07-12
+更新时间：2026-07-13
 
 ## 维护规则
 
@@ -113,6 +113,9 @@
 | 效果 | 来源文件 | effectType | effectKey | fadeIn / hold / fadeOut | minIntensity | damageScale | missingHpScale | enableBloomPulse | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Player Damage | `PlayerDamageVolumeEffectConfig.asset` | PlayerDamage | CombatVolume_PlayerDamage | 0.08 / 0.08 / 0.32 | 0.35 | 0.08 | 0.35 | true | `CombatVolumeManager` 监听玩家受伤后按配置淡入、保持、淡出 |
+| Dodge | `DodgeVolumeEffectConfig.asset` | Dodge | Skill_Dodge_SprintPulse | 0.045 / 0.04 / 0.18 | 0.65 | 0 | 0 | false | `CombatVolumeManager` 监听闪避技能后播放轻量冷色速度感脉冲 |
+| Push | `PushVolumeEffectConfig.asset` | Push | Skill_Push_ImpactPulse | 0.035 / 0.05 / 0.16 | 0.55 | 0 | 0 | true | `CombatVolumeManager` 监听推人技能和推中敌人后播放冲击脉冲 |
+| Grenade | `GrenadeVolumeEffectConfig.asset` | Grenade | Skill_Grenade_ExplosionPulse | 0.04 / 0.06 / 0.22 | 0.7 | 0 | 0 | true | `CombatVolumeManager` 监听手雷爆炸视觉事件后播放爆炸脉冲 |
 
 ### CombatVolume PlayerDamage 默认数值
 
@@ -127,7 +130,7 @@
 | bloomIntensityBoost | 0.25 | `PlayerDamageVolumeEffectConfig.asset` | Bloom 脉冲增量 |
 | bloomTintBlend | 0.35 | `PlayerDamageVolumeEffectConfig.asset` | Bloom 染色混合强度 |
 
-规则：CombatVolume 数据层只维护淡入淡出时间、强度计算参数、颜色和后处理数值，不硬引用场景 `Volume`、材质、Shader 或 prefab 实例。表现层只按 `CombatVolumeEffectConfigAsset` 消费配置，`Dodge / Push / Grenade` 类型先在 `CombatVolumeEffectType` 中预留，具体资源和数值后续需要时再补。
+规则：CombatVolume 数据层只维护淡入淡出时间、强度计算参数、颜色和后处理数值，不硬引用场景 `Volume`、材质、Shader 或 prefab 实例。表现层只按 `CombatVolumeEffectConfigAsset` 消费配置。`Dodge / Push / Grenade` 已接入 Resources 配置并由技能事件驱动。
 
 ## 玩家局内能量配置
 
@@ -157,6 +160,44 @@
 | PlayerEnergyLevelUp | `PlayerEnergyLevelUpEventData(level, currentEnergy, maxEnergy, autoLevelUp)` | `PlayerEnergyRuntime` | 自动升级或祝福确认后触发 |
 
 规则：HUD 只监听 `EnemyDamaged` 显示伤害数字、监听 `PlayerEnergyChanged` 显示能量变化，不计算能量成长数值。能量增长来源当前监听 `EnemyDamaged`，只统计 `DamageInfo.attacker` 属于玩家的伤害；后续如果统一伤害结算事件稳定，可以切换到 `DamageResolved`。
+
+## 正式祝福数据
+
+正式主来源：`FPSDemo/MiniTemplate/Datas/#blessing.xlsx`
+
+测试 JSON：`FPSDemo/MiniTemplate/GeneratedJson/tbblessing.json`
+
+Unity 兜底入口：`FPSDemo/Assets/Scripts/Blessing/Data` 下的 `BlessingConfig / BlessingConfigAsset / BlessingConfigDatabaseAsset`，只用于当前 Resources 兜底或后续 Luban 适配，不作为正式文案和数值主来源。
+
+| blessingId | blessingName | category | targetType | unlockEnergyLevel | unlockWave | weight | maxStack | requiredWeaponId | requiredSkillType | stat | modifyType | Normal / Plus / PlusPlus | iconKey |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1001 | 生命强化 | PlayerStat | Player | 1 | 1 | 100 | 5 | 0 | 空 | MaxHp | Add | 20 / 35 / 55 | Blessing_MaxHp |
+| 1002 | 疾跑本能 | PlayerStat | Player | 1 | 1 | 90 | 5 | 0 | 空 | MoveSpeed | PercentAdd | 0.08 / 0.14 / 0.22 | Blessing_MoveSpeed |
+| 1003 | 战斗兴奋 | PlayerStat | Player | 1 | 1 | 80 | 5 | 0 | 空 | EnergyGain | PercentAdd | 0.10 / 0.18 / 0.30 | Blessing_EnergyGain |
+| 1101 | 枪械专注 | WeaponStat | CurrentWeapon | 1 | 1 | 100 | 5 | 0 | 空 | WeaponDamage | PercentAdd | 0.12 / 0.20 / 0.32 | Blessing_CurrentWeaponDamage |
+| 1102 | 扩容弹匣 | WeaponStat | CurrentWeapon | 1 | 1 | 85 | 4 | 0 | 空 | WeaponMagazine | PercentAdd | 0.20 / 0.32 / 0.50 | Blessing_CurrentWeaponMagazine |
+| 1103 | 稳定握持 | WeaponStat | CurrentWeapon | 1 | 1 | 80 | 4 | 0 | 空 | WeaponRecoil | PercentAdd | -0.15 / -0.24 / -0.36 | Blessing_CurrentWeaponRecoil |
+| 1201 | 快速冷却 | SkillStat | Skill | 1 | 1 | 90 | 5 | 0 | 空 | SkillCooldown | PercentAdd | -0.10 / -0.16 / -0.25 | Blessing_SkillCooldown |
+| 1202 | 爆破储备 | SkillStat | Skill | 2 | 2 | 65 | 3 | 0 | Grenade | SkillMaxCount | Add | 1 / 1 / 2 | Blessing_GrenadeMaxCount |
+| 1301 | 贪婪本能 | Economy | Economy | 1 | 1 | 75 | 5 | 0 | 空 | GoldGain | PercentAdd | 0.20 / 0.32 / 0.50 | Blessing_GoldGain |
+
+字段说明：`id` 是基础祝福 ID，同一次三选一按该 ID 去重，不能出现同一基础祝福的不同 tier；`tier` 是默认展示等级，正式抽取时由等级概率表先抽本次 `BlessingTier`；`requiredWeaponId=0` 表示不限制武器；`requiredSkillType` 为空表示不限制技能；触发型字段 `triggerType / triggerChance / triggerCooldown / triggerEffectKey / triggerDamageMultiplier / triggerRadius / triggerChainCount / triggerMaxActiveCount` 已在表中预留，第一批测试数据先全部为 `None / 0`。
+
+## 祝福等级概率
+
+正式主来源：`FPSDemo/MiniTemplate/Datas/#blessing_tier_probability.xlsx`
+
+测试 JSON：`FPSDemo/MiniTemplate/GeneratedJson/tbblessing_tier_probability.json`
+
+| minEnergyLevel | Normal | Plus | PlusPlus | 说明 |
+| --- | --- | --- | --- | --- |
+| 1 | 100 | 0 | 0 | Lv1 |
+| 2 | 80 | 20 | 0 | Lv2 |
+| 3 | 65 | 30 | 5 | Lv3 |
+| 4 | 50 | 40 | 10 | Lv4 |
+| 5 | 40 | 45 | 15 | Lv5+ |
+
+规则：`BlessingRoller` 根据当前能量等级先抽 `BlessingTier`，再按武器、技能、解锁等级、最大层数过滤基础祝福，最后按 `weight` 生成三选一候选。祝福效果后续写入数值修正层，不直接改 `PlayerBaseConfig / WeaponConfig / PlayerSkillConfig`。
 
 ## 玩家技能配置
 

@@ -53,6 +53,7 @@ namespace Weapon.State
             controller.RuntimeData.isReloading = false;
             controller.CurrentWeaponView?.SetAmmo(controller.RuntimeData.currentAmmoInMagazine);
             controller.CurrentWeaponView?.SetReloading(false);
+            controller.TriggerWeaponAmmoChanged();
             controller.ChangeState(WeaponStateType.Idle);
         }
 
@@ -94,6 +95,7 @@ namespace Weapon.State
 
             LoadSingleRoundStep();
             controller.CurrentWeaponView?.SetAmmo(controller.RuntimeData.currentAmmoInMagazine);
+            controller.TriggerWeaponAmmoChanged();
 
             if (ShouldInterruptSingleRoundReload())
             {

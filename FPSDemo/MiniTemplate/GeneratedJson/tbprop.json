@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "name": "药瓶",
+    "iconName": "恢复药",
+    "desc": "恢复 10% 生命值",
+    "effectType": "HealPercent",
+    "value": 0.1,
+    "maxCount": 3
+  },
+  {
+    "id": 2,
+    "name": "能量恢复药",
+    "iconName": "能量恢复效率",
+    "desc": "立刻恢复最大能量",
+    "effectType": "RecoverEnergyFull",
+    "value": 1,
+    "maxCount": 1
+  }
+]

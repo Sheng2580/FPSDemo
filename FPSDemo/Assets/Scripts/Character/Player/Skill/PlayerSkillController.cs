@@ -97,6 +97,53 @@ public class PlayerSkillController : MonoBehaviour
         return true;
     }
 
+    public bool ApplyCooldownMultiplier(SkillType skillType, float multiplier)
+    {
+        if (!_runtimeData.TryGetValue(skillType, out PlayerSkillRuntimeData runtimeData)
+            || !_configs.TryGetValue(skillType, out PlayerSkillConfig config))
+        {
+            return false;
+        }
+
+        float previousCooldown = GetCooldown(config, runtimeData);
+        float previousRemainingRate = previousCooldown > 0f
+            ? Mathf.Clamp01(runtimeData.cooldownRemaining / previousCooldown)
+            : 0f;
+
+        runtimeData.cooldownMultiplier = Mathf.Max(0.01f, runtimeData.cooldownMultiplier * Mathf.Max(0f, multiplier));
+        float nextCooldown = GetCooldown(config, runtimeData);
+        runtimeData.cooldownRemaining = Mathf.Min(nextCooldown, nextCooldown * previousRemainingRate);
+        EventCenter.Instance.EventTrigger(
+            GameEvent.SkillCooldownChanged,
+            new SkillCooldownEventData(config, runtimeData.cooldownRemaining, nextCooldown));
+        return true;
+    }
+
+    public bool AddMaxCount(SkillType skillType, int count)
+    {
+        if (count == 0
+            || !_runtimeData.TryGetValue(skillType, out PlayerSkillRuntimeData runtimeData)
+            || !_configs.TryGetValue(skillType, out PlayerSkillConfig config))
+        {
+            return false;
+        }
+
+        runtimeData.maxCount = Mathf.Max(0, runtimeData.maxCount + count);
+        if (count > 0)
+        {
+            runtimeData.currentCount = Mathf.Min(runtimeData.maxCount, runtimeData.currentCount + count);
+        }
+        else
+        {
+            runtimeData.currentCount = Mathf.Clamp(runtimeData.currentCount, 0, runtimeData.maxCount);
+        }
+
+        EventCenter.Instance.EventTrigger(
+            GameEvent.SkillChargeChanged,
+            new SkillChargeEventData(config, runtimeData.currentCount, runtimeData.maxCount));
+        return true;
+    }
+
     private void CacheReferences()
     {
         _player ??= GetComponent<PlayerController>();

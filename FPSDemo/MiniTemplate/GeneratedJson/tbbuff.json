@@ -1,0 +1,101 @@
+[
+  {
+    "id": 1,
+    "name": "攻击力+",
+    "iconName": "攻击力",
+    "desc": "攻击力 +10",
+    "statType": "Attack",
+    "addType": "Flat",
+    "value": 10,
+    "weight": 1,
+    "maxStack": 1
+  },
+  {
+    "id": 2,
+    "name": "攻击力++",
+    "iconName": "攻击力",
+    "desc": "攻击力 +20",
+    "statType": "Attack",
+    "addType": "Flat",
+    "value": 20,
+    "weight": 0.8,
+    "maxStack": 1
+  },
+  {
+    "id": 3,
+    "name": "防御力+",
+    "iconName": "防御",
+    "desc": "防御力 +10",
+    "statType": "Defense",
+    "addType": "Flat",
+    "value": 10,
+    "weight": 1,
+    "maxStack": 1
+  },
+  {
+    "id": 4,
+    "name": "生命值+",
+    "iconName": "生命",
+    "desc": "生命值 +20",
+    "statType": "MaxHp",
+    "addType": "Flat",
+    "value": 20,
+    "weight": 1,
+    "maxStack": 1
+  },
+  {
+    "id": 5,
+    "name": "暴击率+",
+    "iconName": "暴击率",
+    "desc": "暴击率 +10%",
+    "statType": "CritRate",
+    "addType": "Flat",
+    "value": 0.1,
+    "weight": 0.8,
+    "maxStack": 1
+  },
+  {
+    "id": 6,
+    "name": "暴击伤害+",
+    "iconName": "暴击伤害",
+    "desc": "暴击伤害 +20%",
+    "statType": "CritDamage",
+    "addType": "Flat",
+    "value": 0.2,
+    "weight": 0.8,
+    "maxStack": 1
+  },
+  {
+    "id": 7,
+    "name": "能量效率+",
+    "iconName": "能量恢复效率",
+    "desc": "能量充能效率 +20%",
+    "statType": "EnergyGainEfficiency",
+    "addType": "Flat",
+    "value": 0.2,
+    "weight": 0.8,
+    "maxStack": 1
+  },
+  {
+    "id": 8,
+    "name": "能量消耗减少",
+    "iconName": "能量恢复效率",
+    "desc": "能量消耗 -20%",
+    "statType": "EnergyCostReduction",
+    "addType": "Flat",
+    "value": 0.2,
+    "weight": 0.6,
+    "maxStack": 1
+  },
+  {
+    "id": 9,
+    "name": "吸血+",
+    "iconName": "攻击力",
+    "desc": "攻击伤害 1% 吸血",
+    "statType": "LifeSteal",
+    "addType": "Flat",
+    "value": 0.01,
+    "weight": 0.5,
+    "maxStack": 1
+  }
+]

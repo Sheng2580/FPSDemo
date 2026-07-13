@@ -3,6 +3,13 @@ using UnityEngine;
 
 namespace PlayerData
 {
+    public enum PlayerEnergyState
+    {
+        Charging,
+        LevelUpReady,
+        BlessingSelecting
+    }
+
     /// <summary>
     /// 玩家局内能量运行时数据
     /// 不写回配置资源
@@ -22,6 +29,8 @@ namespace PlayerData
         public bool autoLevelUp;
         // 是否已经达到升级准备状态
         public bool isLevelUpReady;
+        // 当前能量状态
+        public PlayerEnergyState state = PlayerEnergyState.Charging;
 
         public float NormalizedEnergy => maxEnergy > 0f ? Mathf.Clamp01(currentEnergy / maxEnergy) : 0f;
 
@@ -35,6 +44,7 @@ namespace PlayerData
             energyGainMultiplier = 1f;
             autoLevelUp = safeConfig.autoLevelUp;
             isLevelUpReady = false;
+            state = PlayerEnergyState.Charging;
         }
 
         public float CalculateEnergyGain(float finalDamage, PlayerEnergyConfig config)
@@ -46,7 +56,7 @@ namespace PlayerData
 
         public float AddEnergy(float deltaEnergy)
         {
-            if (deltaEnergy <= 0f || isLevelUpReady)
+            if (deltaEnergy <= 0f || state != PlayerEnergyState.Charging)
             {
                 return 0f;
             }
