@@ -224,6 +224,32 @@ Unity 兜底入口：`FPSDemo/Assets/Scripts/Blessing/Data` 下的 `BlessingConf
 - 表现层后续消费 `animationKey / effectKey / audioKey / fovEffectKey / postProcessKey / cameraShakeKey`。
 - 武器系统只读取技能释放锁定状态，不直接持有技能配置。
 
+## 局内道具配置
+
+正式主来源：`FPSDemo/MiniTemplate/Datas/#pickup_item.xlsx`
+
+测试 JSON：`FPSDemo/MiniTemplate/GeneratedJson/tbpickup_item.json`
+
+Unity 运行时优先读取：`FPSDemo/Assets/Resources/PickupJson/tbpickup_item.json`
+
+Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
+
+| id | itemName | itemType | assetBundleName | assetName | weight | unlockWave | lifeTime | pickupRadius | healValue | ammoAmount | grenadeAmount | berserkDuration | tipColorKey | postProcessKey | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1001 | 小型医疗包 | Heal | prop_runtime | HpProp | 100 | 1 | 18 | 1.4 | 30 | 0 | 0 | 0 | Heal | 空 | 拾取后恢复生命 |
+| 1002 | 弹药补给 | Ammo | prop_runtime | BulletProp | 90 | 1 | 18 | 1.4 | 0 | 30 | 0 | 0 | Ammo | 空 | 拾取后给玩家本局携带的所有武器补充备弹 |
+| 1003 | 炸弹补给 | Grenade | prop_runtime | bombProp | 65 | 2 | 18 | 1.4 | 0 | 0 | 1 | 0 | Grenade | 空 | 拾取后增加手雷技能数量 |
+| 1004 | 狂暴药剂 | Berserk | prop_runtime | RageProp | 55 | 2 | 16 | 1.4 | 0 | 0 | 0 | 6 | Berserk | Pickup_Berserk_SpeedLines | 拾取后进入短时狂暴效果，有弹不扣弹，弹夹为 0 不能开枪 |
+
+字段说明：
+
+- `assetBundleName / assetName` 只保存 AB 资源 key，不硬引用 prefab 实例。`assetName` 必须和 `Assets/Art/ABRes/Prop` 下 prefab 文件名一致。
+- `descriptionTemplate` 当前为 `恢复生命 +{0}`、`获得子弹 +{0}`、`获得炸弹 +{0}`、`狂暴时间 +{0}秒`，表现层按道具类型选择对应数值填入。
+- `PickupItemConfigLoader` 读取顺序为 `Resources/PickupJson` -> `StreamingAssets` -> `MiniTemplate/GeneratedJson`。
+- `PickupItemRuntimeData` 只保存单局生成时间、剩余存活时间和拾取状态，不写回配置。
+- 道具事件已接入 `GameEvent.cs`：`PickupSpawned`、`PickupCollected`、`PickupExpired`、`PickupTipRequested`、`PlayerBerserkChanged`。
+- 狂暴后处理只打开或关闭 Combat Volume Profile 中名为 `SpeedLines` 的组件，不调整强度参数。
+
 ## 敌人配置
 
 来源目录：`FPSDemo/Assets/Resources/EnemyConfigs`

@@ -16,12 +16,14 @@ public static class FPSDemoBuildTools
     private const string EnemyLifebarCanvasPath = "Assets/Art/ABRes/UI/EnemyLifebarCanvas.prefab";
     private const string BlessingSelectCanvasPath = "Assets/Art/ABRes/UI/BlessingSelectCanvas.prefab";
     private const string CombatCanvasPath = "Assets/Art/ABRes/UI/CombatCanvas.prefab";
+    private const string TipCanvasPath = "Assets/Art/ABRes/UI/TipCanvas.prefab";
     private const string WeaponItemPath = "Assets/Art/ABRes/UI/Item/WeaponItem.prefab";
     private const string TouchCanvasBundleName = "uipanel";
     private const string UIItemBundleName = "uiitem";
     private const string PlayerRuntimeBundleName = "player_runtime";
     private const string CombatFeedbackBundleName = "combat_feedback";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
+    private const string PropRuntimeBundleName = "prop_runtime";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
     private const string CombatScenePath = "Assets/Scenes/Combat.unity";
     private const string StreamingAssetsPath = "Assets/StreamingAssets";
@@ -59,7 +61,8 @@ public static class FPSDemoBuildTools
         HpAndWeaponCanvasPath,
         EnemyLifebarCanvasPath,
         BlessingSelectCanvasPath,
-        CombatCanvasPath
+        CombatCanvasPath,
+        TipCanvasPath
     };
 
     private static readonly string[] UIItemAssetPaths =
@@ -120,21 +123,12 @@ public static class FPSDemoBuildTools
         "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieOldCrone_LOD2.prefab"
     };
 
-    private static readonly string[] PickupRollbackAssetPaths =
+    private static readonly string[] PropRuntimeAssetPaths =
     {
-        "Assets/Art/ABRes/UI/TipCanvas.prefab",
         "Assets/Art/ABRes/Prop/HpProp.prefab",
         "Assets/Art/ABRes/Prop/BulletProp.prefab",
         "Assets/Art/ABRes/Prop/bombProp.prefab",
-        "Assets/Art/ABRes/Prop/RageProp.prefab",
-        "Assets/Powerup FX/Materials/Symbol/SymbolEmissive.mat",
-        "Assets/Powerup FX/Materials/Cube/CubeBloom.mat",
-        "Assets/Powerup FX/Materials/GlowAtlas/GlowAtlasNew.mat",
-        "Assets/Powerup FX/Materials/Symbol/SymbolNeon.mat",
-        "Assets/Art/SymbolNeon 1.mat",
-        "Assets/Art/SymbolNeon 2.mat",
-        "Assets/Art/Shaders/S_PickupOpaqueMobile.shader",
-        "Assets/Art/Shaders/S_PickupTransparentGlowMobile.shader"
+        "Assets/Art/ABRes/Prop/RageProp.prefab"
     };
 
     private static readonly string[] RequiredRuntimeBundleNames =
@@ -143,7 +137,8 @@ public static class FPSDemoBuildTools
         UIItemBundleName,
         PlayerRuntimeBundleName,
         CombatFeedbackBundleName,
-        EnemyPrefabBundleName
+        EnemyPrefabBundleName,
+        PropRuntimeBundleName
     };
 
     [MenuItem("FPSDemo/Build/检查移动端UI", priority = 0)]
@@ -524,7 +519,7 @@ public static class FPSDemoBuildTools
         success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
         success &= TrySetAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName, ref changed);
-        success &= TryClearAssetBundleNames(PickupRollbackAssetPaths, ref changed);
+        success &= TrySetAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName, ref changed);
         success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
         success &= TryClearAssetBundleNames(SceneMaterialAssetPaths, ref changed);
 
@@ -628,6 +623,7 @@ public static class FPSDemoBuildTools
         isValid &= ValidateAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName);
         isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
         isValid &= ValidateAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName);
+        isValid &= ValidateAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName);
 
         if (logResult && isValid)
         {

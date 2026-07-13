@@ -141,6 +141,30 @@ namespace Combat
             };
         }
 
+        public static CombatVolumeEffectConfig CreateDefaultBerserk()
+        {
+            return new CombatVolumeEffectConfig
+            {
+                effectType = CombatVolumeEffectType.Berserk,
+                effectKey = "Pickup_Berserk_SpeedLines",
+                fadeInTime = 0.18f,
+                holdTime = 0f,
+                fadeOutTime = 0.35f,
+                minIntensity = 0.8f,
+                damageToIntensityScale = 0f,
+                missingHpIntensityScale = 0f,
+                colorFilter = new Color(1f, 0.42f, 0.28f, 1f),
+                vignetteColor = new Color(0.55f, 0.04f, 0.02f, 1f),
+                vignetteIntensityBoost = 0.18f,
+                vignetteSmoothnessBoost = 0.08f,
+                postExposureOffset = 0.08f,
+                saturationOffset = 10f,
+                bloomIntensityBoost = 0.12f,
+                bloomTintBlend = 0.25f,
+                enableBloomPulse = true
+            };
+        }
+
         public CombatVolumeEffectConfig Clone()
         {
             return (CombatVolumeEffectConfig)MemberwiseClone();

@@ -15,6 +15,7 @@ using UnityEngine.SceneManagement;
 public class CombatVolumeManager : MonoBehaviour
 {
     private const string DefaultCombatVolumeName = "CombatVolume";
+    private const string DefaultSpeedLinesComponentName = "SpeedLines";
 
     private static CombatVolumeManager instance;
     private static bool instanceWasAutoCreated;
@@ -25,6 +26,7 @@ public class CombatVolumeManager : MonoBehaviour
     [SerializeField] private bool createRuntimeVolumeIfMissing = true;
     [SerializeField] private bool enablePostProcessingOnCameras = true;
     [SerializeField] private bool debugLog;
+    [SerializeField] private string speedLinesComponentName = DefaultSpeedLinesComponentName;
 
     [Header("玩家受伤效果配置")]
     [SerializeField] private CombatVolumeEffectConfigAsset playerDamageConfigAsset;
@@ -46,6 +48,7 @@ public class CombatVolumeManager : MonoBehaviour
     private Vignette vignette;
     private ColorAdjustments colorAdjustments;
     private Bloom bloom;
+    private VolumeComponent speedLinesComponent;
 
     private bool hasSnapshot;
     private float baseVignetteIntensity;
@@ -65,6 +68,7 @@ public class CombatVolumeManager : MonoBehaviour
     private Coroutine skillPulseRoutine;
     private Coroutine cameraRefreshRoutine;
     private bool usingRuntimeCreatedVolume;
+    private bool speedLinesMissingLogged;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
@@ -140,6 +144,7 @@ public class CombatVolumeManager : MonoBehaviour
         EventCenter.Instance.AddEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
         EventCenter.Instance.AddEventListener<SkillHitEnemyEventData>(GameEvent.SkillHitEnemy, OnSkillHitEnemy);
         EventCenter.Instance.AddEventListener<SkillVisualEventData>(GameEvent.SkillVisualStarted, OnSkillVisualStarted);
+        EventCenter.Instance.AddEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
         EnsurePlayerDamageConfig();
         EnsureCombatVolume(false);
         StartCameraRefreshRoutine();
@@ -152,8 +157,10 @@ public class CombatVolumeManager : MonoBehaviour
         EventCenter.Instance.RemoveEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
         EventCenter.Instance.RemoveEventListener<SkillHitEnemyEventData>(GameEvent.SkillHitEnemy, OnSkillHitEnemy);
         EventCenter.Instance.RemoveEventListener<SkillVisualEventData>(GameEvent.SkillVisualStarted, OnSkillVisualStarted);
+        EventCenter.Instance.RemoveEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
         StopDamagePulseRoutine();
         StopSkillPulseRoutine();
+        StopBerserkPulseRoutine();
         StopCameraRefreshRoutine();
         RestoreBaseValues();
     }
@@ -195,6 +202,8 @@ public class CombatVolumeManager : MonoBehaviour
             combatVolume = null;
             runtimeProfile = null;
             hasSnapshot = false;
+            speedLinesComponent = null;
+            speedLinesMissingLogged = false;
             usingRuntimeCreatedVolume = false;
         }
 
@@ -270,6 +279,11 @@ public class CombatVolumeManager : MonoBehaviour
         }
 
         PlaySkillPulse(eventData.skillType, eventData.postProcessKey, eventData.intensity);
+    }
+
+    private void OnPlayerBerserkChanged(PlayerBerserkChangedEventData eventData)
+    {
+        PlayBerserk(eventData.active, eventData.postProcessKey);
     }
 
     private CombatVolumeEffectConfig EnsurePlayerDamageConfig()
@@ -360,6 +374,8 @@ public class CombatVolumeManager : MonoBehaviour
                 return CombatVolumeEffectConfig.CreateDefaultPush();
             case CombatVolumeEffectType.Grenade:
                 return CombatVolumeEffectConfig.CreateDefaultGrenade();
+            case CombatVolumeEffectType.Berserk:
+                return CombatVolumeEffectConfig.CreateDefaultBerserk();
             default:
                 return null;
         }
@@ -391,6 +407,16 @@ public class CombatVolumeManager : MonoBehaviour
         if (debugLog)
         {
             Debug.Log($"[CombatVolume] 技能画面反馈 Type={skillType} Intensity={intensity:0.00}", this);
+        }
+    }
+
+    private void PlayBerserk(bool active, string effectKey)
+    {
+        SetSpeedLinesActive(active);
+
+        if (debugLog)
+        {
+            Debug.Log($"[CombatVolume] 狂暴 SpeedLines Active={active}", this);
         }
     }
 
@@ -530,7 +556,54 @@ public class CombatVolumeManager : MonoBehaviour
             bloom.tint.overrideState = true;
         }
 
+        EnsureSpeedLinesComponent();
         SnapshotBaseValues();
+    }
+
+    private void EnsureSpeedLinesComponent()
+    {
+        if (runtimeProfile == null || speedLinesComponent != null)
+        {
+            return;
+        }
+
+        string targetName = string.IsNullOrWhiteSpace(speedLinesComponentName)
+            ? DefaultSpeedLinesComponentName
+            : speedLinesComponentName;
+
+        List<VolumeComponent> components = runtimeProfile.components;
+        for (int i = 0; i < components.Count; i++)
+        {
+            VolumeComponent component = components[i];
+            if (component == null)
+            {
+                continue;
+            }
+
+            if (component.name == targetName || component.GetType().Name == targetName)
+            {
+                speedLinesComponent = component;
+                return;
+            }
+        }
+    }
+
+    private void SetSpeedLinesActive(bool active)
+    {
+        EnsureCombatVolume();
+        EnsureSpeedLinesComponent();
+        if (speedLinesComponent == null)
+        {
+            if (debugLog && !speedLinesMissingLogged)
+            {
+                Debug.LogWarning($"[CombatVolume] 找不到 {speedLinesComponentName} 后处理组件", this);
+                speedLinesMissingLogged = true;
+            }
+
+            return;
+        }
+
+        speedLinesComponent.active = active;
     }
 
     private void SnapshotBaseValues()
@@ -651,6 +724,14 @@ public class CombatVolumeManager : MonoBehaviour
 
         skillBlend = 0f;
         activeSkillConfig = null;
+    }
+
+    private void StopBerserkPulseRoutine()
+    {
+        if (speedLinesComponent != null)
+        {
+            speedLinesComponent.active = false;
+        }
     }
 
     private IEnumerator FadeSkillAmount(float from, float to, float duration)

@@ -2,6 +2,7 @@ using Combat;
 using Blessing.Data;
 using Enemy;
 using Enemy.Data;
+using Pickup.Data;
 using PlayerData;
 using UnityEngine;
 using Weapon;
@@ -58,7 +59,12 @@ public enum GameEvent
     PlayerEnergyStateChanged,
     PlayerEnergyBlessingSelectRequested,
     PlayerEnergyBlessingSelectCanceled,
-    PlayerEnergyBlessingSelected
+    PlayerEnergyBlessingSelected,
+    PickupSpawned,
+    PickupCollected,
+    PickupExpired,
+    PickupTipRequested,
+    PlayerBerserkChanged
 }
 
 public readonly struct PlayerWeaponChangedEventData
@@ -596,5 +602,89 @@ public readonly struct SkillChargeEventData
         skillType = config != null ? config.skillType : SkillType.Dodge;
         this.currentCount = Mathf.Max(0, currentCount);
         this.maxCount = Mathf.Max(0, maxCount);
+    }
+}
+
+public readonly struct PickupSpawnedEventData
+{
+    public readonly PickupItemConfig config;
+    public readonly GameObject pickupObject;
+    public readonly Vector3 position;
+
+    public PickupSpawnedEventData(PickupItemConfig config, GameObject pickupObject, Vector3 position)
+    {
+        this.config = config;
+        this.pickupObject = pickupObject;
+        this.position = position;
+    }
+}
+
+public readonly struct PickupCollectedEventData
+{
+    public readonly PickupItemConfig config;
+    public readonly GameObject collector;
+    public readonly GameObject pickupObject;
+    public readonly Vector3 position;
+
+    public PickupCollectedEventData(
+        PickupItemConfig config,
+        GameObject collector,
+        GameObject pickupObject,
+        Vector3 position)
+    {
+        this.config = config;
+        this.collector = collector;
+        this.pickupObject = pickupObject;
+        this.position = position;
+    }
+}
+
+public readonly struct PickupExpiredEventData
+{
+    public readonly PickupItemConfig config;
+    public readonly GameObject pickupObject;
+    public readonly Vector3 position;
+
+    public PickupExpiredEventData(PickupItemConfig config, GameObject pickupObject, Vector3 position)
+    {
+        this.config = config;
+        this.pickupObject = pickupObject;
+        this.position = position;
+    }
+}
+
+public readonly struct PickupTipEventData
+{
+    public readonly string itemName;
+    public readonly string description;
+    public readonly string tipColorKey;
+    public readonly float duration;
+
+    public PickupTipEventData(string itemName, string description, string tipColorKey, float duration)
+    {
+        this.itemName = itemName ?? string.Empty;
+        this.description = description ?? string.Empty;
+        this.tipColorKey = tipColorKey ?? string.Empty;
+        this.duration = Mathf.Max(0.1f, duration);
+    }
+}
+
+public readonly struct PlayerBerserkChangedEventData
+{
+    public readonly bool active;
+    public readonly float remainingTime;
+    public readonly float addedDuration;
+    public readonly string postProcessKey;
+
+    public PlayerBerserkChangedEventData(
+        bool active,
+        float remainingTime,
+        float addedDuration,
+        string postProcessKey)
+    {
+        this.active = active;
+        this.remainingTime = Mathf.Max(0f, remainingTime);
+        this.addedDuration = Mathf.Max(0f, addedDuration);
+        this.postProcessKey = postProcessKey ?? string.Empty;
     }
 }

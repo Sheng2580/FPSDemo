@@ -120,6 +120,8 @@ namespace Enemy
         private int _nextSingleSpawnPointIndex;
         private int _nextBurstSpawnPointIndex;
 
+        public int CurrentWaveIndex => Mathf.Max(1, _currentWaveIndex);
+
         private void Awake()
         {
             _battleStartTime = Time.time;

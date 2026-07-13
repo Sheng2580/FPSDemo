@@ -7,6 +7,9 @@ using UnityEngine;
 /// </summary>
 public sealed class BlessingCardDeck
 {
+    private const float ClosedCardScale = 0.82f;
+    private const float ClosedPadding = 96f;
+
     private readonly float[] _openRotations = { 8f, 0f, -8f };
     private readonly BlessingCardViewData[] _candidateViews = new BlessingCardViewData[3];
     private BlessingSelectCanvas _owner;
@@ -86,7 +89,7 @@ public sealed class BlessingCardDeck
             }
 
             item.SetData(_candidateViews[i]);
-            item.SetPose(closedPosition, 0f, 0.82f, 1f);
+            item.SetPose(closedPosition, 0f, ClosedCardScale, 1f);
         }
     }
 
@@ -131,7 +134,7 @@ public sealed class BlessingCardDeck
             float delay = i * _settings.cardInterval;
             sequence.Insert(delay, item.Root.DOAnchorPos(closedPosition, _settings.closeDuration).SetEase(Ease.InCubic));
             sequence.Insert(delay, item.Root.DOLocalRotate(Vector3.zero, _settings.closeDuration).SetEase(Ease.InCubic));
-            sequence.Insert(delay, item.Root.DOScale(0.82f, _settings.closeDuration).SetEase(Ease.InCubic));
+            sequence.Insert(delay, item.Root.DOScale(ClosedCardScale, _settings.closeDuration).SetEase(Ease.InCubic));
             sequence.Insert(delay, item.FadeTo(1f, _settings.closeDuration));
         }
 
@@ -235,7 +238,7 @@ public sealed class BlessingCardDeck
                 continue;
             }
 
-            item.SetPose(closedPosition, 0f, 0.82f, 1f);
+            item.SetPose(closedPosition, 0f, ClosedCardScale, 1f);
             item.RestoreSiblingIndex();
             item.ResetVisualColor();
         }
@@ -308,7 +311,13 @@ public sealed class BlessingCardDeck
     {
         Rect rootRect = _cardRoot != null ? _cardRoot.rect : Rect.zero;
         float width = rootRect.width > 0f ? rootRect.width : 1920f;
-        return new Vector2(-width * 0.68f, 0f);
+        RectTransform card = GetFirstValidCard();
+        float cardWidth = card != null && card.rect.width > 0f ? card.rect.width : _settings.cardWidth;
+        float pivotX = card != null ? card.pivot.x : 0.5f;
+        float rightEdgeFromPivot = Mathf.Max(cardWidth * (1f - pivotX) * ClosedCardScale, cardWidth * 0.5f);
+
+        // 按卡片右边界计算收起点 避免窄屏或模拟器比例下露出卡片
+        return new Vector2(-width * 0.5f - rightEdgeFromPivot - ClosedPadding, 0f);
     }
 
     private Vector2[] ResolveOpenPositions()

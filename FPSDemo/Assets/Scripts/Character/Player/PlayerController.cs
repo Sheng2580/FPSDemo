@@ -195,6 +195,27 @@ public class PlayerController : CharacterBase<PlayerModel>
         }
     }
 
+    public int Heal(int amount)
+    {
+        if (Stats == null || Stats.RuntimeData == null || amount <= 0)
+        {
+            return 0;
+        }
+
+        int previousHp = Stats.RuntimeData.currentHp;
+        Stats.RuntimeData.currentHp = Mathf.Min(Stats.RuntimeData.maxHp, Stats.RuntimeData.currentHp + amount);
+        int healedAmount = Stats.RuntimeData.currentHp - previousHp;
+        if (healedAmount <= 0)
+        {
+            return 0;
+        }
+
+        EventCenter.Instance.EventTrigger(
+            GameEvent.PlayerHealthChanged,
+            new PlayerHealthChangedEventData(this, Stats.RuntimeData.currentHp, Stats.RuntimeData.maxHp, healedAmount, 0));
+        return healedAmount;
+    }
+
     public void SetVerticalVelocity(float velocity)
     {
         SetPlayerVelocityY(velocity);

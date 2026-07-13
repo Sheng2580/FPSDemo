@@ -52,6 +52,8 @@ namespace Combat
         [SerializeField] private string spawnPointName = DefaultSpawnPointName;
         [SerializeField] private bool openTouchCanvasOnStart = true;
         [SerializeField] private bool openHUDCanvasOnStart = true;
+        [SerializeField] private bool openCombatCanvasOnStart = true;
+        [SerializeField] private bool openTipCanvasOnStart = true;
         [SerializeField] private bool openEnemyLifebarCanvasOnStart = true;
 
         [Header("玩家")]
@@ -189,6 +191,16 @@ namespace Combat
                 UIManager.Instance.OpenPanelAsy<global::HUDCanvas>();
             }
 
+            if (openCombatCanvasOnStart)
+            {
+                UIManager.Instance.OpenPanelAsy<global::CombatCanvas>();
+            }
+
+            if (openTipCanvasOnStart)
+            {
+                UIManager.Instance.OpenPanelAsy<global::TipCanvas>();
+            }
+
             if (openEnemyLifebarCanvasOnStart)
             {
                 UIManager.Instance.OpenPanelAsy<global::EnemyLifebarCanvas>();
@@ -235,6 +247,8 @@ namespace Combat
             _ = GameInputManger.Instance;
             _ = ABManager.Instance;
             _ = UIManager.Instance;
+            _ = MultiTimerManager.Instance;
+            global::Pickup.PickupManager.EnsureForCurrentScene();
         }
 
         private void SpawnPlayer(GameObject playerObject)

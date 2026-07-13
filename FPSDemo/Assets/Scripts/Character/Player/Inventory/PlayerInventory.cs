@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Weapon.Data;
 
 public class PlayerInventory : MonoBehaviour
 {
@@ -191,6 +192,53 @@ public class PlayerInventory : MonoBehaviour
         return true;
     }
 
+    public int AddReserveAmmoToAllWeapons(int amount)
+    {
+        if (amount <= 0)
+        {
+            return 0;
+        }
+
+        InitForNewRun();
+        if (carriedWeapons == null || carriedWeapons.Count <= 0)
+        {
+            return 0;
+        }
+
+        int totalAddedAmount = 0;
+        for (int i = 0; i < carriedWeapons.Count; i++)
+        {
+            CarriedWeaponSlot slot = carriedWeapons[i];
+            if (slot == null)
+            {
+                continue;
+            }
+
+            slot.EnsureRuntimeReady();
+            WeaponConfig config = slot.RuntimeConfig;
+            WeaponRuntimeData runtimeData = slot.RuntimeData;
+            if (config == null || runtimeData == null)
+            {
+                continue;
+            }
+
+            int previousReserveAmmo = runtimeData.currentReserveAmmo;
+            int maxReserveAmmo = Mathf.Max(0, config.maxReserveAmmo);
+            runtimeData.currentReserveAmmo = Mathf.Clamp(runtimeData.currentReserveAmmo + amount, 0, maxReserveAmmo);
+
+            int addedAmount = runtimeData.currentReserveAmmo - previousReserveAmmo;
+            if (addedAmount <= 0)
+            {
+                continue;
+            }
+
+            totalAddedAmount += addedAmount;
+            SendWeaponAmmoChangedEvent(i, slot);
+        }
+
+        return totalAddedAmount;
+    }
+
     private void OnSwitchWeaponPressed()
     {
         SwitchNextWeapon();
@@ -304,6 +352,28 @@ public class PlayerInventory : MonoBehaviour
                 slot?.DisplayName ?? string.Empty,
                 slot?.RuntimeData?.currentAmmoInMagazine ?? 0,
                 slot?.RuntimeData?.currentReserveAmmo ?? 0));
+    }
+
+    private void SendWeaponAmmoChangedEvent(int weaponIndex, CarriedWeaponSlot slot)
+    {
+        slot?.EnsureRuntimeReady();
+        WeaponConfig config = slot?.RuntimeConfig;
+        WeaponRuntimeData runtimeData = slot?.RuntimeData;
+        if (config == null || runtimeData == null)
+        {
+            return;
+        }
+
+        EventCenter.Instance.EventTrigger(
+            GameEvent.PlayerWeaponAmmoChanged,
+            new PlayerWeaponAmmoChangedEventData(
+                weaponIndex,
+                config.weaponId,
+                config.weaponName,
+                runtimeData.currentAmmoInMagazine,
+                runtimeData.currentReserveAmmo,
+                config.magazineSize,
+                config.maxReserveAmmo));
     }
 
     private void SendInventoryChangedEvent(InventoryItemSlot slot)

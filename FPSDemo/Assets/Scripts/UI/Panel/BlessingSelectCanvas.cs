@@ -21,6 +21,7 @@ public class BlessingSelectCanvas : BaseCanvas
     [Header("界面引用")]
     [SerializeField] private RectTransform cardRoot;
     [SerializeField] private RectTransform cardButton;
+    [SerializeField] private CanvasGroup cardRootGroup;
     [SerializeField] private Button confirmButton;
     [SerializeField] private CanvasGroup confirmButtonGroup;
     [SerializeField] private Button cardButtonClickArea;
@@ -230,6 +231,15 @@ public class BlessingSelectCanvas : BaseCanvas
         confirmButton ??= FindButton("Button (Legacy)");
         cardButtonClickArea ??= cardButton != null ? cardButton.GetComponent<Button>() : null;
 
+        if (cardRootGroup == null && cardRoot != null)
+        {
+            cardRootGroup = cardRoot.GetComponent<CanvasGroup>();
+            if (cardRootGroup == null)
+            {
+                cardRootGroup = cardRoot.gameObject.AddComponent<CanvasGroup>();
+            }
+        }
+
         if (confirmButtonGroup == null && confirmButton != null)
         {
             confirmButtonGroup = confirmButton.GetComponent<CanvasGroup>();
@@ -284,6 +294,20 @@ public class BlessingSelectCanvas : BaseCanvas
         }
 
         SetConfirmButtonVisible(visible);
+        SetCardRootVisible(visible);
+    }
+
+    private void SetCardRootVisible(bool visible)
+    {
+        if (cardRootGroup == null)
+        {
+            return;
+        }
+
+        // 卡片区单独隐藏 不影响右侧祝福入口按钮
+        cardRootGroup.alpha = visible ? 1f : 0f;
+        cardRootGroup.interactable = visible;
+        cardRootGroup.blocksRaycasts = visible;
     }
 
     private void SetConfirmButtonVisible(bool visible)

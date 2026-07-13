@@ -79,6 +79,7 @@ namespace Weapon
             EventCenter.Instance.AddEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
             EventCenter.Instance.AddEventListener<PlayerActionLockEventData>(GameEvent.PlayerActionLockChanged, OnPlayerActionLockChanged);
             EventCenter.Instance.AddEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
+            EventCenter.Instance.AddEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
         }
 
         private void Start()
@@ -103,6 +104,7 @@ namespace Weapon
             EventCenter.Instance.RemoveEventListener<PlayerWeaponChangedEventData>(GameEvent.PlayerWeaponChanged, OnPlayerWeaponChanged);
             EventCenter.Instance.RemoveEventListener<PlayerActionLockEventData>(GameEvent.PlayerActionLockChanged, OnPlayerActionLockChanged);
             EventCenter.Instance.RemoveEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
+            EventCenter.Instance.RemoveEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
             ResetAimVisuals();
         }
 
@@ -134,17 +136,12 @@ namespace Weapon
                    && !_isPlayerActionLocked
                    && RuntimeData.isEquipped
                    && !RuntimeData.isReloading
-                   && (InfiniteAmmoActive || RuntimeData.currentAmmoInMagazine > 0)
+                   && RuntimeData.currentAmmoInMagazine > 0
                    && Time.time >= RuntimeData.nextFireTime;
         }
 
         public bool CanReload()
         {
-            if (InfiniteAmmoActive)
-            {
-                return false;
-            }
-
             return currentWeaponView != null
                    && _config != null
                    && RuntimeData != null
@@ -158,8 +155,7 @@ namespace Weapon
         public bool CanAutoReloadOnFire()
         {
             // 只有弹夹真正空了才允许开火键触发自动换弹 避免射速冷却中误换弹
-            return !InfiniteAmmoActive
-                   && RuntimeData != null
+            return RuntimeData != null
                    && RuntimeData.currentAmmoInMagazine <= 0
                    && CanReload();
         }
@@ -172,13 +168,26 @@ namespace Weapon
             }
 
             _infiniteAmmoEndTime = Mathf.Max(_infiniteAmmoEndTime, Time.time + duration);
+        }
 
-            if (_config != null && RuntimeData != null && RuntimeData.currentAmmoInMagazine <= 0)
+        public int AddReserveAmmoToCurrentWeapon(int amount)
+        {
+            if (amount <= 0 || _config == null || RuntimeData == null)
             {
-                RuntimeData.currentAmmoInMagazine = _config.magazineSize;
-                currentWeaponView?.SetAmmo(RuntimeData.currentAmmoInMagazine);
+                return 0;
+            }
+
+            int previousReserveAmmo = RuntimeData.currentReserveAmmo;
+            RuntimeData.currentReserveAmmo = Mathf.Min(
+                Mathf.Max(0, _config.maxReserveAmmo),
+                RuntimeData.currentReserveAmmo + amount);
+            int addedAmount = RuntimeData.currentReserveAmmo - previousReserveAmmo;
+            if (addedAmount > 0)
+            {
                 TriggerWeaponAmmoChanged();
             }
+
+            return addedAmount;
         }
 
         public void ClearRuntimeInfiniteAmmo()
@@ -649,6 +658,17 @@ namespace Weapon
             }
 
             currentWeaponView.TryPlaySkillAnimation(fallbackState, duration);
+        }
+
+        private void OnPlayerBerserkChanged(PlayerBerserkChangedEventData eventData)
+        {
+            if (eventData.active)
+            {
+                ActivateInfiniteAmmo(eventData.remainingTime);
+                return;
+            }
+
+            ClearRuntimeInfiniteAmmo();
         }
 
         private void UpdateInput()

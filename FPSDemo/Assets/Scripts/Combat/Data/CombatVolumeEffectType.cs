@@ -12,6 +12,8 @@ namespace Combat
         // 推敌预留
         Push,
         // 手雷预留
-        Grenade
+        Grenade,
+        // 狂暴道具
+        Berserk
     }
 }

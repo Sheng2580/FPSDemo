@@ -144,6 +144,28 @@ public class PlayerSkillController : MonoBehaviour
         return true;
     }
 
+    public int AddCurrentCount(SkillType skillType, int count)
+    {
+        if (count <= 0
+            || !_runtimeData.TryGetValue(skillType, out PlayerSkillRuntimeData runtimeData)
+            || !_configs.TryGetValue(skillType, out PlayerSkillConfig config))
+        {
+            return 0;
+        }
+
+        int previousCount = runtimeData.currentCount;
+        runtimeData.currentCount = Mathf.Min(runtimeData.maxCount, runtimeData.currentCount + count);
+        int addedCount = runtimeData.currentCount - previousCount;
+        if (addedCount > 0)
+        {
+            EventCenter.Instance.EventTrigger(
+                GameEvent.SkillChargeChanged,
+                new SkillChargeEventData(config, runtimeData.currentCount, runtimeData.maxCount));
+        }
+
+        return addedCount;
+    }
+
     private void CacheReferences()
     {
         _player ??= GetComponent<PlayerController>();
