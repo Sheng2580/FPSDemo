@@ -378,7 +378,7 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 | id | itemName | itemType | assetBundleName | assetName | weight | unlockWave | lifeTime | pickupRadius | healValue | ammoAmount | grenadeAmount | berserkDuration | tipColorKey | postProcessKey | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1001 | 小型医疗包 | Heal | prop_runtime | HpProp | 100 | 1 | 18 | 1.4 | 30 | 0 | 0 | 0 | Heal | 空 | 拾取后恢复生命 |
-| 1002 | 弹药补给 | Ammo | prop_runtime | BulletProp | 90 | 1 | 18 | 1.4 | 0 | 30 | 0 | 0 | Ammo | 空 | 拾取后给玩家本局携带的所有武器补充备弹 |
+| 1002 | 弹药补给 | Ammo | prop_runtime | BulletProp | 180 | 1 | 18 | 1.4 | 0 | 30 | 0 | 0 | Ammo | 空 | 拾取后给玩家本局携带的所有武器补充备弹 |
 | 1003 | 炸弹补给 | Grenade | prop_runtime | bombProp | 65 | 2 | 18 | 1.4 | 0 | 0 | 1 | 0 | Grenade | 空 | 拾取后增加手雷技能数量 |
 | 1004 | 狂暴药剂 | Berserk | prop_runtime | RageProp | 55 | 2 | 16 | 1.4 | 0 | 0 | 0 | 6 | Berserk | Pickup_Berserk_SpeedLines | 拾取后进入短时狂暴效果，有弹不扣弹，弹夹为 0 不能开枪 |
 
@@ -388,18 +388,29 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 - `descriptionTemplate` 当前为 `恢复生命 +{0}`、`获得子弹 +{0}`、`获得炸弹 +{0}`、`狂暴时间 +{0}秒`，表现层按道具类型选择对应数值填入。
 - `PickupItemConfigLoader` 读取顺序为 `Resources/PickupJson` -> `StreamingAssets` -> `MiniTemplate/GeneratedJson`。
 - `PickupItemRuntimeData` 只保存单局生成时间、剩余存活时间和拾取状态，不写回配置。
+- `PickupManager` 当前每 5 秒尝试生成一次，场上最多同时存在 6 个道具。
+- 道具按当前波次过滤后使用 `weight` 加权随机，第二波以后弹药补给概率为 45%
+- 场上没有弹药补给时，下一次成功刷新强制选择 `Ammo` 类型，保证局内始终会补充弹药道具
 - 道具事件已接入 `GameEvent.cs`：`PickupSpawned`、`PickupCollected`、`PickupExpired`、`PickupTipRequested`、`PlayerBerserkChanged`。
 - 狂暴后处理只打开或关闭 Combat Volume Profile 中名为 `SpeedLines` 的组件，不调整强度参数。
 
 ## 敌人配置
 
-来源目录：`FPSDemo/Assets/Resources/EnemyConfigs`
+正式主来源：`FPSDemo/MiniTemplate/Datas/#enemy_config.xlsx`
 
-| 敌人 | 来源文件 | enemyId | prefabResourceKey | behaviorTreeKey | aiProfileKey | maxHealth | moveSpeed | attackDamage | attackDistance | attackInterval | detectionRange | gold | blessingEnergy | 备注 |
+生成 JSON：
+
+- `FPSDemo/MiniTemplate/GeneratedJson/tbenemy_config.json`
+- `FPSDemo/Assets/Resources/EnemyJson/tbenemy_config.json`
+- `FPSDemo/Assets/StreamingAssets/tbenemy_config.json`
+
+读取优先级：`Resources/EnemyJson` -> `StreamingAssets` -> `MiniTemplate/GeneratedJson`。`FPSDemo/Assets/Resources/EnemyConfigs` 下的 ScriptableObject 只在整套敌人 JSON 读取失败时兜底，不与 JSON 数值叠加。
+
+| 敌人 | enemyId | prefabAssetBundleName | prefabResourceKey | behaviorTreeKey | aiProfileKey | maxHealth | moveSpeed | attackDamage | attackDistance | attackInterval | detectionRange | gold | blessingEnergy | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Zombie Skeleton OneHanded | `NormalZombieEnemyConfig.asset` | 1001 | Enemy_ZombieSkeleton_LOD2 | ZombieMelee | NormalZombieAI | 100 | 2.2 | 10 | 1.4 | 1.2 | 30 | 1 | 1 | 基础杂兵，真实 ABRes prefab |
-| Zombie Nerd OneHanded | `FastZombieEnemyConfig.asset` | 1002 | Enemy_ZombieNerd_LOD2 | ZombieMelee | FastZombieAI | 90 | 2.45 | 9 | 1.35 | 1.1 | 32 | 2 | 1 | 普通杂兵，真实 ABRes prefab |
-| Zombie Old Crone OneHanded | `EliteZombieEnemyConfig.asset` | 1003 | Enemy_ZombieOldCrone_LOD2 | ZombieMelee | EliteZombieAI | 180 | 1.45 | 14 | 1.45 | 1.45 | 28 | 3 | 2 | 慢速厚血普通怪，真实 ABRes prefab |
+| Zombie Skeleton OneHanded | 1001 | enemy_prefabs | Enemy_ZombieSkeleton_LOD2 | ZombieMelee | NormalZombieAI | 100 | 2.2 | 10 | 1.4 | 1.2 | 30 | 1 | 1 | 基础杂兵，真实 ABRes prefab |
+| Zombie Nerd OneHanded | 1002 | enemy_prefabs | Enemy_ZombieNerd_LOD2 | ZombieMelee | FastZombieAI | 90 | 2.45 | 9 | 1.35 | 1.1 | 32 | 2 | 1 | 普通杂兵，真实 ABRes prefab |
+| Zombie Old Crone OneHanded | 1003 | enemy_prefabs | Enemy_ZombieOldCrone_LOD2 | ZombieMelee | EliteZombieAI | 180 | 1.45 | 14 | 1.45 | 1.45 | 28 | 3 | 2 | 慢速厚血普通怪，真实 ABRes prefab |
 
 ## 敌人受击与动画数据
 
@@ -421,9 +432,9 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 
 | 敌人 | Head | Body | Arm | Leg | 来源 | 用法 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Zombie Skeleton OneHanded | 2 | 1 | 0.75 | 0.6 | `NormalZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
-| Zombie Nerd OneHanded | 2 | 1 | 0.75 | 0.6 | `FastZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
-| Zombie Old Crone OneHanded | 2 | 1 | 0.75 | 0.6 | `EliteZombieEnemyConfig.asset` | `EnemyHitBox` / 伤害结算 |
+| Zombie Skeleton OneHanded | 2 | 1 | 0.75 | 0.6 | `#enemy_config.xlsx` | `EnemyHitBox` / 伤害结算 |
+| Zombie Nerd OneHanded | 2 | 1 | 0.75 | 0.6 | `#enemy_config.xlsx` | `EnemyHitBox` / 伤害结算 |
+| Zombie Old Crone OneHanded | 2 | 1 | 0.75 | 0.6 | `#enemy_config.xlsx` | `EnemyHitBox` / 伤害结算 |
 
 ## Enemy AI Profile
 
@@ -437,7 +448,16 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 
 ## 波次配置
 
-来源目录：`FPSDemo/Assets/Resources/EnemyWaves`
+正式主来源：`FPSDemo/MiniTemplate/Datas/#enemy_wave_config.xlsx`
+
+候选池主来源：`FPSDemo/MiniTemplate/Datas/#enemy_spawn_pool.xlsx`
+
+生成 JSON：
+
+- `tbenemy_wave_config.json`
+- `tbenemy_spawn_pool.json`
+
+三份副本分别位于 `MiniTemplate/GeneratedJson`、`Assets/Resources/EnemyJson` 和 `Assets/StreamingAssets`。`Assets/Resources/EnemyWaves` 只在 Loader 返回失败时兜底。
 
 | 波次模板 | 时间兜底 | difficultyTierIndex | wavesPerDifficultyTier | waveTotalSpawnCount | waveTotalSpawnGrowth | waveClearDelay | waitForAvailableSpawnSlot | spawnInterval | batch | batchGrowth/min | maxBatch | sceneMax | maxNear | maxAgent | maxAttackers | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -454,6 +474,8 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 - `EnemyWaveConfig.GetFirstWaveIndexInDifficultyTier()` 可把旧时间段模板映射到该难度档首个绝对波次。
 - `EnemyWaveConfig.GetResolvedSpawnEntriesForWave(absoluteWaveIndex)` 可根据第 N 波返回已筛选、已计算权重和倍率的刷新池。
 - `EnemyRuntimeStats.TryCreateFromWave(wave, absoluteWaveIndex, waveElapsedTime, ...)` 可直接按权重生成最终运行时敌人数值。
+- `EnemyJsonConfigLoader.TryLoadWaveConfigs(out List<EnemyWaveConfig>)` 一次性返回已关联基础敌人配置的完整波次列表。
+- Loader 返回的每个 `EnemySpawnEntry` 已通过 `ConfigureRuntimeEnemyConfig` 保存对应 `EnemyConfig`，运行时直接调用 `CreateRuntimeEnemyConfig()`，不需要再次按 `enemyId` 查表。
 - `waveClearDelay` 当前统一为 5 秒，表现层清完当前波后等待 5 秒进入下一波。
 - `waitForAvailableSpawnSlot = true` 表示当前波还没刷完但场上敌人达到 `sceneMaxEnemyCount` 时，不丢弃剩余生成数，等待敌人死亡回池后继续补刷。
 
@@ -479,12 +501,14 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 
 | 绝对波次 | 使用模板 | 可刷敌人和大致权重 |
 | --- | --- | --- |
-| 1 | Wave01 | Skeleton 100 |
-| 2 | Wave01 | Skeleton 100，Nerd 35 |
-| 3 | Wave01 | Skeleton 100，Nerd 40，Old Crone 12 |
+| 1 | Wave01 | Skeleton 100，Nerd 100，Old Crone 100 |
+| 2 | Wave01 | Skeleton 100，Nerd 100，Old Crone 100 |
+| 3 | Wave01 | Skeleton 100，Nerd 100，Old Crone 100 |
 | 4 | Wave02 | Skeleton 70，Nerd 45，Old Crone 24 |
 | 7 | Wave03 | Skeleton 50，Nerd 48，Old Crone 34 |
-| 10 | Wave03 作为后期兜底 | Skeleton 44，Nerd 51，Old Crone 40 |
+| 10 | Wave03 作为后期兜底 | Skeleton 44，Nerd 51，Old Crone 43 |
+
+倍率应用边界：候选池中的基础倍率和每波/每难度档成长由 `EnemySpawnEntry.CreateResolvedForWave` 计算一次，`EnemyRuntimeStats.Create` 再将最终倍率乘到 `EnemyConfig` 基础生命、伤害、速度和金币上。运行时接入 JSON 后禁止再次乘 SO 倍率或重复执行一套成长公式。
 
 ## ABRes 敌人 Prefab
 
@@ -534,11 +558,11 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 - 如果后续表现层重新生成或改名 prefab，必须同步更新 `EnemyConfig.prefabResourceKey` 和本快速表，保持 key 与 `Assets/Art/ABRes/Enemies/Prefabs` 文件名一致。
 - 火把怪灼烧、毒液远程怪、精英复杂技能本轮只保留为后续预留，不实现。
 - 所有武器表现 key 必须先存在于 `CombatFeedbackResources.asset`，再写入武器配置。
-- 本表是快速读取表，不替代源码和 Unity Inspector。最终运行值以资源文件和 `ApplyMissingDefaults()` 后的运行时数据为准。
+- 本表是快速读取表，不替代源码和 Unity Inspector。最终运行值优先以 Luban JSON 和 `ApplyMissingDefaults()` 后的数据为准，SO 只在整套 JSON 读取失败时兜底。
 
 ## 敌人波次正式字段
 
-字段来源：`EnemyWaveConfig`，资源位置：`FPSDemo/Assets/Resources/EnemyWaves`
+字段来源：`#enemy_wave_config.xlsx / #enemy_spawn_pool.xlsx`，SO 资源只做缺表兜底
 
 | 字段 | 当前状态 | 用法 |
 | --- | --- | --- |

@@ -8,6 +8,7 @@ namespace Enemy.Data
         public int enemyId;
         public string enemyName;
         public string prefabKey;
+        public string prefabAssetBundleName;
         public string prefabResourceKey;
         public string behaviorTreeKey;
         public string aiProfileKey;
@@ -57,6 +58,7 @@ namespace Enemy.Data
                 enemyId = 1001,
                 enemyName = "Zombie Skeleton OneHanded",
                 prefabKey = "ZombieSkeletonOneHanded",
+                prefabAssetBundleName = "enemy_prefabs",
                 prefabResourceKey = "Enemy_ZombieSkeleton_LOD2",
                 behaviorTreeKey = "ZombieMelee",
                 aiProfileKey = "NormalZombieAI",
@@ -199,6 +201,11 @@ namespace Enemy.Data
             if (string.IsNullOrEmpty(prefabResourceKey))
             {
                 prefabResourceKey = "Enemy_ZombieSkeleton_LOD2";
+            }
+
+            if (string.IsNullOrEmpty(prefabAssetBundleName))
+            {
+                prefabAssetBundleName = "enemy_prefabs";
             }
 
             if (string.IsNullOrEmpty(behaviorTreeKey))

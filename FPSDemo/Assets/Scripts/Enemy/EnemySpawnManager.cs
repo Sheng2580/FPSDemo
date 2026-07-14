@@ -42,6 +42,7 @@ namespace Enemy
             public int enemyId = 1001;
             public string enemyName = "Zombie Skeleton";
             public string prefabKey = "ZombieSkeletonOneHanded";
+            public string prefabAssetBundleName = DefaultEnemyPrefabBundleName;
             public string prefabResourceKey = "Enemy_ZombieSkeleton_LOD2";
             public GameObject prefab;
             public float weight = 100f;
@@ -75,6 +76,20 @@ namespace Enemy
             }
         }
 
+        private readonly struct EnemyPrefabAddress
+        {
+            public readonly string bundleName;
+            public readonly string resourceKey;
+
+            public EnemyPrefabAddress(string bundleName, string resourceKey)
+            {
+                this.bundleName = ResolveEnemyBundleName(bundleName);
+                this.resourceKey = resourceKey;
+            }
+
+            public string CacheKey => BuildPrefabCacheKey(bundleName, resourceKey);
+        }
+
         [Header("生成")]
         [SerializeField] private bool autoSpawn = true;
         [SerializeField] private bool useWaveConfigs = true;
@@ -104,6 +119,7 @@ namespace Enemy
         private readonly Dictionary<string, GameObject> _loadedPrefabByResourceKey = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _loadingPrefabResourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _missingPrefabWarnings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<EnemyWaveConfig> _loadedWaveConfigs = new List<EnemyWaveConfig>();
         private NavMeshPath _spawnPath;
         private float _nextSpawnTime;
         private float _battleStartTime;
@@ -146,7 +162,7 @@ namespace Enemy
                 return;
             }
 
-            if (useWaveConfigs && HasWaveConfigAssets())
+            if (useWaveConfigs && HasWaveConfigs())
             {
                 TickWaveAutoSpawn();
                 return;
@@ -609,21 +625,20 @@ namespace Enemy
 
         private EnemyWaveConfig ResolveActiveWave(float elapsedTime)
         {
-            if (!useWaveConfigs || waveConfigs == null || waveConfigs.Count == 0)
+            if (!useWaveConfigs || !HasWaveConfigs())
             {
                 return null;
             }
 
             EnemyWaveConfig fallback = null;
-            for (int i = 0; i < waveConfigs.Count; i++)
+            for (int i = 0; i < _loadedWaveConfigs.Count; i++)
             {
-                EnemyWaveConfigAsset asset = waveConfigs[i];
-                if (asset == null || asset.Config == null)
+                EnemyWaveConfig config = _loadedWaveConfigs[i];
+                if (config == null)
                 {
                     continue;
                 }
 
-                EnemyWaveConfig config = asset.Config;
                 config.ApplyMissingDefaults();
                 if (config.IsInTime(elapsedTime))
                 {
@@ -639,14 +654,14 @@ namespace Enemy
             return fallback != null && elapsedTime >= fallback.startTime ? fallback : null;
         }
 
-        private bool HasWaveConfigAssets()
+        private bool HasWaveConfigs()
         {
-            return waveConfigs != null && waveConfigs.Count > 0;
+            return _loadedWaveConfigs.Count > 0;
         }
 
         private EnemyWaveConfig ResolveWaveByAbsoluteIndex(int absoluteWaveIndex)
         {
-            if (!HasWaveConfigAssets())
+            if (!HasWaveConfigs())
             {
                 return null;
             }
@@ -656,10 +671,9 @@ namespace Enemy
             EnemyWaveConfig fallback = null;
             int fallbackTier = 0;
 
-            for (int i = 0; i < waveConfigs.Count; i++)
+            for (int i = 0; i < _loadedWaveConfigs.Count; i++)
             {
-                EnemyWaveConfigAsset asset = waveConfigs[i];
-                EnemyWaveConfig config = asset != null ? asset.Config : null;
+                EnemyWaveConfig config = _loadedWaveConfigs[i];
                 if (config == null)
                 {
                     continue;
@@ -684,17 +698,16 @@ namespace Enemy
 
         private EnemyWaveConfig ResolveFirstAvailableWave()
         {
-            if (!HasWaveConfigAssets())
+            if (!HasWaveConfigs())
             {
                 return null;
             }
 
             EnemyWaveConfig fallback = null;
             int fallbackTier = int.MaxValue;
-            for (int i = 0; i < waveConfigs.Count; i++)
+            for (int i = 0; i < _loadedWaveConfigs.Count; i++)
             {
-                EnemyWaveConfigAsset asset = waveConfigs[i];
-                EnemyWaveConfig config = asset != null ? asset.Config : null;
+                EnemyWaveConfig config = _loadedWaveConfigs[i];
                 if (config == null)
                 {
                     continue;
@@ -721,14 +734,14 @@ namespace Enemy
 
         private int ResolveWavesPerDifficultyTier()
         {
-            if (!HasWaveConfigAssets())
+            if (!HasWaveConfigs())
             {
                 return 1;
             }
 
-            for (int i = 0; i < waveConfigs.Count; i++)
+            for (int i = 0; i < _loadedWaveConfigs.Count; i++)
             {
-                EnemyWaveConfig config = waveConfigs[i] != null ? waveConfigs[i].Config : null;
+                EnemyWaveConfig config = _loadedWaveConfigs[i];
                 if (config != null)
                 {
                     return Mathf.Max(1, config.wavesPerDifficultyTier);
@@ -814,15 +827,16 @@ namespace Enemy
                 return null;
             }
 
-            if (TryGetAssetBundlePrefab(runtimeStats.prefabResourceKey, out GameObject prefab))
+            string bundleName = ResolveEnemyBundleName(runtimeStats.prefabAssetBundleName);
+            if (TryGetAssetBundlePrefab(bundleName, runtimeStats.prefabResourceKey, out GameObject prefab))
             {
                 return prefab;
             }
 
             if (loadPrefabsFromAssetBundle && !string.IsNullOrEmpty(runtimeStats.prefabResourceKey))
             {
-                BeginLoadEnemyPrefab(runtimeStats.prefabResourceKey);
-                if (TryGetAssetBundlePrefab(runtimeStats.prefabResourceKey, out prefab))
+                BeginLoadEnemyPrefab(bundleName, runtimeStats.prefabResourceKey);
+                if (TryGetAssetBundlePrefab(bundleName, runtimeStats.prefabResourceKey, out prefab))
                 {
                     return prefab;
                 }
@@ -840,15 +854,16 @@ namespace Enemy
                 return null;
             }
 
-            if (TryGetAssetBundlePrefab(definition.prefabResourceKey, out GameObject prefab))
+            string bundleName = ResolveEnemyBundleName(definition.prefabAssetBundleName);
+            if (TryGetAssetBundlePrefab(bundleName, definition.prefabResourceKey, out GameObject prefab))
             {
                 return prefab;
             }
 
             if (loadPrefabsFromAssetBundle && !string.IsNullOrEmpty(definition.prefabResourceKey))
             {
-                BeginLoadEnemyPrefab(definition.prefabResourceKey);
-                if (TryGetAssetBundlePrefab(definition.prefabResourceKey, out prefab))
+                BeginLoadEnemyPrefab(bundleName, definition.prefabResourceKey);
+                if (TryGetAssetBundlePrefab(bundleName, definition.prefabResourceKey, out prefab))
                 {
                     return prefab;
                 }
@@ -920,18 +935,19 @@ namespace Enemy
                 return;
             }
 
-            HashSet<string> keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            CollectPrefabKeys(keys);
+            Dictionary<string, EnemyPrefabAddress> addresses =
+                new Dictionary<string, EnemyPrefabAddress>(StringComparer.OrdinalIgnoreCase);
+            CollectPrefabAddresses(addresses);
 
-            foreach (string key in keys)
+            foreach (EnemyPrefabAddress address in addresses.Values)
             {
-                BeginLoadEnemyPrefab(key);
+                BeginLoadEnemyPrefab(address.bundleName, address.resourceKey);
             }
         }
 
-        private void CollectPrefabKeys(HashSet<string> keys)
+        private void CollectPrefabAddresses(Dictionary<string, EnemyPrefabAddress> addresses)
         {
-            if (keys == null)
+            if (addresses == null)
             {
                 return;
             }
@@ -941,7 +957,7 @@ namespace Enemy
                 for (int i = 0; i < prefabBindings.Count; i++)
                 {
                     EnemyPrefabBinding binding = prefabBindings[i];
-                    AddPrefabKey(keys, binding?.prefabResourceKey);
+                    AddPrefabAddress(addresses, enemyPrefabAssetBundleName, binding?.prefabResourceKey);
                 }
             }
 
@@ -950,19 +966,21 @@ namespace Enemy
                 for (int i = 0; i < spawnDefinitions.Count; i++)
                 {
                     EnemySpawnDefinition definition = spawnDefinitions[i];
-                    AddPrefabKey(keys, definition?.prefabResourceKey);
+                    AddPrefabAddress(
+                        addresses,
+                        definition?.prefabAssetBundleName,
+                        definition?.prefabResourceKey);
                 }
             }
 
-            if (waveConfigs == null)
+            if (!HasWaveConfigs())
             {
                 return;
             }
 
-            for (int i = 0; i < waveConfigs.Count; i++)
+            for (int i = 0; i < _loadedWaveConfigs.Count; i++)
             {
-                EnemyWaveConfigAsset waveAsset = waveConfigs[i];
-                EnemyWaveConfig wave = waveAsset != null ? waveAsset.Config : null;
+                EnemyWaveConfig wave = _loadedWaveConfigs[i];
                 if (wave?.entries == null)
                 {
                     continue;
@@ -971,28 +989,33 @@ namespace Enemy
                 for (int j = 0; j < wave.entries.Count; j++)
                 {
                     EnemySpawnEntry entry = wave.entries[j];
-                    EnemyConfig config = entry?.enemyConfig != null ? entry.enemyConfig.CreateRuntimeConfig() : null;
-                    AddPrefabKey(keys, config?.prefabResourceKey);
+                    EnemyConfig config = entry?.CreateRuntimeEnemyConfig();
+                    AddPrefabAddress(addresses, config?.prefabAssetBundleName, config?.prefabResourceKey);
                 }
             }
 
-            if (keys.Count == 0)
+            if (addresses.Count == 0)
             {
-                AddPrefabKey(keys, CreateDefaultSpawnDefinition().prefabResourceKey);
+                EnemySpawnDefinition definition = CreateDefaultSpawnDefinition();
+                AddPrefabAddress(addresses, definition.prefabAssetBundleName, definition.prefabResourceKey);
             }
         }
 
-        private void AddPrefabKey(HashSet<string> keys, string key)
+        private static void AddPrefabAddress(
+            Dictionary<string, EnemyPrefabAddress> addresses,
+            string bundleName,
+            string resourceKey)
         {
-            if (keys == null || string.IsNullOrEmpty(key))
+            if (addresses == null || string.IsNullOrEmpty(resourceKey))
             {
                 return;
             }
 
-            keys.Add(key);
+            EnemyPrefabAddress address = new EnemyPrefabAddress(bundleName, resourceKey);
+            addresses[address.CacheKey] = address;
         }
 
-        private bool TryGetAssetBundlePrefab(string resourceKey, out GameObject prefab)
+        private bool TryGetAssetBundlePrefab(string bundleName, string resourceKey, out GameObject prefab)
         {
             prefab = null;
             if (string.IsNullOrEmpty(resourceKey))
@@ -1000,17 +1023,20 @@ namespace Enemy
                 return false;
             }
 
-            return _loadedPrefabByResourceKey.TryGetValue(resourceKey, out prefab) && prefab != null;
+            string cacheKey = BuildPrefabCacheKey(bundleName, resourceKey);
+            return _loadedPrefabByResourceKey.TryGetValue(cacheKey, out prefab) && prefab != null;
         }
 
-        private void BeginLoadEnemyPrefab(string resourceKey)
+        private void BeginLoadEnemyPrefab(string bundleName, string resourceKey)
         {
             if (!loadPrefabsFromAssetBundle || string.IsNullOrEmpty(resourceKey))
             {
                 return;
             }
 
-            if (_loadedPrefabByResourceKey.ContainsKey(resourceKey) || !_loadingPrefabResourceKeys.Add(resourceKey))
+            string resolvedBundleName = ResolveEnemyBundleName(bundleName);
+            string cacheKey = BuildPrefabCacheKey(resolvedBundleName, resourceKey);
+            if (_loadedPrefabByResourceKey.ContainsKey(cacheKey) || !_loadingPrefabResourceKeys.Add(cacheKey))
             {
                 return;
             }
@@ -1018,31 +1044,41 @@ namespace Enemy
 #if UNITY_EDITOR
             if (preferEditorDirectPrefab && TryLoadEditorEnemyPrefab(resourceKey, out GameObject editorPrefab))
             {
-                _loadingPrefabResourceKeys.Remove(resourceKey);
-                _loadedPrefabByResourceKey[resourceKey] = editorPrefab;
+                _loadingPrefabResourceKeys.Remove(cacheKey);
+                _loadedPrefabByResourceKey[cacheKey] = editorPrefab;
                 return;
             }
 #endif
 
-            ABManager.Instance.LoadAssetAsync<GameObject>(enemyPrefabAssetBundleName, resourceKey, loadedPrefab =>
+            ABManager.Instance.LoadAssetAsync<GameObject>(resolvedBundleName, resourceKey, loadedPrefab =>
             {
-                _loadingPrefabResourceKeys.Remove(resourceKey);
+                _loadingPrefabResourceKeys.Remove(cacheKey);
                 if (loadedPrefab != null)
                 {
-                    _loadedPrefabByResourceKey[resourceKey] = loadedPrefab;
+                    _loadedPrefabByResourceKey[cacheKey] = loadedPrefab;
                     return;
                 }
 
 #if UNITY_EDITOR
                 if (preferEditorDirectPrefab && TryLoadEditorEnemyPrefab(resourceKey, out GameObject editorPrefab))
                 {
-                    _loadedPrefabByResourceKey[resourceKey] = editorPrefab;
+                    _loadedPrefabByResourceKey[cacheKey] = editorPrefab;
                     return;
                 }
 #endif
 
-                WarnMissingEnemyPrefab(resourceKey);
+                WarnMissingEnemyPrefab(resolvedBundleName, resourceKey);
             });
+        }
+
+        private static string ResolveEnemyBundleName(string bundleName)
+        {
+            return string.IsNullOrEmpty(bundleName) ? DefaultEnemyPrefabBundleName : bundleName;
+        }
+
+        private static string BuildPrefabCacheKey(string bundleName, string resourceKey)
+        {
+            return $"{ResolveEnemyBundleName(bundleName)}/{resourceKey}";
         }
 
         private bool TryLoadEditorEnemyPrefab(string resourceKey, out GameObject prefab)
@@ -1056,14 +1092,15 @@ namespace Enemy
 #endif
         }
 
-        private void WarnMissingEnemyPrefab(string resourceKey)
+        private void WarnMissingEnemyPrefab(string bundleName, string resourceKey)
         {
-            if (string.IsNullOrEmpty(resourceKey) || !_missingPrefabWarnings.Add(resourceKey))
+            string cacheKey = BuildPrefabCacheKey(bundleName, resourceKey);
+            if (string.IsNullOrEmpty(resourceKey) || !_missingPrefabWarnings.Add(cacheKey))
             {
                 return;
             }
 
-            Debug.LogWarning($"[EnemySpawn] 找不到敌人 AB Prefab ResourceKey={resourceKey}", this);
+            Debug.LogWarning($"[EnemySpawn] 找不到敌人 AB Prefab Bundle={bundleName} ResourceKey={resourceKey}", this);
         }
 
         private float GetElapsedTime()
@@ -1098,23 +1135,78 @@ namespace Enemy
 
         private void LoadWaveConfigsIfNeeded()
         {
-            if (!useWaveConfigs || (waveConfigs != null && waveConfigs.Count > 0))
+            if (!useWaveConfigs || HasWaveConfigs())
             {
                 return;
             }
 
-            EnemyWaveConfigAsset[] assets = Resources.LoadAll<EnemyWaveConfigAsset>("EnemyWaves");
-            if (assets == null || assets.Length == 0)
+            _loadedWaveConfigs.Clear();
+            if (EnemyJsonConfigLoader.TryLoadWaveConfigs(out List<EnemyWaveConfig> jsonWaveConfigs))
             {
-                DebugSpawn("[EnemySpawnDebug] Resources/EnemyWaves 没有找到波次配置", false);
+                AddLoadedWaveConfigs(jsonWaveConfigs);
+                if (HasWaveConfigs())
+                {
+                    Debug.Log($"[EnemySpawn] 已读取 Luban 敌人波次配置 Count={_loadedWaveConfigs.Count}", this);
+                    return;
+                }
+            }
+
+            if (waveConfigs == null || waveConfigs.Count == 0)
+            {
+                EnemyWaveConfigAsset[] assets = Resources.LoadAll<EnemyWaveConfigAsset>("EnemyWaves");
+                if (assets != null && assets.Length > 0)
+                {
+                    waveConfigs = new List<EnemyWaveConfigAsset>(assets);
+                }
+            }
+
+            if (waveConfigs == null || waveConfigs.Count == 0)
+            {
+                Debug.LogError("[EnemySpawn] Luban 和 Resources 都没有可用敌人波次配置", this);
                 return;
             }
 
-            waveConfigs = new List<EnemyWaveConfigAsset>(assets);
-            waveConfigs.Sort((left, right) =>
+            for (int i = 0; i < waveConfigs.Count; i++)
             {
-                float leftTime = left != null && left.Config != null ? left.Config.startTime : 0f;
-                float rightTime = right != null && right.Config != null ? right.Config.startTime : 0f;
+                EnemyWaveConfig config = waveConfigs[i] != null ? waveConfigs[i].Config : null;
+                if (config != null)
+                {
+                    _loadedWaveConfigs.Add(config);
+                }
+            }
+
+            SortLoadedWaveConfigs();
+            Debug.LogWarning($"[EnemySpawn] Luban 敌人配置读取失败 使用 ScriptableObject 兜底 Count={_loadedWaveConfigs.Count}", this);
+        }
+
+        private void AddLoadedWaveConfigs(List<EnemyWaveConfig> configs)
+        {
+            if (configs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < configs.Count; i++)
+            {
+                EnemyWaveConfig config = configs[i];
+                if (config == null)
+                {
+                    continue;
+                }
+
+                config.ApplyMissingDefaults();
+                _loadedWaveConfigs.Add(config);
+            }
+
+            SortLoadedWaveConfigs();
+        }
+
+        private void SortLoadedWaveConfigs()
+        {
+            _loadedWaveConfigs.Sort((left, right) =>
+            {
+                float leftTime = left != null ? left.startTime : 0f;
+                float rightTime = right != null ? right.startTime : 0f;
                 return leftTime.CompareTo(rightTime);
             });
         }
@@ -1556,7 +1648,7 @@ namespace Enemy
                 return ResolveSceneMaxEnemyCount(_currentWave);
             }
 
-            if (useWaveConfigs && HasWaveConfigAssets())
+            if (useWaveConfigs && HasWaveConfigs())
             {
                 EnemyWaveConfig waveByIndex = ResolveWaveByAbsoluteIndex(Mathf.Max(1, _currentWaveIndex));
                 return ResolveSceneMaxEnemyCount(waveByIndex);
@@ -1701,7 +1793,7 @@ namespace Enemy
             for (int i = 0; i < entries.Count; i++)
             {
                 EnemySpawnEntry entry = entries[i];
-                EnemyConfig config = entry?.enemyConfig != null ? entry.enemyConfig.CreateRuntimeConfig() : null;
+                EnemyConfig config = entry?.CreateRuntimeEnemyConfig();
                 if (entry == null || config == null)
                 {
                     continue;

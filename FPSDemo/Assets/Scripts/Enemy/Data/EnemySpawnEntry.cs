@@ -7,6 +7,7 @@ namespace Enemy.Data
     public class EnemySpawnEntry
     {
         public EnemyConfigAsset enemyConfig;
+        [NonSerialized] private EnemyConfig runtimeEnemyConfig;
         public int unlockWaveIndex = 1;
         public int minWaveIndex = 1;
         public int maxWaveIndex;
@@ -33,8 +34,27 @@ namespace Enemy.Data
         public float goldMultiplierGrowthPerDifficultyTier;
         public float maxGoldMultiplier;
 
-        public bool IsValid => enemyConfig != null && weight > 0f && maxAliveCount != 0;
+        public bool IsValid => HasEnemyConfig && weight > 0f && maxAliveCount != 0;
+        public bool HasEnemyConfig => runtimeEnemyConfig != null || enemyConfig != null;
         public int EffectiveUnlockWaveIndex => Mathf.Max(1, Mathf.Max(unlockWaveIndex, minWaveIndex));
+
+        public void ConfigureRuntimeEnemyConfig(EnemyConfig config)
+        {
+            runtimeEnemyConfig = config != null ? config.Clone() : null;
+            runtimeEnemyConfig?.ApplyMissingDefaults();
+        }
+
+        public EnemyConfig CreateRuntimeEnemyConfig()
+        {
+            if (runtimeEnemyConfig != null)
+            {
+                EnemyConfig config = runtimeEnemyConfig.Clone();
+                config.ApplyMissingDefaults();
+                return config;
+            }
+
+            return enemyConfig != null ? enemyConfig.CreateRuntimeConfig() : null;
+        }
 
         public void ApplyMissingDefaults()
         {
@@ -62,7 +82,7 @@ namespace Enemy.Data
         public bool IsAvailableForWave(int absoluteWaveIndex)
         {
             int safeWaveIndex = Mathf.Max(1, absoluteWaveIndex);
-            if (enemyConfig == null || safeWaveIndex < EffectiveUnlockWaveIndex)
+            if (!HasEnemyConfig || safeWaveIndex < EffectiveUnlockWaveIndex)
             {
                 return false;
             }

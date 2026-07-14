@@ -9,6 +9,7 @@ namespace Enemy.Data
         public int enemyId;
         public string enemyName;
         public string prefabKey;
+        public string prefabAssetBundleName;
         public string prefabResourceKey;
         public string behaviorTreeKey;
         public string aiProfileKey;
@@ -110,6 +111,7 @@ namespace Enemy.Data
                 enemyId = config.enemyId,
                 enemyName = config.enemyName,
                 prefabKey = config.prefabKey,
+                prefabAssetBundleName = config.prefabAssetBundleName,
                 prefabResourceKey = config.prefabResourceKey,
                 behaviorTreeKey = config.behaviorTreeKey,
                 aiProfileKey = config.aiProfileKey,
@@ -256,12 +258,17 @@ namespace Enemy.Data
             int absoluteWaveIndex,
             float waveElapsedTime)
         {
-            if (entry == null || entry.enemyConfig == null)
+            if (entry == null)
             {
                 return null;
             }
 
-            EnemyConfig config = entry.enemyConfig.CreateRuntimeConfig();
+            EnemyConfig config = entry.CreateRuntimeEnemyConfig();
+            if (config == null)
+            {
+                return null;
+            }
+
             return Create(config, entry, wave, elapsedTime, absoluteWaveIndex, waveElapsedTime);
         }
 

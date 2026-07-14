@@ -5,7 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LUBAN_DLL="$SCRIPT_DIR/Luban/Luban.dll"
 CONF_ROOT="$SCRIPT_DIR"
-OUTPUT_DIR="$PROJECT_DIR/Assets/StreamingAssets"
+OUTPUT_DIR="${TMPDIR:-/tmp}/fpsdemo_luban_json"
+GENERATED_DIR="$SCRIPT_DIR/GeneratedJson"
+STREAMING_DIR="$PROJECT_DIR/Assets/StreamingAssets"
 
 if command -v dotnet >/dev/null 2>&1; then
     DOTNET_CMD="$(command -v dotnet)"
@@ -21,7 +23,8 @@ if [ ! -f "$LUBAN_DLL" ]; then
     exit 1
 fi
 
-mkdir -p "$OUTPUT_DIR"
+rm -rf "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR" "$GENERATED_DIR" "$STREAMING_DIR"
 
 echo "[Info] Using dotnet: $DOTNET_CMD"
 echo "[Info] Using Luban: $LUBAN_DLL"
@@ -35,4 +38,7 @@ DOTNET_ROLL_FORWARD=Major \
     --conf "$CONF_ROOT/luban.conf" \
     -x outputDataDir="$OUTPUT_DIR"
 
-echo "[Success] Luban json generated."
+cp "$OUTPUT_DIR"/*.json "$GENERATED_DIR"/
+cp "$OUTPUT_DIR"/*.json "$STREAMING_DIR"/
+
+echo "[Success] Luban json generated without clearing StreamingAssets."

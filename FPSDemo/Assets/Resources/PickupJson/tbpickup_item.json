@@ -24,7 +24,7 @@
     "itemType": "Ammo",
     "assetBundleName": "prop_runtime",
     "assetName": "BulletProp",
-    "weight": 90,
+    "weight": 180,
     "unlockWave": 1,
     "lifeTime": 18,
     "pickupRadius": 1.4,

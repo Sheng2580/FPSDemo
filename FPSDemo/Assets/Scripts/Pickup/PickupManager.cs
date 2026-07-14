@@ -23,8 +23,9 @@ namespace Pickup
 
         [Header("生成")]
         [SerializeField] private bool autoSpawn = true;
-        [SerializeField] private float spawnInterval = 8f;
-        [SerializeField] private int maxActivePickupCount = 4;
+        [SerializeField] private bool guaranteeAmmoPickup = true;
+        [SerializeField] private float spawnInterval = 5f;
+        [SerializeField] private int maxActivePickupCount = 6;
         [SerializeField] private float spawnRadius = 18f;
         [SerializeField] private float minDistanceFromPlayer = 4f;
         [SerializeField] private float spawnHeightOffset = 0.6f;
@@ -137,6 +138,9 @@ namespace Pickup
             }
 
             activeInstance = this;
+            // 兼容 Combat 场景中的旧序列化值 同时保留更快的自定义配置
+            spawnInterval = Mathf.Min(spawnInterval, 5f);
+            maxActivePickupCount = Mathf.Max(maxActivePickupCount, 6);
             EnsureEffectResolver();
             LoadConfigsIfNeeded();
             CachePlayer();
@@ -252,7 +256,9 @@ namespace Pickup
             CachePlayer();
             SyncWaveIndexFromSpawner();
 
-            PickupItemConfig config = RollConfig();
+            PickupItemConfig config = RollConfig(ShouldGuaranteeAmmoPickup()
+                ? PickupItemType.Ammo
+                : (PickupItemType?)null);
             if (config == null)
             {
                 DebugLog("[Pickup] 没有可用道具配置");
@@ -296,7 +302,7 @@ namespace Pickup
             });
         }
 
-        private PickupItemConfig RollConfig()
+        private PickupItemConfig RollConfig(PickupItemType? requiredType = null)
         {
             float totalWeight = 0f;
             int currentWave = Mathf.Max(1, _currentWaveIndex);
@@ -304,7 +310,7 @@ namespace Pickup
             for (int i = 0; i < _configs.Count; i++)
             {
                 PickupItemConfig config = _configs[i];
-                if (config != null && config.unlockWave <= currentWave)
+                if (IsAvailableConfig(config, currentWave, requiredType))
                 {
                     fallbackConfig = config;
                     totalWeight += Mathf.Max(0f, config.weight);
@@ -320,7 +326,7 @@ namespace Pickup
             for (int i = 0; i < _configs.Count; i++)
             {
                 PickupItemConfig config = _configs[i];
-                if (config == null || config.unlockWave > currentWave)
+                if (!IsAvailableConfig(config, currentWave, requiredType))
                 {
                     continue;
                 }
@@ -333,6 +339,37 @@ namespace Pickup
             }
 
             return fallbackConfig;
+        }
+
+        private bool ShouldGuaranteeAmmoPickup()
+        {
+            if (!guaranteeAmmoPickup)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _activePickups.Count; i++)
+            {
+                BasePickupItem pickupItem = _activePickups[i];
+                if (pickupItem != null &&
+                    pickupItem.Config != null &&
+                    pickupItem.Config.itemType == PickupItemType.Ammo)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsAvailableConfig(
+            PickupItemConfig config,
+            int currentWave,
+            PickupItemType? requiredType)
+        {
+            return config != null &&
+                   config.unlockWave <= currentWave &&
+                   (!requiredType.HasValue || config.itemType == requiredType.Value);
         }
 
         private bool TryFindSpawnPosition(out Vector3 position)

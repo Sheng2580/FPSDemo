@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4044454764708556400}
   - component: {fileID: 862357827300265984}
   - component: {fileID: 4885636093997209411}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: QuestionMark
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4855,7 +4855,7 @@ GameObject:
   - component: {fileID: 2208313093433970159}
   - component: {fileID: -4529991640152382381}
   - component: {fileID: 770101000000000004}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: RageProp
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9762,7 +9762,7 @@ GameObject:
   - component: {fileID: 1893422435138091112}
   - component: {fileID: 6102216876156907460}
   - component: {fileID: 5881228833649449557}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: Sparkle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14604,7 +14604,7 @@ GameObject:
   - component: {fileID: 7944873443354743970}
   - component: {fileID: 4521663916392614982}
   - component: {fileID: 7641371577244106257}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: BigGlow
   m_TagString: Untagged
   m_Icon: {fileID: 0}

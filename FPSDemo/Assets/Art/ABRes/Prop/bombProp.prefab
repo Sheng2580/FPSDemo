@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5061242111945804185}
   - component: {fileID: 8140109776084669920}
   - component: {fileID: 770101000000000003}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: bombProp
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -82,7 +82,7 @@ GameObject:
   - component: {fileID: 7462597487607994434}
   - component: {fileID: 3248991637093079786}
   - component: {fileID: 8293087991423069054}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: BigGlow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4879,7 +4879,7 @@ GameObject:
   - component: {fileID: 1455313692263258313}
   - component: {fileID: 2210242898206028977}
   - component: {fileID: 1788559700373124369}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: QuestionMark
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9721,7 +9721,7 @@ GameObject:
   - component: {fileID: 1745484728532595255}
   - component: {fileID: 7581663536002985409}
   - component: {fileID: 6682542190253303133}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: Sparkle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
