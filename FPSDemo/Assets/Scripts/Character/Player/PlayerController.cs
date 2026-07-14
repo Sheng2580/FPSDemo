@@ -17,6 +17,7 @@ public class PlayerController : CharacterBase<PlayerModel>
     private float _jumpBufferTimer;
     private float _coyoteTimer;
     private bool _hasLoggedMissingMotor;
+    private bool _isDead;
 
     public PlayerStateType CurrentStateType => _currentStateType;
     public PlayerStateType PreviousStateType => _previousStateType;
@@ -30,6 +31,7 @@ public class PlayerController : CharacterBase<PlayerModel>
     public bool HasBufferedJump => _jumpBufferTimer > 0f;
     public bool CanUseCoyoteJump => _coyoteTimer > 0f;
     public bool IsSkillMovementLocked { get; private set; }
+    public bool IsDead => _isDead;
 
     private void Awake()
     {
@@ -74,6 +76,20 @@ public class PlayerController : CharacterBase<PlayerModel>
         ChangeState(PlayerStateType.Idle);
     }
 
+    private void OnEnable()
+    {
+        if (stateMachine != null && stateMachine.CurrentState == null)
+        {
+            ChangeState(PlayerStateType.Idle);
+        }
+    }
+
+    private void OnDisable()
+    {
+        // 场景退出时注销全局更新 避免旧玩家状态继续运行
+        stateMachine?.Stop(false);
+    }
+
     protected override void Update()
     {
         base.Update();
@@ -88,9 +104,9 @@ public class PlayerController : CharacterBase<PlayerModel>
     {
         PlayerBaseConfig baseConfig = defaultConfigAsset != null && defaultConfigAsset.config != null
             ? defaultConfigAsset.config
-            : PlayerBaseConfig.CreateDefault();
+            : PlayerDefaultConfigAsset.LoadRuntimeConfig();
 
-        PlayerSaveData saveData = PlayerSaveData.CreateNew();
+        PlayerSaveData saveData = PlayerProgressSaveService.Load();
 
         Stats = new PlayerStats();
         Stats.Init(baseConfig, saveData);
@@ -171,7 +187,7 @@ public class PlayerController : CharacterBase<PlayerModel>
 
     public void TakeDamage(float damage)
     {
-        if (Stats == null || Stats.RuntimeData == null)
+        if (_isDead || Stats == null || Stats.RuntimeData == null)
         {
             return;
         }
@@ -193,11 +209,17 @@ public class PlayerController : CharacterBase<PlayerModel>
         {
             Debug.Log($"玩家受到伤害 {damageAmount} 当前生命 {Stats.RuntimeData.currentHp}", this);
         }
+
+        if (Stats.RuntimeData.currentHp <= 0)
+        {
+            _isDead = true;
+            EventCenter.Instance.EventTrigger(GameEvent.PlayerDied, new PlayerDiedEventData(this));
+        }
     }
 
     public int Heal(int amount)
     {
-        if (Stats == null || Stats.RuntimeData == null || amount <= 0)
+        if (_isDead || Stats == null || Stats.RuntimeData == null || amount <= 0)
         {
             return 0;
         }
@@ -250,7 +272,7 @@ public class PlayerController : CharacterBase<PlayerModel>
 
         float jumpHeight = Stats != null
             ? Stats.JumpHeight
-            : PlayerBaseConfig.CreateDefault().jumpHeight;
+            : PlayerDefaultConfigAsset.LoadRuntimeConfig().jumpHeight;
 
         ConsumeJumpBuffer();
         ClearCoyoteTimer();

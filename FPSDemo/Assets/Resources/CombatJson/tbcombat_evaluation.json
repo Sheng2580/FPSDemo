@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "minSurvivalSeconds": 0,
+    "minKillCount": 0,
+    "evaluationText": "幸存者"
+  },
+  {
+    "id": 2,
+    "minSurvivalSeconds": 60,
+    "minKillCount": 10,
+    "evaluationText": "丧尸猎手"
+  },
+  {
+    "id": 3,
+    "minSurvivalSeconds": 180,
+    "minKillCount": 35,
+    "evaluationText": "杀戮专家"
+  },
+  {
+    "id": 4,
+    "minSurvivalSeconds": 300,
+    "minKillCount": 80,
+    "evaluationText": "末日幸存者"
+  }
+]

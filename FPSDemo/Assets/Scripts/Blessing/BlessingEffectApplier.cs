@@ -149,7 +149,7 @@ public class BlessingEffectApplier : MonoBehaviour
             case BlessingStatType.WeaponRecoil:
                 ApplyWeaponStat(config, effect, value);
                 break;
-            case BlessingStatType.SkillCooldown:
+            case BlessingStatType.SkillCooldownReduction:
             case BlessingStatType.SkillMaxCount:
                 ApplySkillStat(config, effect.statType, effect.modifyType, value);
                 break;
@@ -320,20 +320,20 @@ public class BlessingEffectApplier : MonoBehaviour
             return;
         }
 
-        if (statType == BlessingStatType.SkillCooldown && (config == null || !config.requiresSkillType))
+        if (statType == BlessingStatType.SkillCooldownReduction && (config == null || !config.requiresSkillType))
         {
-            float multiplier = ResolveMultiplierModifier(modifyType, value);
-            _skillController.ApplyCooldownMultiplier(SkillType.Dodge, multiplier);
-            _skillController.ApplyCooldownMultiplier(SkillType.Push, multiplier);
-            _skillController.ApplyCooldownMultiplier(SkillType.Grenade, multiplier);
+            float reduction = ResolveCooldownReduction(modifyType, value);
+            _skillController.ApplyCooldownReduction(SkillType.Dodge, reduction);
+            _skillController.ApplyCooldownReduction(SkillType.Push, reduction);
+            _skillController.ApplyCooldownReduction(SkillType.Grenade, reduction);
             return;
         }
 
         SkillType skillType = config != null && config.requiresSkillType ? config.requiredSkillType : SkillType.Grenade;
         switch (statType)
         {
-            case BlessingStatType.SkillCooldown:
-                _skillController.ApplyCooldownMultiplier(skillType, ResolveMultiplierModifier(modifyType, value));
+            case BlessingStatType.SkillCooldownReduction:
+                _skillController.ApplyCooldownReduction(skillType, ResolveCooldownReduction(modifyType, value));
                 break;
             case BlessingStatType.SkillMaxCount:
                 _skillController.AddMaxCount(skillType, Mathf.RoundToInt(value));
@@ -441,6 +441,21 @@ public class BlessingEffectApplier : MonoBehaviour
                 return value;
             default:
                 return 1f;
+        }
+    }
+
+    private float ResolveCooldownReduction(BlessingModifyType modifyType, float value)
+    {
+        switch (modifyType)
+        {
+            case BlessingModifyType.Multiply:
+                return Mathf.Max(0f, 1f - value);
+            case BlessingModifyType.Add:
+            case BlessingModifyType.PercentAdd:
+            case BlessingModifyType.Override:
+                return Mathf.Max(0f, value);
+            default:
+                return 0f;
         }
     }
 }

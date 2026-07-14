@@ -18,8 +18,6 @@ namespace PlayerData
         public float moveSpeedMultiplier = 1f;
         // 跳跃高度倍率
         public float jumpHeightMultiplier = 1f;
-        // 闪避冷却倍率
-        public float dodgeCooldownMultiplier = 1f;
         // 是否无敌
         public bool isInvincible;
         // 是否霸体
@@ -31,7 +29,6 @@ namespace PlayerData
             currentHp = maxHp;
             moveSpeedMultiplier = 1f;
             jumpHeightMultiplier = 1f;
-            dodgeCooldownMultiplier = 1f;
             isInvincible = false;
             isSuperArmor = false;
         }

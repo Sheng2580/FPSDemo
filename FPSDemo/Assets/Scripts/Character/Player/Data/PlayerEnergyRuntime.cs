@@ -1,5 +1,6 @@
 using Combat;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -13,7 +14,10 @@ namespace PlayerData
     [DisallowMultipleComponent]
     public class PlayerEnergyRuntime : MonoBehaviour
     {
+        private const string CombatSceneName = "Combat";
         private const string DefaultConfigPath = "PlayerEnergyConfigs/DefaultPlayerEnergyConfig";
+
+        private static PlayerEnergyRuntime _instance;
 
         [SerializeField] private PlayerEnergyConfigAsset configAsset;
         [SerializeField] private bool loadDefaultConfigFromResources = true;
@@ -30,10 +34,16 @@ namespace PlayerData
         public PlayerEnergyRuntimeData RuntimeData => _runtimeData;
         public PlayerEnergyState CurrentState => _runtimeData != null ? _runtimeData.state : PlayerEnergyState.Charging;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetRuntimeState()
+        {
+            _instance = null;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureRuntimeInstance()
         {
-            if (FindObjectOfType<PlayerEnergyRuntime>() != null)
+            if (_instance != null || FindObjectOfType<PlayerEnergyRuntime>() != null)
             {
                 return;
             }
@@ -44,11 +54,20 @@ namespace PlayerData
 
         private void Awake()
         {
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
             InitRuntimeData();
         }
 
         private void OnEnable()
         {
+            SceneManager.sceneLoaded += OnSceneLoaded;
             EventCenter.Instance.AddEventListener<EnemyDamagedEventData>(GameEvent.EnemyDamaged, OnEnemyDamaged);
             EventCenter.Instance.AddEventListener(GameEvent.PlayerEnergyBlessingSelectRequested, OnBlessingSelectRequested);
             EventCenter.Instance.AddEventListener(GameEvent.PlayerEnergyBlessingSelectCanceled, OnBlessingSelectCanceled);
@@ -57,10 +76,27 @@ namespace PlayerData
 
         private void OnDisable()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             EventCenter.Instance.RemoveEventListener<EnemyDamagedEventData>(GameEvent.EnemyDamaged, OnEnemyDamaged);
             EventCenter.Instance.RemoveEventListener(GameEvent.PlayerEnergyBlessingSelectRequested, OnBlessingSelectRequested);
             EventCenter.Instance.RemoveEventListener(GameEvent.PlayerEnergyBlessingSelectCanceled, OnBlessingSelectCanceled);
             EventCenter.Instance.RemoveEventListener<PlayerEnergyBlessingSelectedEventData>(GameEvent.PlayerEnergyBlessingSelected, OnBlessingSelected);
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name == CombatSceneName)
+            {
+                InitRuntimeData();
+            }
         }
 
         private void Update()
@@ -76,8 +112,11 @@ namespace PlayerData
         public void InitRuntimeData()
         {
             _config = ResolveConfig();
+            int permanentLevel = PlayerProgressSaveService.GetPlayerSharedUpgradeLevel();
+            float permanentBonus = PermanentUpgradeConfigLoader.GetPlayerEnergyGainBonus(permanentLevel, 0f);
+            permanentBonus = Mathf.Min(permanentBonus, _config.maxPermanentEnergyGainBonus);
             _runtimeData = new PlayerEnergyRuntimeData();
-            _runtimeData.InitForNewRun(_config);
+            _runtimeData.InitForNewRun(_config, 1f + permanentBonus);
             TriggerEnergyChanged(0f);
             TriggerStateChanged(PlayerEnergyState.Charging, true);
         }
@@ -104,8 +143,9 @@ namespace PlayerData
                 return;
             }
 
-            _runtimeData.LevelUpAndReset();
-            TriggerEnergyChanged(-_runtimeData.maxEnergy);
+            float consumedEnergy = _runtimeData.maxEnergy;
+            _runtimeData.LevelUpAndReset(_config);
+            TriggerEnergyChanged(-consumedEnergy);
             TriggerLevelUp(GameEvent.PlayerEnergyLevelUp);
             TriggerStateChanged(PlayerEnergyState.Charging);
 
@@ -186,8 +226,9 @@ namespace PlayerData
 
             if (_runtimeData.autoLevelUp)
             {
-                _runtimeData.LevelUpAndReset();
-                TriggerEnergyChanged(-_runtimeData.maxEnergy);
+                float consumedEnergy = _runtimeData.maxEnergy;
+                _runtimeData.LevelUpAndReset(_config);
+                TriggerEnergyChanged(-consumedEnergy);
                 TriggerLevelUp(GameEvent.PlayerEnergyLevelUp);
                 TriggerStateChanged(PlayerEnergyState.Charging, true);
                 return;

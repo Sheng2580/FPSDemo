@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// HUD 能量显示中心
-/// 能量数值由数据层事件提供 这里只负责两位小数缓动表现
+/// 只显示本级升级百分比 不显示内部需求能量
 /// </summary>
 [DisallowMultipleComponent]
 public class EnergyCentre : MonoBehaviour
@@ -25,7 +25,7 @@ public class EnergyCentre : MonoBehaviour
     [SerializeField] private Ease levelReadyEase = Ease.InOutSine;
 
     [Header("格式")]
-    [SerializeField] private string energyFormat = "0.00";
+    [SerializeField] private string energyFormat = "0";
     [SerializeField] private string levelPrefix = "Lv.";
 
     private RectTransform _energyRect;
@@ -87,15 +87,16 @@ public class EnergyCentre : MonoBehaviour
     private void OnPlayerEnergyChanged(PlayerEnergyChangedEventData eventData)
     {
         _level = Mathf.Max(1, eventData.level);
-        float duration = eventData.targetEnergy < _displayEnergy ? resetTweenDuration : valueTweenDuration;
-        Ease ease = eventData.targetEnergy < _displayEnergy ? resetEase : valueEase;
+        float targetPercent = Mathf.Clamp(eventData.normalizedEnergy * 100f, 0f, 100f);
+        float duration = targetPercent < _displayEnergy ? resetTweenDuration : valueTweenDuration;
+        Ease ease = targetPercent < _displayEnergy ? resetEase : valueEase;
 
-        if (eventData.targetEnergy < eventData.maxEnergy)
+        if (targetPercent < 100f)
         {
             StopLevelReadyLoop();
         }
 
-        TweenEnergyTo(eventData.targetEnergy, duration, ease);
+        TweenEnergyTo(targetPercent, duration, ease);
         RefreshLevelText();
 
         if (eventData.deltaEnergy > 0f)
@@ -107,6 +108,7 @@ public class EnergyCentre : MonoBehaviour
     private void OnPlayerEnergyLevelUpReady(PlayerEnergyLevelUpEventData eventData)
     {
         _level = Mathf.Max(1, eventData.level);
+        TweenEnergyTo(100f, valueTweenDuration, valueEase);
         RefreshLevelText();
         PlayLevelReadyLoop();
         PlayPunch();
@@ -116,14 +118,17 @@ public class EnergyCentre : MonoBehaviour
     {
         _level = Mathf.Max(1, eventData.level);
         StopLevelReadyLoop();
-        TweenEnergyTo(eventData.currentEnergy, resetTweenDuration, resetEase);
+        float targetPercent = eventData.maxEnergy > 0f
+            ? Mathf.Clamp(eventData.currentEnergy / eventData.maxEnergy * 100f, 0f, 100f)
+            : 0f;
+        TweenEnergyTo(targetPercent, resetTweenDuration, resetEase);
         RefreshLevelText();
         PlayPunch();
     }
 
     private void TweenEnergyTo(float targetEnergy, float duration, Ease ease)
     {
-        _targetEnergy = Mathf.Max(0f, targetEnergy);
+        _targetEnergy = Mathf.Clamp(targetEnergy, 0f, 100f);
         _valueTweener?.Kill();
 
         if (duration <= 0f)
@@ -191,7 +196,7 @@ public class EnergyCentre : MonoBehaviour
     {
         if (energyText != null)
         {
-            energyText.text = _displayEnergy.ToString(energyFormat);
+            energyText.text = _displayEnergy.ToString(energyFormat) + "%";
         }
     }
 

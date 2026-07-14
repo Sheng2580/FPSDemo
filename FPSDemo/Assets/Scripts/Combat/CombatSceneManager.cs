@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using PlayerData;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Weapon;
@@ -26,6 +27,7 @@ namespace Combat
         [Serializable]
         private class RunWeaponEntry
         {
+            public int weaponId;
             public string displayName;
             public string assetBundleName;
             public string assetName;
@@ -33,12 +35,14 @@ namespace Combat
             public string editorAssetPath;
 
             public RunWeaponEntry(
+                int weaponId,
                 string displayName,
                 string assetBundleName,
                 string assetName,
                 string configResourcesPath,
                 string editorAssetPath)
             {
+                this.weaponId = weaponId;
                 this.displayName = displayName;
                 this.assetBundleName = assetBundleName;
                 this.assetName = assetName;
@@ -69,18 +73,21 @@ namespace Combat
         private List<RunWeaponEntry> defaultRunWeapons = new List<RunWeaponEntry>
         {
             new RunWeaponEntry(
+                1,
                 "Default Pistol",
                 DefaultPlayerBundleName,
                 "PistolView",
                 "WeaponConfigs/DefaultPistolWeaponConfig",
                 "Assets/Art/ABRes/Player/PlayerWeapon/PistolView.prefab"),
             new RunWeaponEntry(
+                2,
                 "Default Assault Rifle",
                 DefaultPlayerBundleName,
                 "AssaultRifleView",
                 "WeaponConfigs/DefaultAssaultRifleWeaponConfig",
                 "Assets/Art/ABRes/Player/PlayerWeapon/AssaultRifleView.prefab"),
             new RunWeaponEntry(
+                3,
                 "Default Shotgun",
                 DefaultPlayerBundleName,
                 "ShotgunView",
@@ -89,10 +96,12 @@ namespace Combat
         };
 
         [Header("编辑器测试")]
-        [SerializeField] private bool loadSourcePrefabsInEditor = true;
+        [SerializeField] private bool loadSourcePrefabsInEditor;
 
         private GameObject playerInstance;
         private bool isLoading;
+        private CombatEconomyManager combatEconomyManager;
+        private CombatRunRecorder combatRunRecorder;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRuntimeState()
@@ -178,6 +187,7 @@ namespace Combat
                 yield break;
             }
 
+            Time.timeScale = 1f;
             isLoading = true;
             EnsureRuntimeManagers();
 
@@ -209,6 +219,7 @@ namespace Combat
             if (useScenePlayerIfExists && TryUseScenePlayer(out playerInstance))
             {
                 yield return LoadRunWeapons(playerInstance);
+                StartCombatRun(playerInstance);
                 isLoading = false;
                 Debug.Log("[CombatScene] 已使用场景里的玩家并配置默认武器", playerInstance);
                 yield break;
@@ -232,6 +243,7 @@ namespace Combat
             SpawnPlayer(playerInstance);
 
             yield return LoadRunWeapons(playerInstance);
+            StartCombatRun(playerInstance);
             isLoading = false;
             Debug.Log("[CombatScene] 战斗场景玩家和默认武器加载完成", this);
         }
@@ -249,6 +261,34 @@ namespace Combat
             _ = UIManager.Instance;
             _ = MultiTimerManager.Instance;
             global::Pickup.PickupManager.EnsureForCurrentScene();
+        }
+
+        private void StartCombatRun(GameObject playerObject)
+        {
+            PlayerController player = playerObject != null ? playerObject.GetComponent<PlayerController>() : null;
+            if (player == null)
+            {
+                Debug.LogError("[CombatScene] 玩家缺少 PlayerController 无法启动战斗统计", playerObject);
+                return;
+            }
+
+            combatEconomyManager?.Dispose();
+            combatRunRecorder?.Dispose();
+            combatEconomyManager = new CombatEconomyManager(player);
+            combatRunRecorder = new CombatRunRecorder(player);
+        }
+
+        private void OnDestroy()
+        {
+            combatRunRecorder?.Dispose();
+            combatRunRecorder = null;
+            combatEconomyManager?.Dispose();
+            combatEconomyManager = null;
+
+            if (activeInstance == this)
+            {
+                activeInstance = null;
+            }
         }
 
         private void SpawnPlayer(GameObject playerObject)
@@ -279,10 +319,11 @@ namespace Combat
 
             ClearWeaponViews(weaponRoot);
 
+            List<RunWeaponEntry> runWeapons = ResolveRunWeaponsFromSave();
             List<CarriedWeaponSlot> weaponSlots = new List<CarriedWeaponSlot>();
-            for (int i = 0; i < defaultRunWeapons.Count; i++)
+            for (int i = 0; i < runWeapons.Count; i++)
             {
-                RunWeaponEntry entry = defaultRunWeapons[i];
+                RunWeaponEntry entry = runWeapons[i];
                 if (entry == null)
                 {
                     continue;
@@ -316,6 +357,74 @@ namespace Combat
             }
 
             inventory.ConfigureRunWeapons(weaponSlots, defaultWeaponIndex);
+        }
+
+        private List<RunWeaponEntry> ResolveRunWeaponsFromSave()
+        {
+            List<RunWeaponEntry> result = new List<RunWeaponEntry>(2);
+            RunWeaponEntry pistol = FindRunWeaponEntry(1);
+            if (pistol != null)
+            {
+                result.Add(pistol);
+            }
+
+            PlayerSaveData saveData = PlayerProgressSaveService.Load();
+            int secondWeaponId = PlayerProgressSaveService.NormalizeSecondWeaponId(saveData.selectedSecondWeaponId);
+            RunWeaponEntry secondWeapon = FindRunWeaponEntry(secondWeaponId) ?? FindRunWeaponEntry(2);
+            if (secondWeapon != null && ResolveWeaponId(secondWeapon) != 1)
+            {
+                result.Add(secondWeapon);
+            }
+
+            if (result.Count > 0)
+            {
+                return result;
+            }
+
+            for (int i = 0; i < defaultRunWeapons.Count && result.Count < 2; i++)
+            {
+                if (defaultRunWeapons[i] != null)
+                {
+                    result.Add(defaultRunWeapons[i]);
+                }
+            }
+
+            return result;
+        }
+
+        private RunWeaponEntry FindRunWeaponEntry(int weaponId)
+        {
+            if (defaultRunWeapons == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < defaultRunWeapons.Count; i++)
+            {
+                RunWeaponEntry entry = defaultRunWeapons[i];
+                if (entry != null && ResolveWeaponId(entry) == weaponId)
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        private int ResolveWeaponId(RunWeaponEntry entry)
+        {
+            if (entry == null)
+            {
+                return 0;
+            }
+
+            if (entry.weaponId > 0)
+            {
+                return entry.weaponId;
+            }
+
+            WeaponConfigAsset configAsset = LoadWeaponConfig(entry.configResourcesPath);
+            return configAsset != null && configAsset.Config != null ? configAsset.Config.weaponId : 0;
         }
 
         private static void ClearWeaponViews(Transform weaponRoot)
@@ -422,7 +531,10 @@ namespace Combat
         {
             return candidate != null
                    && candidate.scene.IsValid()
+                   && candidate.GetComponent<PlayerController>() != null
+                   && candidate.GetComponent<PlayerMotor>() != null
                    && candidate.GetComponent<PlayerInventory>() != null
+                   && candidate.GetComponent<CharacterController>() != null
                    && FindChildRecursive(candidate.transform, weaponRootName) != null;
         }
 

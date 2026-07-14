@@ -75,7 +75,7 @@ namespace Combat
         [Header("调试")]
         [SerializeField] private bool debugFeedback = true;
 #if UNITY_EDITOR
-        [SerializeField] private bool preferEditorDirectReferences = true;
+        [SerializeField] private bool preferEditorDirectReferences;
 #endif
 
         private readonly Dictionary<GameObject, Queue<GameObject>> _effectPools = new Dictionary<GameObject, Queue<GameObject>>();
@@ -232,11 +232,13 @@ namespace Combat
                         return;
                     }
 
-                    if (TryLoadEditorResourceLibrary())
+#if UNITY_EDITOR
+                    if (preferEditorDirectReferences && TryLoadEditorResourceLibrary())
                     {
                         FlushPendingResourceRequests();
                         return;
                     }
+#endif
 
                     if (debugFeedback)
                     {

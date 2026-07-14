@@ -31,6 +31,12 @@ public sealed class BlessingSelectionRuntime
         return nextStack;
     }
 
+    public void Reset()
+    {
+        _stacks.Clear();
+        OwnedBuffCount = 0;
+    }
+
     public BlessingStackSnapshot[] CreateStackSnapshots()
     {
         BlessingStackSnapshot[] snapshots = new BlessingStackSnapshot[_stacks.Count];

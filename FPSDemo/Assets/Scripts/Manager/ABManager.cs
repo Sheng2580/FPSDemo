@@ -35,7 +35,13 @@ public class ABManager : UnitySingleTonMono<ABManager>
     {
         get
         {
-#if UNITY_IOS
+#if UNITY_EDITOR_OSX
+            return "StandaloneOSXUniversal";
+#elif UNITY_EDITOR_WIN
+            return "StandaloneWindows";
+#elif UNITY_EDITOR_LINUX
+            return "StandaloneLinux64";
+#elif UNITY_IOS
             return "iOS";
 #elif UNITY_ANDROID
             return "Android";

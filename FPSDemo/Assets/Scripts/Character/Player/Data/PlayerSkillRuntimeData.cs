@@ -29,8 +29,10 @@ namespace PlayerData
         public float inputBufferRemaining;
         // 本局技能等级
         public int runtimeLevel;
-        // 冷却倍率
-        public float cooldownMultiplier = 1f;
+        // 局外永久冷却缩减
+        public float permanentCooldownReduction;
+        // 局内祝福冷却缩减
+        public float blessingCooldownReduction;
         // 伤害倍率
         public float damageMultiplier = 1f;
         // 范围倍率
@@ -53,7 +55,8 @@ namespace PlayerData
             pendingInput = false;
             inputBufferRemaining = 0f;
             runtimeLevel = 1;
-            cooldownMultiplier = 1f;
+            permanentCooldownReduction = 0f;
+            blessingCooldownReduction = 0f;
             damageMultiplier = 1f;
             radiusMultiplier = 1f;
         }

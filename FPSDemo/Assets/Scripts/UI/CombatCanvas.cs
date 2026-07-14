@@ -1,5 +1,6 @@
 using DG.Tweening;
 using DG.Tweening.Core;
+using Combat;
 using PlayerData;
 using TMPro;
 using UnityEngine;
@@ -12,8 +13,6 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class CombatCanvas : BaseCanvas
 {
-    private const string BattleTimerId = "CombatCanvas_BattleTimer";
-
     [Header("文本")]
     [SerializeField] private TMP_Text waveText;
     [SerializeField] private TMP_Text timerText;
@@ -25,9 +24,6 @@ public class CombatCanvas : BaseCanvas
     [SerializeField] private Ease numberEase = Ease.OutQuad;
     [SerializeField] private float punchScale = 0.12f;
     [SerializeField] private float punchDuration = 0.16f;
-
-    [Header("格式")]
-    [SerializeField] private string timerFormat = "0.00";
 
     private Tweener _waveTween;
     private Tweener _killTween;
@@ -42,7 +38,6 @@ public class CombatCanvas : BaseCanvas
     private int _targetWave = 1;
     private int _targetKill;
     private int _targetGold;
-    private Timer _battleTimer;
 
     public override bool NeedRaycaster => false;
 
@@ -57,16 +52,15 @@ public class CombatCanvas : BaseCanvas
     {
         CacheReferences();
         AddListeners();
-        StartBattleTimer();
         SyncInitialWave();
         SyncInitialGold();
+        SyncInitialTime();
         RefreshAllText();
     }
 
     private void OnDisable()
     {
         RemoveListeners();
-        StopBattleTimer();
         KillTweens();
     }
 
@@ -76,7 +70,7 @@ public class CombatCanvas : BaseCanvas
         EventCenter.Instance.AddEventListener<EnemyWaveEventData>(GameEvent.EnemyWaveProgressChanged, OnEnemyWaveProgressChanged);
         EventCenter.Instance.AddEventListener<EnemyDiedEventData>(GameEvent.EnemyDied, OnEnemyDied);
         EventCenter.Instance.AddEventListener<PlayerBattleGoldChangedEventData>(GameEvent.PlayerBattleGoldChanged, OnPlayerBattleGoldChanged);
-        EventCenter.Instance.AddEventListener<PlayerEnergyStateChangedEventData>(GameEvent.PlayerEnergyStateChanged, OnPlayerEnergyStateChanged);
+        EventCenter.Instance.AddEventListener<CombatTimeChangedEventData>(GameEvent.CombatTimeChanged, OnCombatTimeChanged);
     }
 
     private void RemoveListeners()
@@ -85,7 +79,7 @@ public class CombatCanvas : BaseCanvas
         EventCenter.Instance.RemoveEventListener<EnemyWaveEventData>(GameEvent.EnemyWaveProgressChanged, OnEnemyWaveProgressChanged);
         EventCenter.Instance.RemoveEventListener<EnemyDiedEventData>(GameEvent.EnemyDied, OnEnemyDied);
         EventCenter.Instance.RemoveEventListener<PlayerBattleGoldChangedEventData>(GameEvent.PlayerBattleGoldChanged, OnPlayerBattleGoldChanged);
-        EventCenter.Instance.RemoveEventListener<PlayerEnergyStateChangedEventData>(GameEvent.PlayerEnergyStateChanged, OnPlayerEnergyStateChanged);
+        EventCenter.Instance.RemoveEventListener<CombatTimeChangedEventData>(GameEvent.CombatTimeChanged, OnCombatTimeChanged);
     }
 
     private void OnEnemyWaveStarted(EnemyWaveEventData eventData)
@@ -100,6 +94,12 @@ public class CombatCanvas : BaseCanvas
 
     private void OnEnemyDied(EnemyDiedEventData eventData)
     {
+        CombatRunRecorder recorder = CombatRunRecorder.Active;
+        if (recorder != null && !CombatOwnership.IsPlayerOwnedDamage(eventData.damageInfo, recorder.Player))
+        {
+            return;
+        }
+
         SetKill(_targetKill + 1, true);
     }
 
@@ -108,23 +108,10 @@ public class CombatCanvas : BaseCanvas
         SetGold(eventData.battleGold, true);
     }
 
-    private void OnPlayerEnergyStateChanged(PlayerEnergyStateChangedEventData eventData)
+    private void OnCombatTimeChanged(CombatTimeChangedEventData eventData)
     {
-        if (_battleTimer == null)
-        {
-            return;
-        }
-
-        if (eventData.currentState == PlayerEnergyState.BlessingSelecting)
-        {
-            _battleTimer.Pause();
-            return;
-        }
-
-        if (_battleTimer.State == TimerState.Paused)
-        {
-            _battleTimer.Resume();
-        }
+        _battleTime = eventData.elapsedSeconds;
+        RefreshTimerText();
     }
 
     private void SetWave(int value, bool playPunch)
@@ -232,41 +219,11 @@ public class CombatCanvas : BaseCanvas
         SetWave(spawnManager.CurrentWaveIndex, false);
     }
 
-    private void StartBattleTimer()
+    private void SyncInitialTime()
     {
-        StopBattleTimer();
-
-        MultiTimerManager timerManager = MultiTimerManager.Instance;
-        if (timerManager == null)
-        {
-            return;
-        }
-
-        _battleTimer = timerManager.CreateTimer(BattleTimerId, true);
-        _battleTimer.OnUpdate += OnBattleTimerUpdated;
-        _battleTimer.Start();
-    }
-
-    private void StopBattleTimer()
-    {
-        if (_battleTimer == null)
-        {
-            return;
-        }
-
-        _battleTimer.OnUpdate -= OnBattleTimerUpdated;
-        _battleTimer = null;
-        MultiTimerManager timerManager = MultiTimerManager.Instance;
-        if (timerManager != null)
-        {
-            timerManager.RemoveTimer(BattleTimerId);
-        }
-    }
-
-    private void OnBattleTimerUpdated(float time)
-    {
-        _battleTime = Mathf.Max(0f, time);
-        RefreshTimerText();
+        _battleTime = CombatRunRecorder.Active != null
+            ? CombatRunRecorder.Active.SurvivalSeconds
+            : 0f;
     }
 
     private void ResetDisplay()
@@ -293,7 +250,7 @@ public class CombatCanvas : BaseCanvas
     {
         if (timerText != null)
         {
-            timerText.text = _battleTime.ToString(timerFormat);
+            timerText.text = CombatTimeFormatter.Format(_battleTime);
         }
     }
 

@@ -2,7 +2,7 @@
 
 用途：快速查看当前已经应用到项目里的数据值、来源、用法和维护位置。数据层每次改武器、敌人、波次、AI Profile、ABRes key、掉落、金币、Buff、道具或存档数据时，都必须同步更新本表。
 
-更新时间：2026-07-13
+更新时间：2026-07-14
 
 ## 维护规则
 
@@ -34,6 +34,121 @@
 | Default Shotgun | SingleRound | 1 | 0.72 | true | 逐发装填，每轮加 1 发，有弹时按开火可打断换弹 |
 
 备注：`reloadTime` 仍保留为整段换弹时长和旧配置兜底；`SingleRound` 模式下逻辑主要读取 `reloadSingleRoundTime`，后续加快换弹时应缩短单发装填时间或提高动画播放速度，而不是一次直接补满。
+
+## 局外永久升级配置
+
+玩家升级表正式主来源：`FPSDemo/MiniTemplate/Datas/#player_permanent_upgrade.xlsx`
+
+武器升级表正式主来源：`FPSDemo/MiniTemplate/Datas/#weapon_permanent_upgrade.xlsx`
+
+测试 JSON：
+
+- `FPSDemo/MiniTemplate/GeneratedJson/tbplayer_permanent_upgrade.json`
+- `FPSDemo/MiniTemplate/GeneratedJson/tbweapon_permanent_upgrade.json`
+
+Unity 运行时优先读取：
+
+- `FPSDemo/Assets/Resources/PlayerJson/tbplayer_permanent_upgrade.json`
+- `FPSDemo/Assets/Resources/UpgradeJson/tbweapon_permanent_upgrade.json`
+
+### 玩家永久升级
+
+| statType | displayName | level | modifyType | value | costGold | maxLevel | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| MaxHp | 最大生命 | 1-10 | Add | 10-100 | 100-1000 | 10 | 每级增加 10 点最大生命 |
+| MoveSpeed | 移动速度 | 1-10 | Add | 0.15-1.50 | 100-1000 | 10 | 同时增加走路和跑步速度 |
+| JumpHeight | 跳跃高度 | 1-10 | Add | 0.05-0.50 | 100-1000 | 10 | 每级增加 0.05 跳跃高度 |
+| SkillCooldownReduction | 技能冷却缩减 | 1-10 | Add | 0.03-0.30 | 100-1000 | 10 | 每级增加 3% 局外冷却缩减 上限 30% |
+| EnergyGainEfficiency | 充能效率 | 1-10 | Add | 0.10-1.00 | 100-1000 | 10 | 每级增加 10% 充能效率 满级累计增加 100% |
+
+说明：`value` 按当前等级累计值维护。Hall 当前使用统一玩家等级，一次升级会同步提升最大生命、移动速度、跳跃高度、技能冷却缩减和充能效率。默认新存档测试金币为 `10000`，用于 Hall 升级流程测试。技能冷却缩减不会改写 Dodge / Push / Grenade 的基础冷却，只在运行时参与最终冷却计算。最终跳跃高度按 `(基础跳跃高度 + 永久升级增加值) * 局内跳跃倍率` 计算。充能效率使用统一玩家等级读取，不新增独立存档等级，最终基础倍率为 `1 + Clamp(EnergyGainEfficiency, 0, 1)`。
+
+### 武器永久升级
+
+| weaponId | 武器 | level 范围 | damageMultiplier | magazineAdd | reserveAmmoAdd | fireIntervalMultiplier | reloadTimeMultiplier | recoilMultiplier | spreadMultiplier | costGold | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Default Pistol | 1-10 | 1.08-1.8 | 1-8 | 4-40 | 0.985-0.85 | 0.975-0.75 | 0.975-0.75 | 0.975-0.75 | 100-1000 | 后续 Hall 武器升级读表替换当前代码兜底 |
+| 2 | Default Assault Rifle | 1-10 | 1.08-1.8 | 2-20 | 10-100 | 0.985-0.85 | 0.975-0.75 | 0.975-0.75 | 0.975-0.75 | 100-1000 | 同上 |
+| 3 | Default Shotgun | 1-10 | 1.08-1.8 | 1-5 | 3-30 | 0.985-0.85 | 0.975-0.75 | 0.975-0.75 | 0.975-0.75 | 100-1000 | 同上 |
+
+说明：`damageMultiplier / fireIntervalMultiplier / reloadTimeMultiplier / recoilMultiplier / spreadMultiplier` 是该等级的最终倍率；`magazineAdd / reserveAmmoAdd` 是该等级的累计增加值。散弹枪仍保持逐发装填规则，升级表只增加弹仓容量和缩短单发装填相关时间，不能把 `reloadAmmoPerStep` 改成一次填满。
+
+## 战斗结算存档
+
+正式多存档目录：`Application.persistentDataPath/Saves`
+
+Android 对应应用私有持久化目录下的 `Saves` 文件夹。新存档文件名为 `Save_yyyyMMdd_HHmmss.json`，文件名表示最后一次手动保存时间。
+
+| 数据 | 字段 | 来源 | 用法 |
+| --- | --- | --- | --- |
+| `PlayerSaveData` | `gold / bestSurvivalTime / bestKillCount` | `Assets/Scripts/Character/Player/Data/PlayerSaveData.cs` | 只保存永久金币、最长存活和最高击杀纪录 |
+| `CombatRunSettlementResult` | `isNewBestSurvivalTime / isNewBestKillCount / totalGold` | `Assets/Scripts/Combat/Data/CombatRunSettlementResult.cs` | `EndCanvas` 读取新纪录标记和结算后金币 |
+| `PlayerSaveSlotSummary` | `FileName / FullPath / SavedAt / IsLegacy / Gold / BestSurvivalTime / BestKillCount / PlayerUpgradeLevel / SelectedSecondWeaponId` | `PlayerProgressSaveService.GetSaveSlotSummaries()` | Start 读取存档列表的只读摘要 |
+
+结算规则：
+
+- `PlayerProgressSaveService.SettleCombatRun(survivalSeconds, killCount, goldEarned)` 是永久进度结算入口。
+- 结算入口累加最终 `goldEarned`，更新 `bestSurvivalTime / bestKillCount`，只修改当前内存会话并标记 dirty。
+- 数据层不保存每局历史、`runId`、Buff、道具、弹药或其他局内统计。
+- 防止同一局重复调用由 `CombatRunRecorder._completed` 保证。
+- 本系统不计算本局金币，只消费 `CombatEconomyManager` 提供的最终 `goldEarned`。
+- 只有 Hall 手动保存按钮调用 `CommitCurrentSession` 或 `SaveCurrentSession` 时才真正写文件。
+
+### 多存档会话 API
+
+| API | 返回 | 用法 |
+| --- | --- | --- |
+| `BeginNewSession()` | `PlayerSaveData` | Start 的开始游戏按钮创建全新内存会话，不创建文件 |
+| `TryContinueLatestSession(out saveData)` | `bool` | Start 的继续游戏按钮读取保存时间最新的有效存档 |
+| `GetSaveSlotSummaries()` | `IReadOnlyList<PlayerSaveSlotSummary>` | Start 的读取存档界面按时间倒序展示列表 |
+| `TryLoadSession(fileName, out saveData)` | `bool` | 按列表中的文件名加载指定存档 |
+| `Load()` | `PlayerSaveData` | 现有 Hall/Combat 兼容入口，优先返回当前内存会话 |
+| `Reload()` | `PlayerSaveData` | 兼容旧调用，不重新读盘，不覆盖未手动保存的内存进度 |
+| `Save(saveData)` | `void` | 更新当前内存会话并标记 dirty，不写文件 |
+| `CommitCurrentSession(out summary)` | `bool` | Hall 手动保存入口，写入新时间戳文件并返回摘要 |
+| `SaveCurrentSession(out summary)` | `bool` | `CommitCurrentSession` 同义入口 |
+
+只读状态：`HasCurrentSession / IsCurrentSessionDirty / CurrentSaveFilePath / CurrentSaveFileName`。
+
+保存规则：
+
+- 新游戏首次手动保存时创建 `Save_yyyyMMdd_HHmmss.json`。
+- 已加载会话再次手动保存时先写入新的时间戳文件，成功后再删除旧文件。
+- 写入使用临时 `.tmp` 文件，临时文件成功移动为正式文件后才删除旧档，写入失败时保留旧档。
+- 同一秒文件名冲突时顺延时间戳，保证不会覆盖其他存档。
+- `PlayerProgress.json` 作为旧版存档继续出现在存档列表；加载后首次手动保存会迁移为新格式并删除旧文件。
+- 损坏或无法解析的单个存档会跳过，不影响其他存档列表。
+- 不会在新游戏、升级、战斗结算、切换场景或退出应用时自动创建文件。
+
+### EndCanvas 局内展示统计
+
+以下数据只随 `CombatRunResult` 交给结算面板展示，不写入 `PlayerProgress.json`：
+
+| 显示项 | 建议字段 | 累计事件 | 统计口径 |
+| --- | --- | --- | --- |
+| 获得祝福 | `blessingSelectCount` | `PlayerEnergyBlessingSelected` | 每次成功确认一张祝福卡计 1，同一祝福重复叠层也分别计数 |
+| 捡起道具 | `pickupCollectedCount` | `PickupCollected` | 玩家每次成功拾取一个道具计 1，生成或过期不计 |
+| 使用子弹 | `weaponFireCount` | `WeaponFired` | 每次成功开火计 1，散弹枪一次开火仍计 1，不按弹丸数统计 |
+
+“使用子弹”最终口径是成功开火次数，不是实际扣除弹药数。狂暴或无限弹期间只要成功触发 `WeaponFired` 仍计 1；弹夹为空、武器锁定或其他原因导致 `CanFire()` 失败时不会触发 `WeaponFired`，因此计 0。`WeaponFiredEventData` 不需要增加 `ammoConsumed`。
+
+## 战斗评价配置
+
+正式表：`FPSDemo/MiniTemplate/Datas/#combat_evaluation.xlsx`
+
+生成 JSON：
+
+- `FPSDemo/MiniTemplate/GeneratedJson/tbcombat_evaluation.json`
+- `FPSDemo/Assets/Resources/CombatJson/tbcombat_evaluation.json`
+
+| id | minSurvivalSeconds | minKillCount | evaluationText |
+| --- | ---: | ---: | --- |
+| 1 | 0 | 0 | 幸存者 |
+| 2 | 60 | 10 | 丧尸猎手 |
+| 3 | 180 | 35 | 杀戮专家 |
+| 4 | 300 | 80 | 末日幸存者 |
+
+读取规则：`CombatEvaluationConfigLoader` 按 `id` 从高到低检查，存活时间和击杀数必须同时达到阈值，返回满足条件的最高档评价。
 
 ## 武器准星数据
 
@@ -136,18 +251,18 @@
 
 来源目录：`FPSDemo/Assets/Resources/PlayerEnergyConfigs`
 
-| 配置 | 来源文件 | maxEnergy | startLevel | damageToEnergyRate | autoLevelUp | onlyGainFromPlayerDamage | 用法 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Default Player Energy | `DefaultPlayerEnergyConfig.asset` | 100 | 1 | 0.05 | false | true | `PlayerEnergyRuntime` 监听 `EnemyDamaged` 后把玩家造成的伤害转为局内能量 |
+| 配置 | 来源文件 | baseRequiredEnergy | linearGrowth | quadraticGrowth | startLevel | damageToEnergyRate | 永久加成上限 | 用法 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Default Player Energy | `DefaultPlayerEnergyConfig.asset` | 100 | 15 | 2.5 | 1 | 0.05 | 100% | `PlayerEnergyRuntime` 监听 `EnemyDamaged` 后把玩家造成的伤害转为局内能量 |
 
 ## 玩家局内能量运行时数据
 
 | 字段 | 默认值 | 来源 | 用法 |
 | --- | --- | --- | --- |
 | currentEnergy | 0 | `PlayerEnergyRuntimeData.InitForNewRun` | 当前局能量，范围 0 到 `maxEnergy` |
-| maxEnergy | 100 | `DefaultPlayerEnergyConfig.asset` | 能量满值，第一版固定 100 |
+| maxEnergy | 100 | `PlayerEnergyConfig.CalculateRequiredEnergy` | 当前等级内部能量需求，按 `100 + 15n + 2.5n²` 计算，`n = level - 1` |
 | level | 1 | `DefaultPlayerEnergyConfig.asset` | 当前能量等级，后续祝福选择或自动升级后递增 |
-| energyGainMultiplier | 1 | `PlayerEnergyRuntimeData` | Buff 可叠加倍率，最终能量 = `finalDamage * damageToEnergyRate * energyGainMultiplier` |
+| energyGainMultiplier | 1-2 | `PlayerEnergyRuntimeData` | 基础倍率包含局外充能效率，统一玩家升级满级为 2 倍，祝福继续在运行时叠加 |
 | autoLevelUp | false | `DefaultPlayerEnergyConfig.asset` | 当前先不自动升级，满能量后触发升级准备事件 |
 | isLevelUpReady | false | `PlayerEnergyRuntimeData` | 满能量且等待祝福选择时为 true |
 
@@ -156,10 +271,14 @@
 | 事件 | 参数 | 触发者 | 用法 |
 | --- | --- | --- | --- |
 | PlayerEnergyChanged | `PlayerEnergyChangedEventData(currentEnergy, targetEnergy, level, deltaEnergy, maxEnergy, normalizedEnergy)` | `PlayerEnergyRuntime` | HUD EnergyCentre 更新目标能量数字和进度 |
-| PlayerEnergyLevelUpReady | `PlayerEnergyLevelUpEventData(level, currentEnergy, maxEnergy, autoLevelUp)` | `PlayerEnergyRuntime` | 能量满 100 且非自动升级时触发，后续用于打开祝福选择 |
+| PlayerEnergyLevelUpReady | `PlayerEnergyLevelUpEventData(level, currentEnergy, maxEnergy, autoLevelUp)` | `PlayerEnergyRuntime` | 当前等级进度达到 100% 且非自动升级时触发，后续用于打开祝福选择 |
 | PlayerEnergyLevelUp | `PlayerEnergyLevelUpEventData(level, currentEnergy, maxEnergy, autoLevelUp)` | `PlayerEnergyRuntime` | 自动升级或祝福确认后触发 |
 
-规则：HUD 只监听 `EnemyDamaged` 显示伤害数字、监听 `PlayerEnergyChanged` 显示能量变化，不计算能量成长数值。能量增长来源当前监听 `EnemyDamaged`，只统计 `DamageInfo.attacker` 属于玩家的伤害；后续如果统一伤害结算事件稳定，可以切换到 `DamageResolved`。
+规则：HUD 只监听 `EnemyDamaged` 显示伤害数字、监听 `PlayerEnergyChanged` 显示能量变化，不计算能量成长数值。能量面板显示 `normalizedEnergy * 100`，始终是 `0%-100%`，不显示内部 `currentEnergy/maxEnergy`。能量增长来源当前监听 `EnemyDamaged`，只统计 `DamageInfo.attacker` 属于玩家的伤害；后续如果统一伤害结算事件稳定，可以切换到 `DamageResolved`。
+
+等级需求示例：Lv1 `100`、Lv2 `118`、Lv3 `140`、Lv4 `168`、Lv5 `200`、Lv6 `238`、Lv7 `280`、Lv8 `328`、Lv9 `380`、Lv10 `438`。需求曲线使用二次函数，前期增长温和，后期逐步拉开祝福选择间隔。
+
+运行时生命周期：`PlayerEnergyRuntime` 跨场景保留，并在每次进入 `Combat` 场景时调用 `InitRuntimeData()` 重置本局能量、等级、倍率和状态，避免从 Start/Hall 切换后监听对象被销毁。
 
 ## 正式祝福数据
 
@@ -177,7 +296,7 @@ Unity 兜底入口：`FPSDemo/Assets/Scripts/Blessing/Data` 下的 `BlessingConf
 | 1101 | 枪械专注 | WeaponStat | CurrentWeapon | 1 | 1 | 100 | 5 | 0 | 空 | WeaponDamage | PercentAdd | 0.12 / 0.20 / 0.32 | Blessing_CurrentWeaponDamage |
 | 1102 | 扩容弹匣 | WeaponStat | CurrentWeapon | 1 | 1 | 85 | 4 | 0 | 空 | WeaponMagazine | PercentAdd | 0.20 / 0.32 / 0.50 | Blessing_CurrentWeaponMagazine |
 | 1103 | 稳定握持 | WeaponStat | CurrentWeapon | 1 | 1 | 80 | 4 | 0 | 空 | WeaponRecoil | PercentAdd | -0.15 / -0.24 / -0.36 | Blessing_CurrentWeaponRecoil |
-| 1201 | 快速冷却 | SkillStat | Skill | 1 | 1 | 90 | 5 | 0 | 空 | SkillCooldown | PercentAdd | -0.10 / -0.16 / -0.25 | Blessing_SkillCooldown |
+| 1201 | 快速冷却 | SkillStat | Skill | 1 | 1 | 90 | 5 | 0 | 空 | SkillCooldownReduction | Add | 0.10 / 0.16 / 0.25 | Blessing_SkillCooldown |
 | 1202 | 爆破储备 | SkillStat | Skill | 2 | 2 | 65 | 3 | 0 | Grenade | SkillMaxCount | Add | 1 / 1 / 2 | Blessing_GrenadeMaxCount |
 | 1301 | 贪婪本能 | Economy | Economy | 1 | 1 | 75 | 5 | 0 | 空 | GoldGain | PercentAdd | 0.20 / 0.32 / 0.50 | Blessing_GoldGain |
 
@@ -201,13 +320,35 @@ Unity 兜底入口：`FPSDemo/Assets/Scripts/Blessing/Data` 下的 `BlessingConf
 
 ## 玩家技能配置
 
-来源目录：`FPSDemo/Assets/Resources/PlayerSkillConfigs`
+正式主来源：`FPSDemo/MiniTemplate/Datas/#player_skill_config.xlsx`
+
+冷却规则来源：`FPSDemo/MiniTemplate/Datas/#player_skill_rules.xlsx`
+
+生成 JSON：
+
+- `FPSDemo/MiniTemplate/GeneratedJson/tbplayer_skill_config.json`
+- `FPSDemo/MiniTemplate/GeneratedJson/tbplayer_skill_rules.json`
+
+Unity 运行时优先读取：
+
+- `FPSDemo/Assets/Resources/PlayerJson/tbplayer_skill_config.json`
+- `FPSDemo/Assets/Resources/PlayerJson/tbplayer_skill_rules.json`
+
+`FPSDemo/Assets/Resources/PlayerSkillConfigs` 下的三个 ScriptableObject 只作为 JSON 读取失败时的兜底。
 
 | 技能 | 来源文件 | skillId | skillType | cooldown | duration | lockWeaponDuringCast | postProcessKey | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Dodge | `DefaultDodgeSkillConfig.asset` | 1 | Dodge | 3.5 | 0.22 | true | Skill_Dodge_SprintPulse | 闪避位移和短暂无敌 |
-| Push | `DefaultPushSkillConfig.asset` | 2 | Push | 6 | 0.45 | true | Skill_Push_ImpactPulse | 近战推敌解围 |
-| Grenade | `DefaultGrenadeSkillConfig.asset` | 3 | Grenade | 8 | 0.45 | true | Skill_Grenade_ExplosionPulse | 投掷炸弹范围伤害 |
+| Dodge | `tbplayer_skill_config.json` | 1 | Dodge | 3.5 | 0.22 | true | Skill_Dodge_SprintPulse | 闪避位移和短暂无敌 |
+| Push | `tbplayer_skill_config.json` | 2 | Push | 6 | 0.45 | true | Skill_Push_ImpactPulse | 近战推敌解围 |
+| Grenade | `tbplayer_skill_config.json` | 3 | Grenade | 8 | 0.45 | true | Skill_Grenade_ExplosionPulse | 投掷炸弹范围伤害 |
+
+冷却计算规则：
+
+- 局外永久升级冷却缩减上限为 30%
+- 局内祝福冷却缩减上限为 30%
+- 最终总冷却缩减上限为 60%
+- 最终冷却为 `基础冷却 * (1 - 永久缩减 - 祝福缩减)`
+- 满缩减时 Dodge / Push / Grenade 最低冷却分别为 `1.4 / 2.4 / 3.2` 秒
 
 ## 玩家技能数值
 

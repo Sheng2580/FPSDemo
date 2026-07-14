@@ -3,7 +3,10 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - FX
+  - World
+  - Target
   layers:
   - Default
   - TransparentFX
@@ -19,7 +22,7 @@ TagManager:
   - Surface_Metal
   - Surface_Wood
   - Surface_Glass
-  - 
+  - Enemy
   - 
   - 
   - 

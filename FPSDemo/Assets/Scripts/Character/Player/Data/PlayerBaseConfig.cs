@@ -32,10 +32,6 @@ namespace PlayerData
         public float airMoveControl;
         // 跳跃结束竖直速度阈值
         public float jumpEndVerticalVelocity;
-        // 闪避冷却时间
-        public float dodgeCooldown;
-        // 闪避距离
-        public float dodgeDistance;
 
         public static PlayerBaseConfig CreateDefault()
         {
@@ -51,9 +47,7 @@ namespace PlayerData
                 jumpBufferTime = 0.15f,
                 coyoteTime = 0.12f,
                 airMoveControl = 0.65f,
-                jumpEndVerticalVelocity = 0f,
-                dodgeCooldown = 1f,
-                dodgeDistance = 5f,
+                jumpEndVerticalVelocity = 0f
             };
         }
     }

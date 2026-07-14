@@ -14,7 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config:
     maxEnergy: 100
+    requiredEnergyLinearGrowth: 15
+    requiredEnergyQuadraticGrowth: 2.5
     startLevel: 1
     damageToEnergyRate: 0.05
     autoLevelUp: 0
     onlyGainFromPlayerDamage: 1
+    maxPermanentEnergyGainBonus: 1

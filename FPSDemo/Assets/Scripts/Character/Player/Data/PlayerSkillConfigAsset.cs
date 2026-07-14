@@ -4,7 +4,7 @@ namespace PlayerData
 {
     /// <summary>
     /// 玩家技能配置资源
-    /// 当前用于 Resources 加载 后续可替换为表格数据
+    /// Luban Json 读取失败时作为兜底
     /// </summary>
     [CreateAssetMenu(menuName = "FPSDemo/Player/Skill Config", fileName = "PlayerSkillConfig")]
     public class PlayerSkillConfigAsset : ScriptableObject

@@ -10,50 +10,54 @@ namespace PlayerData
     {
         public static int GetMaxHp(PlayerBaseConfig baseConfig, PlayerSaveData saveData)
         {
-            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerBaseConfig.CreateDefault();
+            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerDefaultConfigAsset.LoadRuntimeConfig();
             PlayerSaveData safeSaveData = saveData ?? PlayerSaveData.CreateNew();
-            return safeBaseConfig.maxHp + safeSaveData.maxHpLevel * 10;
+            int fallbackBonus = safeSaveData.maxHpLevel * 10;
+            int upgradeBonus = PermanentUpgradeConfigLoader.GetPlayerMaxHpBonus(
+                safeSaveData.maxHpLevel,
+                fallbackBonus);
+            return safeBaseConfig.maxHp + upgradeBonus;
         }
 
         public static float GetWalkSpeed(PlayerBaseConfig baseConfig, PlayerSaveData saveData, PlayerRuntimeData runtimeData)
         {
-            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerBaseConfig.CreateDefault();
+            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerDefaultConfigAsset.LoadRuntimeConfig();
             PlayerSaveData safeSaveData = saveData ?? PlayerSaveData.CreateNew();
             PlayerRuntimeData safeRuntimeData = runtimeData ?? CreateDefaultRuntimeData(safeBaseConfig, safeSaveData);
-            float baseValue = safeBaseConfig.walkSpeed + safeSaveData.moveSpeedLevel * 0.15f;
+            float fallbackBonus = safeSaveData.moveSpeedLevel * 0.15f;
+            float upgradeBonus = PermanentUpgradeConfigLoader.GetPlayerUpgradeValue(
+                PermanentUpgradeConfigLoader.MoveSpeedStatType,
+                safeSaveData.moveSpeedLevel,
+                fallbackBonus);
+            float baseValue = safeBaseConfig.walkSpeed + upgradeBonus;
             return baseValue * safeRuntimeData.moveSpeedMultiplier;
         }
 
         public static float GetRunSpeed(PlayerBaseConfig baseConfig, PlayerSaveData saveData, PlayerRuntimeData runtimeData)
         {
-            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerBaseConfig.CreateDefault();
+            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerDefaultConfigAsset.LoadRuntimeConfig();
             PlayerSaveData safeSaveData = saveData ?? PlayerSaveData.CreateNew();
             PlayerRuntimeData safeRuntimeData = runtimeData ?? CreateDefaultRuntimeData(safeBaseConfig, safeSaveData);
-            float baseValue = safeBaseConfig.runSpeed + safeSaveData.moveSpeedLevel * 0.15f;
+            float fallbackBonus = safeSaveData.moveSpeedLevel * 0.15f;
+            float upgradeBonus = PermanentUpgradeConfigLoader.GetPlayerUpgradeValue(
+                PermanentUpgradeConfigLoader.MoveSpeedStatType,
+                safeSaveData.moveSpeedLevel,
+                fallbackBonus);
+            float baseValue = safeBaseConfig.runSpeed + upgradeBonus;
             return baseValue * safeRuntimeData.moveSpeedMultiplier;
         }
 
-        public static float GetJumpHeight(PlayerBaseConfig baseConfig, PlayerRuntimeData runtimeData)
+        public static float GetJumpHeight(PlayerBaseConfig baseConfig, PlayerSaveData saveData, PlayerRuntimeData runtimeData)
         {
-            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerBaseConfig.CreateDefault();
-            PlayerRuntimeData safeRuntimeData = runtimeData ?? CreateDefaultRuntimeData(safeBaseConfig, PlayerSaveData.CreateNew());
-            return safeBaseConfig.jumpHeight * safeRuntimeData.jumpHeightMultiplier;
-        }
-
-        public static float GetDodgeCooldown(PlayerBaseConfig baseConfig, PlayerSaveData saveData, PlayerRuntimeData runtimeData)
-        {
-            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerBaseConfig.CreateDefault();
+            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerDefaultConfigAsset.LoadRuntimeConfig();
             PlayerSaveData safeSaveData = saveData ?? PlayerSaveData.CreateNew();
             PlayerRuntimeData safeRuntimeData = runtimeData ?? CreateDefaultRuntimeData(safeBaseConfig, safeSaveData);
-            float baseValue = safeBaseConfig.dodgeCooldown - safeSaveData.dodgeCooldownLevel * 0.05f;
-            baseValue = Mathf.Max(0.2f, baseValue);
-            return baseValue * safeRuntimeData.dodgeCooldownMultiplier;
-        }
-
-        public static float GetDodgeDistance(PlayerBaseConfig baseConfig)
-        {
-            PlayerBaseConfig safeBaseConfig = baseConfig ?? PlayerBaseConfig.CreateDefault();
-            return safeBaseConfig.dodgeDistance;
+            float fallbackBonus = safeSaveData.jumpHeightLevel * 0.05f;
+            float upgradeBonus = PermanentUpgradeConfigLoader.GetPlayerUpgradeValue(
+                PermanentUpgradeConfigLoader.JumpHeightStatType,
+                safeSaveData.jumpHeightLevel,
+                fallbackBonus);
+            return (safeBaseConfig.jumpHeight + upgradeBonus) * safeRuntimeData.jumpHeightMultiplier;
         }
 
         private static PlayerRuntimeData CreateDefaultRuntimeData(PlayerBaseConfig baseConfig, PlayerSaveData saveData)

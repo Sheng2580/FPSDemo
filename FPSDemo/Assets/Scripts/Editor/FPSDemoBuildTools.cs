@@ -17,6 +17,8 @@ public static class FPSDemoBuildTools
     private const string BlessingSelectCanvasPath = "Assets/Art/ABRes/UI/BlessingSelectCanvas.prefab";
     private const string CombatCanvasPath = "Assets/Art/ABRes/UI/CombatCanvas.prefab";
     private const string TipCanvasPath = "Assets/Art/ABRes/UI/TipCanvas.prefab";
+    private const string LoadSceneCanvasPath = "Assets/Art/ABRes/UI/LoadSceneCanvas.prefab";
+    private const string EndCanvasPath = "Assets/Art/ABRes/UI/EndCanvas.prefab";
     private const string WeaponItemPath = "Assets/Art/ABRes/UI/Item/WeaponItem.prefab";
     private const string TouchCanvasBundleName = "uipanel";
     private const string UIItemBundleName = "uiitem";
@@ -62,7 +64,9 @@ public static class FPSDemoBuildTools
         EnemyLifebarCanvasPath,
         BlessingSelectCanvasPath,
         CombatCanvasPath,
-        TipCanvasPath
+        TipCanvasPath,
+        LoadSceneCanvasPath,
+        EndCanvasPath
     };
 
     private static readonly string[] UIItemAssetPaths =
@@ -141,6 +145,15 @@ public static class FPSDemoBuildTools
         PropRuntimeBundleName
     };
 
+    private static readonly string[] PlatformBundleDirectoryNames =
+    {
+        "Android",
+        "iOS",
+        "StandaloneWindows",
+        "StandaloneOSXUniversal",
+        "StandaloneLinux64"
+    };
+
     [MenuItem("FPSDemo/Build/检查移动端UI", priority = 0)]
     public static void CheckMobileUI()
     {
@@ -176,6 +189,19 @@ public static class FPSDemoBuildTools
         BuildAssetBundles(EditorUserBuildSettings.activeBuildTarget);
     }
 
+    [MenuItem("FPSDemo/Build/重建编辑器AssetBundle", priority = 19)]
+    public static void BuildEditorAssetBundles()
+    {
+        CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
+        FixMobileUIPrefabInternal(false);
+        FixRuntimeAssetBundleResourcesInternal(false);
+
+        BuildTarget editorTarget = GetEditorAssetBundleTarget();
+        BuildAssetBundles(editorTarget, false);
+        ValidateStreamingBundle(GetMainBundleName(editorTarget), true);
+        Debug.Log($"[FPSDemoBuildTools] 编辑器 AssetBundle 已重建 {editorTarget}");
+    }
+
     [MenuItem("FPSDemo/Build/打Android AssetBundle", priority = 21)]
     public static void BuildAndroidAssetBundles()
     {
@@ -183,7 +209,7 @@ public static class FPSDemoBuildTools
         CombatFeedbackMaterialTools.FixCombatFeedbackMaterials(false);
         FixMobileUIPrefabInternal(false);
         FixRuntimeAssetBundleResourcesInternal(false);
-        BuildAssetBundles(BuildTarget.Android, true);
+        BuildAssetBundles(BuildTarget.Android, false);
         ValidateStreamingBundle("Android", true);
     }
 
@@ -200,7 +226,7 @@ public static class FPSDemoBuildTools
             throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
 
-        BuildAssetBundles(BuildTarget.Android, true);
+        BuildAssetBundles(BuildTarget.Android, false);
         ValidateStreamingBundle("Android", true);
     }
 
@@ -217,8 +243,13 @@ public static class FPSDemoBuildTools
             throw new BuildFailedException("运行时 AssetBundle 资源检查失败");
         }
 
-        BuildAssetBundles(BuildTarget.Android, true);
+        BuildTarget editorTarget = GetEditorAssetBundleTarget();
+        CleanStreamingAssetsBeforeSinglePlatformBuild(editorTarget);
+        BuildAssetBundles(editorTarget, false);
+        ValidateStreamingBundle(GetMainBundleName(editorTarget), true);
+        BuildAssetBundles(BuildTarget.Android, false);
         ValidateStreamingBundle("Android", true);
+        Debug.Log($"[FPSDemoBuildTools] 编辑器和 Android AssetBundle 已准备完成 Editor={GetMainBundleName(editorTarget)} Android=Android");
     }
 
     [MenuItem("FPSDemo/Build/打Android APK", priority = 40)]
@@ -302,13 +333,43 @@ public static class FPSDemoBuildTools
             options = BuildOptions.CleanBuildCache | extraBuildOptions
         };
 
-        BuildReport report = BuildPipeline.BuildPlayer(buildOptions);
-        if (report.summary.result != BuildResult.Succeeded)
+        BuildReport report = null;
+        try
         {
-            throw new BuildFailedException($"Android APK 打包失败 {report.summary.result}");
+            report = BuildPipeline.BuildPlayer(buildOptions);
+        }
+        finally
+        {
+            RestoreEditorAssetBundlesAfterAndroidBuild();
+        }
+
+        if (report == null || report.summary.result != BuildResult.Succeeded)
+        {
+            BuildResult result = report != null ? report.summary.result : BuildResult.Failed;
+            throw new BuildFailedException($"Android APK 打包失败 {result}");
         }
 
         Debug.Log($"[FPSDemoBuildTools] {buildLabel} 打包完成: {outputPath}");
+    }
+
+    private static void RestoreEditorAssetBundlesAfterAndroidBuild()
+    {
+        BuildTarget editorTarget = GetEditorAssetBundleTarget();
+        if (editorTarget == BuildTarget.Android)
+        {
+            return;
+        }
+
+        try
+        {
+            BuildAssetBundles(editorTarget, false);
+            ValidateStreamingBundle(GetMainBundleName(editorTarget), true);
+            Debug.Log($"[FPSDemoBuildTools] Android APK 完成后已恢复编辑器 AB {editorTarget}");
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[FPSDemoBuildTools] 编辑器 AB 恢复失败 {exception.Message}");
+        }
     }
 
     private static BuildOptions GetAndroidDevelopmentBuildOptions()
@@ -780,14 +841,14 @@ public static class FPSDemoBuildTools
     {
         Directory.CreateDirectory(StreamingAssetsPath);
 
-        string[] entries = Directory.GetFileSystemEntries(StreamingAssetsPath);
-        for (int i = 0; i < entries.Length; i++)
+        for (int i = 0; i < PlatformBundleDirectoryNames.Length; i++)
         {
-            DeleteFileOrDirectory(entries[i]);
+            string platformPath = Path.Combine(StreamingAssetsPath, PlatformBundleDirectoryNames[i]);
+            DeleteFileOrDirectory(platformPath);
         }
 
         AssetDatabase.Refresh();
-        Debug.Log($"[FPSDemoBuildTools] 已清理 StreamingAssets 旧平台资源 准备打包 {target}");
+        Debug.Log($"[FPSDemoBuildTools] 已清理旧平台 AB 并保留 Luban JSON 准备打包 {target}");
     }
 
     private static void RemoveLegacyPlatformBundleFile(string outputPath)
@@ -868,26 +929,27 @@ public static class FPSDemoBuildTools
         string targetMainBundleName = GetMainBundleName(target);
         bool isValid = true;
 
-        if (Directory.Exists(StreamingAssetsPath))
+        for (int i = 0; i < PlatformBundleDirectoryNames.Length; i++)
         {
-            string[] entries = Directory.GetFileSystemEntries(StreamingAssetsPath);
-            for (int i = 0; i < entries.Length; i++)
+            string platformName = PlatformBundleDirectoryNames[i];
+            if (string.Equals(platformName, targetMainBundleName, StringComparison.Ordinal))
             {
-                string entryName = Path.GetFileName(entries[i]);
-                if (string.Equals(entryName, targetMainBundleName, StringComparison.Ordinal)
-                    || string.Equals(entryName, targetMainBundleName + ".meta", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                isValid = false;
-                Debug.LogError($"[FPSDemoBuildTools] StreamingAssets 存在非目标平台残留: {entries[i]}");
+                continue;
             }
+
+            string platformPath = Path.Combine(StreamingAssetsPath, platformName);
+            if (!Directory.Exists(platformPath) && !File.Exists(platformPath))
+            {
+                continue;
+            }
+
+            isValid = false;
+            Debug.LogError($"[FPSDemoBuildTools] StreamingAssets 存在非目标平台 AB: {platformPath}");
         }
 
         if (isValid)
         {
-            Debug.Log($"[FPSDemoBuildTools] StreamingAssets 只保留目标平台资源: {targetMainBundleName}");
+            Debug.Log($"[FPSDemoBuildTools] StreamingAssets 只保留目标平台 AB 并保留数据文件: {targetMainBundleName}");
             return true;
         }
 
@@ -902,6 +964,19 @@ public static class FPSDemoBuildTools
     private static string GetPlatformBundleOutputPath(BuildTarget target)
     {
         return Path.Combine(StreamingAssetsPath, GetMainBundleName(target));
+    }
+
+    private static BuildTarget GetEditorAssetBundleTarget()
+    {
+#if UNITY_EDITOR_OSX
+        return BuildTarget.StandaloneOSX;
+#elif UNITY_EDITOR_WIN
+        return BuildTarget.StandaloneWindows64;
+#elif UNITY_EDITOR_LINUX
+        return BuildTarget.StandaloneLinux64;
+#else
+        return EditorUserBuildSettings.activeBuildTarget;
+#endif
     }
 
     private static string GetMainBundleName(BuildTarget target)

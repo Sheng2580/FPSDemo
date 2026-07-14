@@ -32,7 +32,7 @@ public class PlayerState : StateBase
    {
       if (player == null || player.Stats == null)
       {
-         float defaultDeadZone = PlayerBaseConfig.CreateDefault().moveInputDeadZone;
+         float defaultDeadZone = PlayerDefaultConfigAsset.LoadRuntimeConfig().moveInputDeadZone;
          return GetMoveInput().sqrMagnitude > defaultDeadZone * defaultDeadZone;
       }
 
@@ -45,7 +45,7 @@ public class PlayerState : StateBase
    {
       if (player == null || player.Stats == null)
       {
-         PlayerBaseConfig defaultConfig = PlayerBaseConfig.CreateDefault();
+         PlayerBaseConfig defaultConfig = PlayerDefaultConfigAsset.LoadRuntimeConfig();
          if (GameInputManger.Instance != null && GameInputManger.Instance.Run)
          {
             return defaultConfig.runSpeed;
@@ -76,7 +76,7 @@ public class PlayerState : StateBase
 
       float jumpHeight = player.Stats != null
          ? player.Stats.JumpHeight
-         : PlayerBaseConfig.CreateDefault().jumpHeight;
+         : PlayerDefaultConfigAsset.LoadRuntimeConfig().jumpHeight;
 
       player.ConsumeJumpBuffer();
       player.ClearCoyoteTimer();

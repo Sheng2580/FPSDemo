@@ -825,7 +825,7 @@ MonoBehaviour:
   levelReadyScale: 1.25
   levelReadyDuration: 0.42
   levelReadyEase: 4
-  energyFormat: 0.00
+  energyFormat: 0
   levelPrefix: Lv.
 --- !u!1 &4304470177274461578
 GameObject:

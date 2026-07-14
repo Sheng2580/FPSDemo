@@ -1,8 +1,10 @@
 fileFormatVersion: 2
 guid: c9aa9095dc5908d4db627c9bdffcc714
-NativeFormatImporter:
+ScriptedImporter:
+  internalIDToNameTable: []
   externalObjects: {}
-  mainObjectFileID: 0
+  serializedVersion: 2
   userData: 
-  assetBundleName: 
+  assetBundleName: enemy_prefabs
   assetBundleVariant: 
+  script: {fileID: 11500000, guid: 625f186215c104763be7675aa2d941aa, type: 3}

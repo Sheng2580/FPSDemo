@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "maxHp": 100,
+    "walkSpeed": 4.5,
+    "runSpeed": 6.5,
+    "moveInputDeadZone": 0.05,
+    "moveAcceleration": 18,
+    "moveDeceleration": 24,
+    "jumpHeight": 1.2,
+    "jumpBufferTime": 0.15,
+    "coyoteTime": 0.12,
+    "airMoveControl": 0.65,
+    "jumpEndVerticalVelocity": 0
+  }
+]

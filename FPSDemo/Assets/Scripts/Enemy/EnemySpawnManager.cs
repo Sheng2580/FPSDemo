@@ -91,7 +91,7 @@ namespace Enemy
         [SerializeField] private bool loadPrefabsFromAssetBundle = true;
         [SerializeField] private string enemyPrefabAssetBundleName = DefaultEnemyPrefabBundleName;
 #if UNITY_EDITOR
-        [SerializeField] private bool preferEditorDirectPrefab = true;
+        [SerializeField] private bool preferEditorDirectPrefab;
 #endif
 
         [Header("调试")]
@@ -1033,11 +1033,13 @@ namespace Enemy
                     return;
                 }
 
-                if (TryLoadEditorEnemyPrefab(resourceKey, out GameObject editorPrefab))
+#if UNITY_EDITOR
+                if (preferEditorDirectPrefab && TryLoadEditorEnemyPrefab(resourceKey, out GameObject editorPrefab))
                 {
                     _loadedPrefabByResourceKey[resourceKey] = editorPrefab;
                     return;
                 }
+#endif
 
                 WarnMissingEnemyPrefab(resourceKey);
             });

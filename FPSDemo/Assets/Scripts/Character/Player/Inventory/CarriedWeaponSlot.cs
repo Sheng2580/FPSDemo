@@ -1,4 +1,5 @@
 using System;
+using PlayerData;
 using UnityEngine;
 using Weapon;
 using Weapon.Data;
@@ -80,6 +81,7 @@ public class CarriedWeaponSlot
         }
 
         runtimeConfig.ApplyMissingDefaults();
+        PlayerProgressSaveService.ApplyPermanentWeaponUpgrade(runtimeConfig);
         return runtimeConfig;
     }
 

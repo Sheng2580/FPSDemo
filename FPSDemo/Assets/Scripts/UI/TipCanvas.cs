@@ -11,7 +11,7 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class TipCanvas : BaseCanvas
 {
-    private const string HideTimerId = "TipCanvas_HideTimer";
+    private const string HideTimerIdPrefix = "TipCanvas_HideTimer";
 
     [Header("文本")]
     [SerializeField] private TMP_Text tipText;
@@ -30,7 +30,9 @@ public class TipCanvas : BaseCanvas
     private RectTransform _tipRoot;
     private Vector2 _baseAnchoredPosition;
     private DG.Tweening.Sequence _sequence;
+    private Tween _hideDelayTween;
     private Timer _hideTimer;
+    private string _hideTimerId;
 
     public override bool NeedRaycaster => false;
 
@@ -44,6 +46,8 @@ public class TipCanvas : BaseCanvas
     public override void Show()
     {
         base.Show();
+        StopHideTimer();
+        KillSequence();
         HideInstant();
     }
 
@@ -147,10 +151,15 @@ public class TipCanvas : BaseCanvas
         MultiTimerManager timerManager = MultiTimerManager.Instance;
         if (timerManager == null)
         {
+            _hideDelayTween = DOVirtual.DelayedCall(
+                    Mathf.Max(0.1f, duration),
+                    HideTip)
+                .SetUpdate(true);
             return;
         }
 
-        _hideTimer = timerManager.CreateTimer(HideTimerId, true);
+        _hideTimerId ??= $"{HideTimerIdPrefix}_{GetInstanceID()}";
+        _hideTimer = timerManager.CreateTimer(_hideTimerId, true);
         _hideTimer.SetTargetTime(Mathf.Max(0.1f, duration));
         _hideTimer.OnTimeUp += OnHideTimerUp;
         _hideTimer.Start();
@@ -158,6 +167,9 @@ public class TipCanvas : BaseCanvas
 
     private void StopHideTimer()
     {
+        _hideDelayTween?.Kill();
+        _hideDelayTween = null;
+
         if (_hideTimer == null)
         {
             return;
@@ -166,9 +178,9 @@ public class TipCanvas : BaseCanvas
         _hideTimer.OnTimeUp -= OnHideTimerUp;
         _hideTimer = null;
         MultiTimerManager timerManager = MultiTimerManager.Instance;
-        if (timerManager != null)
+        if (timerManager != null && !string.IsNullOrEmpty(_hideTimerId))
         {
-            timerManager.RemoveTimer(HideTimerId);
+            timerManager.RemoveTimer(_hideTimerId);
         }
     }
 

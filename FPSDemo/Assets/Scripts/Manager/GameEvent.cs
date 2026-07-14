@@ -30,6 +30,8 @@ public enum GameEvent
     PlayerBattleGoldChanged,
     PlayerDamaged,
     PlayerHealthChanged,
+    PlayerDied,
+    CombatTimeChanged,
     WeaponAimCameraChanged,
     EnemySpawned,
     EnemyDamaged,
@@ -64,7 +66,8 @@ public enum GameEvent
     PickupCollected,
     PickupExpired,
     PickupTipRequested,
-    PlayerBerserkChanged
+    PlayerBerserkChanged,
+    PlayerGoldChanged
 }
 
 public readonly struct PlayerWeaponChangedEventData
@@ -151,6 +154,18 @@ public readonly struct PlayerBattleGoldChangedEventData
     public PlayerBattleGoldChangedEventData(int battleGold)
     {
         this.battleGold = battleGold;
+    }
+}
+
+public readonly struct PlayerGoldChangedEventData
+{
+    public readonly int gold;
+    public readonly int deltaGold;
+
+    public PlayerGoldChangedEventData(int gold, int deltaGold)
+    {
+        this.gold = Mathf.Max(0, gold);
+        this.deltaGold = deltaGold;
     }
 }
 
@@ -295,6 +310,28 @@ public readonly struct PlayerHealthChangedEventData
         this.maxHp = Mathf.Max(1, maxHp);
         this.hpDelta = hpDelta;
         this.maxHpDelta = maxHpDelta;
+    }
+}
+
+public readonly struct PlayerDiedEventData
+{
+    public readonly PlayerController player;
+
+    public PlayerDiedEventData(PlayerController player)
+    {
+        this.player = player;
+    }
+}
+
+public readonly struct CombatTimeChangedEventData
+{
+    public readonly float elapsedSeconds;
+    public readonly int wholeSeconds;
+
+    public CombatTimeChangedEventData(float elapsedSeconds)
+    {
+        this.elapsedSeconds = Mathf.Max(0f, elapsedSeconds);
+        wholeSeconds = Mathf.Max(0, Mathf.FloorToInt(this.elapsedSeconds));
     }
 }
 

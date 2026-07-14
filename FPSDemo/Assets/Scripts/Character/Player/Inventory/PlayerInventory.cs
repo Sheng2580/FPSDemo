@@ -53,6 +53,7 @@ public class PlayerInventory : MonoBehaviour
 
         carriedWeapons ??= new List<CarriedWeaponSlot>();
         items ??= new List<InventoryItemSlot>();
+        battleGold = 0;
         _battleGoldGainMultiplier = 1f;
 
         for (int i = 0; i < carriedWeapons.Count; i++)

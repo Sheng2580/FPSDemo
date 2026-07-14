@@ -17,8 +17,8 @@ namespace Blessing.Data
         WeaponMagazine,
         // 武器后坐力
         WeaponRecoil,
-        // 技能冷却
-        SkillCooldown,
+        // 技能冷却缩减
+        SkillCooldownReduction,
         // 技能最大数量
         SkillMaxCount,
         // 金币获取

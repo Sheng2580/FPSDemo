@@ -39,6 +39,7 @@ public class PlayerSkillController : MonoBehaviour
     private Coroutine _restoreCollisionRoutine;
     private bool _isCastingSkill;
     private bool _isActionLocked;
+    private float _permanentCooldownReduction;
 
     public bool IsCastingSkill => _isCastingSkill;
 
@@ -97,7 +98,7 @@ public class PlayerSkillController : MonoBehaviour
         return true;
     }
 
-    public bool ApplyCooldownMultiplier(SkillType skillType, float multiplier)
+    public bool ApplyCooldownReduction(SkillType skillType, float reduction)
     {
         if (!_runtimeData.TryGetValue(skillType, out PlayerSkillRuntimeData runtimeData)
             || !_configs.TryGetValue(skillType, out PlayerSkillConfig config))
@@ -110,7 +111,8 @@ public class PlayerSkillController : MonoBehaviour
             ? Mathf.Clamp01(runtimeData.cooldownRemaining / previousCooldown)
             : 0f;
 
-        runtimeData.cooldownMultiplier = Mathf.Max(0.01f, runtimeData.cooldownMultiplier * Mathf.Max(0f, multiplier));
+        runtimeData.blessingCooldownReduction = PlayerSkillConfigJsonLoader.Rules.ClampBlessingCooldownReduction(
+            runtimeData.blessingCooldownReduction + Mathf.Max(0f, reduction));
         float nextCooldown = GetCooldown(config, runtimeData);
         runtimeData.cooldownRemaining = Mathf.Min(nextCooldown, nextCooldown * previousRemainingRate);
         EventCenter.Instance.EventTrigger(
@@ -182,6 +184,7 @@ public class PlayerSkillController : MonoBehaviour
     {
         _configs.Clear();
         _runtimeData.Clear();
+        _permanentCooldownReduction = ResolvePermanentCooldownReduction();
 
         AddSkillConfig(ResolveConfig(dodgeConfigAsset, "PlayerSkillConfigs/DefaultDodgeSkillConfig", PlayerSkillConfig.CreateDefaultDodge()));
         AddSkillConfig(ResolveConfig(pushConfigAsset, "PlayerSkillConfigs/DefaultPushSkillConfig", PlayerSkillConfig.CreateDefaultPush()));
@@ -194,7 +197,12 @@ public class PlayerSkillController : MonoBehaviour
         PlayerSkillConfig fallbackConfig)
     {
         PlayerSkillConfig runtimeConfig = null;
-        if (configAsset != null)
+        if (fallbackConfig != null
+            && PlayerSkillConfigJsonLoader.TryGetConfig(fallbackConfig.skillType, out PlayerSkillConfig jsonConfig))
+        {
+            runtimeConfig = jsonConfig;
+        }
+        else if (configAsset != null)
         {
             runtimeConfig = configAsset.CreateRuntimeConfig();
         }
@@ -222,6 +230,7 @@ public class PlayerSkillController : MonoBehaviour
         _configs[config.skillType] = config;
         PlayerSkillRuntimeData runtimeData = new PlayerSkillRuntimeData();
         runtimeData.InitForNewRun(config);
+        runtimeData.permanentCooldownReduction = _permanentCooldownReduction;
         _runtimeData[config.skillType] = runtimeData;
 
         EventCenter.Instance.EventTrigger(
@@ -633,8 +642,19 @@ public class PlayerSkillController : MonoBehaviour
             return 0f;
         }
 
-        float multiplier = runtimeData != null ? Mathf.Max(0f, runtimeData.cooldownMultiplier) : 1f;
-        return Mathf.Max(0f, config.cooldown * multiplier);
+        float permanentReduction = runtimeData != null ? runtimeData.permanentCooldownReduction : 0f;
+        float blessingReduction = runtimeData != null ? runtimeData.blessingCooldownReduction : 0f;
+        return PlayerSkillConfigJsonLoader.Rules.CalculateCooldown(
+            config.cooldown,
+            permanentReduction,
+            blessingReduction);
+    }
+
+    private float ResolvePermanentCooldownReduction()
+    {
+        PlayerSaveData saveData = PlayerProgressSaveService.Load();
+        int level = saveData != null ? saveData.skillCooldownLevel : 0;
+        return PermanentUpgradeConfigLoader.GetPlayerSkillCooldownReduction(level, level * 0.03f);
     }
 
     private int ResolveHitLayerMask()

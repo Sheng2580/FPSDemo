@@ -47,6 +47,7 @@ public class BlessingSelectCanvas : BaseCanvas
     private bool _hasPausedGame;
     private bool _isOpened;
     private bool _isAnimating;
+    private int _combatSceneHandle = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void OpenForCombatScene()
@@ -63,6 +64,7 @@ public class BlessingSelectCanvas : BaseCanvas
     {
         base.Awake();
         CacheReferences();
+        ResetRuntimeForNewCombat();
         BindButtons();
         SetClosedImmediate();
         RefreshBuffCountText(false);
@@ -72,6 +74,7 @@ public class BlessingSelectCanvas : BaseCanvas
     {
         base.Show();
         CacheReferences();
+        ResetRuntimeForNewCombat();
         BindButtons();
         SetClosedImmediate();
     }
@@ -367,6 +370,19 @@ public class BlessingSelectCanvas : BaseCanvas
         Transform countTransform = buffCountText.transform;
         countTransform.localScale = Vector3.one;
         _buffCountTween = countTransform.DOPunchScale(Vector3.one * buffCountPunchScale, 0.2f, 6, 0.8f).SetUpdate(true);
+    }
+
+    private void ResetRuntimeForNewCombat()
+    {
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (activeScene.name != CombatSceneName || activeScene.handle == _combatSceneHandle)
+        {
+            return;
+        }
+
+        _combatSceneHandle = activeScene.handle;
+        _selectionRuntime.Reset();
+        RefreshBuffCountText(false);
     }
 
     private RectTransform FindChildRect(string childName)

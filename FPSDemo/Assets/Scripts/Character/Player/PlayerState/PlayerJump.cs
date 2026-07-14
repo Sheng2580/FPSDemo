@@ -15,10 +15,10 @@ public class PlayerJump : PlayerState
 
         float airMoveControl = player != null && player.Stats != null
             ? player.Stats.AirMoveControl
-            : PlayerBaseConfig.CreateDefault().airMoveControl;
+            : PlayerDefaultConfigAsset.LoadRuntimeConfig().airMoveControl;
         float jumpEndVerticalVelocity = player != null && player.Stats != null
             ? player.Stats.JumpEndVerticalVelocity
-            : PlayerBaseConfig.CreateDefault().jumpEndVerticalVelocity;
+            : PlayerDefaultConfigAsset.LoadRuntimeConfig().jumpEndVerticalVelocity;
         
 
         if (HasMoveInput())

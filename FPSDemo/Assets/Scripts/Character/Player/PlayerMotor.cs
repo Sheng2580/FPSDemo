@@ -123,7 +123,10 @@ public class PlayerMotor : MonoBehaviour
 
     private void AutoBindPlayer()
     {
-        player ??= GetComponent<PlayerController>();
+        if (player == null)
+        {
+            player = GetComponent<PlayerController>();
+        }
 
         if (player == null)
         {

@@ -34,14 +34,14 @@ namespace PlayerData
 
         public float NormalizedEnergy => maxEnergy > 0f ? Mathf.Clamp01(currentEnergy / maxEnergy) : 0f;
 
-        public void InitForNewRun(PlayerEnergyConfig config)
+        public void InitForNewRun(PlayerEnergyConfig config, float baseEnergyGainMultiplier = 1f)
         {
             PlayerEnergyConfig safeConfig = config ?? PlayerEnergyConfig.CreateDefault();
             safeConfig.ApplyMissingDefaults();
             currentEnergy = 0f;
-            maxEnergy = safeConfig.maxEnergy;
             level = safeConfig.startLevel;
-            energyGainMultiplier = 1f;
+            maxEnergy = safeConfig.CalculateRequiredEnergy(level);
+            energyGainMultiplier = Mathf.Max(0f, baseEnergyGainMultiplier);
             autoLevelUp = safeConfig.autoLevelUp;
             isLevelUpReady = false;
             state = PlayerEnergyState.Charging;
@@ -76,10 +76,13 @@ namespace PlayerData
             isLevelUpReady = true;
         }
 
-        public void LevelUpAndReset()
+        public void LevelUpAndReset(PlayerEnergyConfig config)
         {
             level = Mathf.Max(1, level + 1);
             currentEnergy = 0f;
+            PlayerEnergyConfig safeConfig = config ?? PlayerEnergyConfig.CreateDefault();
+            safeConfig.ApplyMissingDefaults();
+            maxEnergy = safeConfig.CalculateRequiredEnergy(level);
             isLevelUpReady = false;
         }
     }
