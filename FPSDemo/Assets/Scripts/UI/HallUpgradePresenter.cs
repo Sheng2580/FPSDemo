@@ -718,6 +718,13 @@ public static class HallTipNotifier
 
     public static void Show(string title, string description, string colorKey)
     {
+        bool isError = !string.IsNullOrEmpty(title)
+                       && (title.Contains("失败")
+                           || title.Contains("不足")
+                           || title.Contains("请选择")
+                           || title.Contains("无存档"));
+        MusicMgr.Instance?.PlayUISound(isError ? MusicMgr.UIErrorSound : MusicMgr.UISuccessSound, 0.9f);
+
         PickupTipEventData eventData = new PickupTipEventData(
             title,
             description,

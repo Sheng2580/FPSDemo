@@ -113,6 +113,7 @@ public class BlessingCardItem : MonoBehaviour, IPointerClickHandler, IPointerDow
 
     public void OnPointerDown(PointerEventData eventData)
     {
+        MusicMgr.Instance?.PlayUISound(MusicMgr.UISelectSound);
         _owner?.SelectCard(this);
     }
 

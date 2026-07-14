@@ -214,6 +214,7 @@ public class WeaponItem : MonoBehaviour
             return;
         }
 
+        UIManager.Instance?.RegisterButtonAudio(button, MusicMgr.UISelectSound);
         button.onClick.RemoveListener(OnButtonClicked);
         button.onClick.AddListener(OnButtonClicked);
     }

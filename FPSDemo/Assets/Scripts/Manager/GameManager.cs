@@ -17,6 +17,7 @@ public class GameManager : MonoBehaviour
         // 每次进入播放都清理事件中心 兼容编辑器关闭域重载
         EventCenter.Instance.Clear();
         CombatFeedbackManager.EnsureExists();
+        MusicMgr.Instance?.PreloadDefaultUISounds();
 
         if (instance != null)
         {

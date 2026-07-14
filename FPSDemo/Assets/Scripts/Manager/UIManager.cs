@@ -66,6 +66,7 @@ public class UIManager : UnitySingleTonMono<UIManager>
     private static void BootstrapEventSystemAfterSceneLoad()
     {
         EnsureEventSystemForCurrentScene();
+        Instance.ConfigureAllButtonAudio();
         if (sceneEventSystemSubscribed)
         {
             return;
@@ -78,6 +79,7 @@ public class UIManager : UnitySingleTonMono<UIManager>
     private static void OnSceneLoadedEnsureEventSystem(Scene scene, LoadSceneMode mode)
     {
         EnsureEventSystemForCurrentScene();
+        Instance.ConfigureAllButtonAudio();
     }
 
     private struct CanvasConfig
@@ -554,6 +556,7 @@ public class UIManager : UnitySingleTonMono<UIManager>
         canvas.transform.SetAsLastSibling();
         openedCanvases[canvasName] = canvas;
         canvas.Show();
+        ConfigureButtonAudio(canvas.transform);
         RebuildLayerSorting(config.Layer, config.UseSafeArea);
     }
 
@@ -575,7 +578,109 @@ public class UIManager : UnitySingleTonMono<UIManager>
     {
         canvas.transform.SetAsLastSibling();
         canvas.Show();
+        ConfigureButtonAudio(canvas.transform);
         RebuildLayerSorting(config.Layer, config.UseSafeArea);
+    }
+
+    private void ConfigureAllButtonAudio()
+    {
+        Button[] buttons = FindObjectsOfType<Button>(true);
+        ConfigureButtonAudio(buttons);
+    }
+
+    private void ConfigureButtonAudio(Transform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        ConfigureButtonAudio(root.GetComponentsInChildren<Button>(true));
+    }
+
+    private void ConfigureButtonAudio(Button[] buttons)
+    {
+        if (buttons == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button button = buttons[i];
+            if (button == null || ShouldSkipAutomaticButtonAudio(button))
+            {
+                continue;
+            }
+
+            RegisterButtonAudio(button, ResolveButtonSound(button.name));
+        }
+    }
+
+    public void RegisterButtonAudio(Button button, string soundName = null)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        UIButtonAudioFeedback feedback = button.GetComponent<UIButtonAudioFeedback>();
+        if (feedback == null)
+        {
+            feedback = button.gameObject.AddComponent<UIButtonAudioFeedback>();
+        }
+
+        feedback.Configure(string.IsNullOrEmpty(soundName) ? ResolveButtonSound(button.name) : soundName);
+    }
+
+    private static bool ShouldSkipAutomaticButtonAudio(Button button)
+    {
+        Transform current = button != null ? button.transform : null;
+        while (current != null)
+        {
+            if (current.GetComponent<TounchControllerCanvas>() != null
+                || current.GetComponent<StartCanvas>() != null)
+            {
+                return true;
+            }
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    private static string ResolveButtonSound(string buttonName)
+    {
+        string lowerName = string.IsNullOrEmpty(buttonName)
+            ? string.Empty
+            : buttonName.ToLowerInvariant();
+
+        if (lowerName.Contains("return")
+            || lowerName.Contains("back")
+            || lowerName.Contains("close")
+            || lowerName.Contains("cancel"))
+        {
+            return MusicMgr.UICloseSound;
+        }
+
+        if (lowerName.Contains("save")
+            || lowerName.Contains("upgrade")
+            || lowerName.Contains("confirm")
+            || lowerName.Contains("start")
+            || lowerName.Contains("continue"))
+        {
+            return MusicMgr.UIConfirmSound;
+        }
+
+        if (lowerName.Contains("card")
+            || lowerName.Contains("weapon")
+            || lowerName.Contains("item"))
+        {
+            return MusicMgr.UISelectSound;
+        }
+
+        return MusicMgr.UIButtonSound;
     }
 
     private void RebuildLayerSorting(UILayer layer, bool useSafeArea)
@@ -748,5 +853,29 @@ public class UIManager : UnitySingleTonMono<UIManager>
         return config.LoadType == UILoadType.AssetBundle
             ? config.AssetBundleName + "/" + config.AssetName
             : config.ResourcesPath;
+    }
+}
+
+[DisallowMultipleComponent]
+public sealed class UIButtonAudioFeedback : MonoBehaviour, IPointerClickHandler
+{
+    [SerializeField] private string soundName = MusicMgr.UIButtonSound;
+    private Button button;
+
+    public void Configure(string newSoundName)
+    {
+        soundName = string.IsNullOrEmpty(newSoundName) ? MusicMgr.UIButtonSound : newSoundName;
+        button ??= GetComponent<Button>();
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        button ??= GetComponent<Button>();
+        if (button == null || !button.IsInteractable())
+        {
+            return;
+        }
+
+        MusicMgr.Instance?.PlayUISound(soundName);
     }
 }

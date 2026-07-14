@@ -83,6 +83,7 @@ public sealed class StartCanvas : MonoBehaviour
             return;
         }
 
+        MusicMgr.Instance?.PlayUISound(MusicMgr.UIConfirmSound);
         PlayerProgressSaveService.BeginNewSession();
         PlayButtonPunch(startGameButton);
         BeginHallTransition();
@@ -101,6 +102,7 @@ public sealed class StartCanvas : MonoBehaviour
             return;
         }
 
+        MusicMgr.Instance?.PlayUISound(MusicMgr.UIConfirmSound);
         PlayButtonPunch(continueGameButton);
         BeginHallTransition();
     }
@@ -125,6 +127,7 @@ public sealed class StartCanvas : MonoBehaviour
             return;
         }
 
+        MusicMgr.Instance?.PlayUISound(MusicMgr.UISelectSound);
         PlayButtonPunch(readFileButton);
         OpenSaveList(summaries);
     }
@@ -138,6 +141,7 @@ public sealed class StartCanvas : MonoBehaviour
 
         _isTransitioning = true;
         SetMainInput(false);
+        MusicMgr.Instance?.PlayUISound(MusicMgr.UICloseSound);
         PlayButtonPunch(quitButton);
 
         _transitionSequence?.Kill();
@@ -216,6 +220,7 @@ public sealed class StartCanvas : MonoBehaviour
             return;
         }
 
+        MusicMgr.Instance?.PlayUISound(MusicMgr.UICloseSound);
         _filePanelOpen = false;
         _filePanelSequence?.Kill();
         SetFilePanelInput(false);

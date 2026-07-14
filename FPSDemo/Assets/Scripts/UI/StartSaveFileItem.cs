@@ -125,6 +125,7 @@ public sealed class StartSaveFileItem : MonoBehaviour
             return;
         }
 
+        UIManager.Instance?.RegisterButtonAudio(button, MusicMgr.UISelectSound);
         button.onClick.RemoveListener(HandleClicked);
         button.onClick.AddListener(HandleClicked);
     }

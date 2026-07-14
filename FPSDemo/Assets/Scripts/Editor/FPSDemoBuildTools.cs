@@ -24,6 +24,7 @@ public static class FPSDemoBuildTools
     private const string UIItemBundleName = "uiitem";
     private const string PlayerRuntimeBundleName = "player_runtime";
     private const string CombatFeedbackBundleName = "combat_feedback";
+    private const string UIAudioBundleName = "ui_audio";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string PropRuntimeBundleName = "prop_runtime";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
@@ -127,6 +128,18 @@ public static class FPSDemoBuildTools
         "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieOldCrone_LOD2.prefab"
     };
 
+    private static readonly string[] UIAudioAssetPaths =
+    {
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/Buttons/SnappyButton1.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/Buttons/ClickyButton9a.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/Buttons/GenericButton4.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/SlidesAndTransitions/OpenOrEnable2.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/SlidesAndTransitions/CloseOrDisable2.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/AlertsAndNotifications/Success3.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/AlertsAndNotifications/Error2.wav",
+        "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/AlertsAndNotifications/GenericNotification3.wav"
+    };
+
     private static readonly string[] PropRuntimeAssetPaths =
     {
         "Assets/Art/ABRes/Prop/HpProp.prefab",
@@ -141,6 +154,7 @@ public static class FPSDemoBuildTools
         UIItemBundleName,
         PlayerRuntimeBundleName,
         CombatFeedbackBundleName,
+        UIAudioBundleName,
         EnemyPrefabBundleName,
         PropRuntimeBundleName
     };
@@ -579,6 +593,7 @@ public static class FPSDemoBuildTools
         success &= TrySetAssetBundleNames(UIItemAssetPaths, UIItemBundleName, ref changed);
         success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
+        success &= TrySetAssetBundleNames(UIAudioAssetPaths, UIAudioBundleName, ref changed);
         success &= TrySetAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName, ref changed);
         success &= TrySetAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName, ref changed);
         success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
@@ -683,6 +698,7 @@ public static class FPSDemoBuildTools
         isValid &= ValidateAssetBundleNames(UIItemAssetPaths, UIItemBundleName);
         isValid &= ValidateAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName);
         isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
+        isValid &= ValidateAssetBundleNames(UIAudioAssetPaths, UIAudioBundleName);
         isValid &= ValidateAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName);
         isValid &= ValidateAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName);
 
