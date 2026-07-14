@@ -21,6 +21,7 @@ namespace Enemy
         [SerializeField] private EnemyView view;
         [SerializeField] private EnemyBrain brain;
         [SerializeField] private EnemyStateMachine stateMachine;
+        [SerializeField] private EnemyAudioController audioController;
 
         private EnemySpawnManager _spawner;
         private EnemyPool _pool;
@@ -59,6 +60,7 @@ namespace Enemy
 
             // 执行 Tick 每帧跑，决策 Tick 由 EnemyAIScheduler 分帧调度
             brain?.TickExecution();
+            audioController?.Tick(motor != null && motor.IsMoving);
         }
 
         public void InitFromSpawner(
@@ -86,6 +88,7 @@ namespace Enemy
             motor?.Init(target, this, definition.moveSpeed, definition.angularSpeed, definition.acceleration, definition.attackDistance);
             attack?.Init(target, this, definition.attackDamage, definition.attackDistance, definition.attackInterval, definition.attackHitDelay);
             brain?.Init(this, target, definition);
+            audioController?.Init(enemyId, target);
             SetCollidersEnabled(true);
 
             EventCenter.Instance.EventTrigger(GameEvent.EnemySpawned, new EnemySpawnedEventData(this));
@@ -124,6 +127,7 @@ namespace Enemy
             motor?.Init(target, this, runtimeStats.moveSpeed, runtimeStats.angularSpeed, runtimeStats.acceleration, runtimeStats.attackDistance);
             attack?.Init(target, this, runtimeStats.attackDamage, runtimeStats.attackDistance, runtimeStats.attackInterval, runtimeStats.attackHitDelay);
             brain?.Init(this, target, runtimeStats);
+            audioController?.Init(enemyId, target);
             SetCollidersEnabled(true);
 
             EventCenter.Instance.EventTrigger(GameEvent.EnemySpawned, new EnemySpawnedEventData(this));
@@ -138,6 +142,7 @@ namespace Enemy
 
             _deathNotified = true;
             _active = false;
+            audioController?.PlayDeath();
             // 死亡后先关闭受击和身体碰撞，死亡动画结束后再由刷怪器回池
             SetCollidersEnabled(false);
             brain?.MarkDead();
@@ -153,7 +158,18 @@ namespace Enemy
                 return;
             }
 
+            audioController?.PlayHit();
             brain?.MarkHitStunned(damageInfo);
+        }
+
+        public void NotifyAttackStarted()
+        {
+            if (!_active || IsDead)
+            {
+                return;
+            }
+
+            audioController?.PlayAttack();
         }
 
         public void ReturnToPool()
@@ -163,6 +179,7 @@ namespace Enemy
             brain?.Deactivate();
             motor?.StopImmediately();
             attack?.StopAttack();
+            audioController?.Deactivate();
 
             if (_pool != null)
             {
@@ -193,6 +210,7 @@ namespace Enemy
             view ??= GetComponentInChildren<EnemyView>(true);
             brain ??= GetComponent<EnemyBrain>();
             stateMachine ??= GetComponent<EnemyStateMachine>();
+            audioController ??= GetComponent<EnemyAudioController>();
 
             if (brain == null)
             {

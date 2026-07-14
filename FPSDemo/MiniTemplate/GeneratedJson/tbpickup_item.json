@@ -60,7 +60,7 @@
     "itemType": "Berserk",
     "assetBundleName": "prop_runtime",
     "assetName": "RageProp",
-    "weight": 55,
+    "weight": 140,
     "unlockWave": 2,
     "lifeTime": 16,
     "pickupRadius": 1.4,

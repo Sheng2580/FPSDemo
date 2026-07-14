@@ -40,6 +40,13 @@ public class CombatVolumeManager : MonoBehaviour
     [SerializeField] private CombatVolumeEffectConfigAsset grenadeConfigAsset;
     [SerializeField] private string grenadeConfigResourcePath = "CombatVolumeEffectConfigs/GrenadeVolumeEffectConfig";
 
+    [Header("狂暴后处理")]
+    [SerializeField, Range(0f, 1f)] private float berserkChromaticIntensity = 0.65f;
+    [SerializeField, Range(0f, 0.3f)] private float berserkChromaticPulseAmount = 0.15f;
+    [SerializeField] private float berserkChromaticPulseSpeed = 4.5f;
+    [SerializeField] private float berserkFadeInTime = 0.18f;
+    [SerializeField] private float berserkFadeOutTime = 0.35f;
+
     private VolumeProfile runtimeProfile;
     private readonly Dictionary<CombatVolumeEffectType, CombatVolumeEffectConfig> skillEffectConfigs =
         new Dictionary<CombatVolumeEffectType, CombatVolumeEffectConfig>();
@@ -48,6 +55,7 @@ public class CombatVolumeManager : MonoBehaviour
     private Vignette vignette;
     private ColorAdjustments colorAdjustments;
     private Bloom bloom;
+    private ChromaticAberration chromaticAberration;
     private VolumeComponent speedLinesComponent;
 
     private bool hasSnapshot;
@@ -59,13 +67,17 @@ public class CombatVolumeManager : MonoBehaviour
     private Color baseColorFilter;
     private float baseBloomIntensity;
     private Color baseBloomTint;
+    private float baseChromaticIntensity;
 
     private float damageTarget;
     private float damageBlend;
     private float damageHoldEndTime;
     private float skillBlend;
+    private float berserkBlend;
+    private bool berserkActive;
     private Coroutine damagePulseRoutine;
     private Coroutine skillPulseRoutine;
+    private Coroutine berserkPulseRoutine;
     private Coroutine cameraRefreshRoutine;
     private bool usingRuntimeCreatedVolume;
     private bool speedLinesMissingLogged;
@@ -202,6 +214,7 @@ public class CombatVolumeManager : MonoBehaviour
             combatVolume = null;
             runtimeProfile = null;
             hasSnapshot = false;
+            chromaticAberration = null;
             speedLinesComponent = null;
             speedLinesMissingLogged = false;
             usingRuntimeCreatedVolume = false;
@@ -412,11 +425,23 @@ public class CombatVolumeManager : MonoBehaviour
 
     private void PlayBerserk(bool active, string effectKey)
     {
-        SetSpeedLinesActive(active);
+        EnsureCombatVolume();
+        berserkActive = active;
+        if (berserkPulseRoutine != null)
+        {
+            StopCoroutine(berserkPulseRoutine);
+        }
+
+        if (active)
+        {
+            SetSpeedLinesActive(true);
+        }
+
+        berserkPulseRoutine = StartCoroutine(BerserkBlendRoutine(active));
 
         if (debugLog)
         {
-            Debug.Log($"[CombatVolume] 狂暴 SpeedLines Active={active}", this);
+            Debug.Log($"[CombatVolume] 狂暴 Active={active} SpeedLines保留 色散目标={berserkChromaticIntensity:0.00}", this);
         }
     }
 
@@ -540,15 +565,22 @@ public class CombatVolumeManager : MonoBehaviour
             colorAdjustments = runtimeProfile.Add<ColorAdjustments>(true);
         }
 
+        if (!runtimeProfile.TryGet(out chromaticAberration))
+        {
+            chromaticAberration = runtimeProfile.Add<ChromaticAberration>(true);
+        }
+
         runtimeProfile.TryGet(out bloom);
         vignette.active = true;
         colorAdjustments.active = true;
+        chromaticAberration.active = true;
         vignette.color.overrideState = true;
         vignette.intensity.overrideState = true;
         vignette.smoothness.overrideState = true;
         colorAdjustments.postExposure.overrideState = true;
         colorAdjustments.saturation.overrideState = true;
         colorAdjustments.colorFilter.overrideState = true;
+        chromaticAberration.intensity.overrideState = true;
 
         if (bloom != null)
         {
@@ -625,6 +657,10 @@ public class CombatVolumeManager : MonoBehaviour
             baseBloomIntensity = bloom.intensity.value;
             baseBloomTint = bloom.tint.value;
         }
+
+        baseChromaticIntensity = chromaticAberration != null
+            ? chromaticAberration.intensity.value
+            : 0f;
 
         hasSnapshot = true;
     }
@@ -728,10 +764,56 @@ public class CombatVolumeManager : MonoBehaviour
 
     private void StopBerserkPulseRoutine()
     {
+        if (berserkPulseRoutine != null)
+        {
+            StopCoroutine(berserkPulseRoutine);
+            berserkPulseRoutine = null;
+        }
+
+        berserkActive = false;
+        berserkBlend = 0f;
         if (speedLinesComponent != null)
         {
             speedLinesComponent.active = false;
         }
+        ApplyVolumeValues();
+    }
+
+    private IEnumerator BerserkBlendRoutine(bool active)
+    {
+        float target = active ? 1f : 0f;
+        float duration = active ? berserkFadeInTime : berserkFadeOutTime;
+        duration = Mathf.Max(0.01f, duration);
+        float start = berserkBlend;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Smooth01(elapsed / duration);
+            SetBerserkAmount(Mathf.Lerp(start, target, t));
+            yield return null;
+        }
+
+        SetBerserkAmount(target);
+        while (active && berserkActive)
+        {
+            ApplyVolumeValues();
+            yield return null;
+        }
+
+        if (!active)
+        {
+            SetSpeedLinesActive(false);
+        }
+
+        berserkPulseRoutine = null;
+    }
+
+    private void SetBerserkAmount(float amount)
+    {
+        berserkBlend = Mathf.Clamp01(amount);
+        ApplyVolumeValues();
     }
 
     private IEnumerator FadeSkillAmount(float from, float to, float duration)
@@ -846,6 +928,17 @@ public class CombatVolumeManager : MonoBehaviour
             bloom.intensity.value = Mathf.Max(0f, bloomIntensity);
             bloom.tint.value = bloomTintValue;
         }
+
+        if (chromaticAberration != null)
+        {
+            float berserkAmount = Smooth01(berserkBlend);
+            float pulse = berserkActive && berserkAmount > 0.001f
+                ? (Mathf.Sin(Time.unscaledTime * Mathf.Max(0f, berserkChromaticPulseSpeed)) * 0.5f + 0.5f)
+                  * Mathf.Max(0f, berserkChromaticPulseAmount)
+                : 0f;
+            float chromaticBoost = (berserkChromaticIntensity + pulse) * berserkAmount;
+            chromaticAberration.intensity.value = Mathf.Clamp01(baseChromaticIntensity + chromaticBoost);
+        }
     }
 
     private void AccumulateVolumeEffect(
@@ -897,6 +990,11 @@ public class CombatVolumeManager : MonoBehaviour
         {
             bloom.intensity.value = baseBloomIntensity;
             bloom.tint.value = baseBloomTint;
+        }
+
+        if (chromaticAberration != null)
+        {
+            chromaticAberration.intensity.value = baseChromaticIntensity;
         }
     }
 

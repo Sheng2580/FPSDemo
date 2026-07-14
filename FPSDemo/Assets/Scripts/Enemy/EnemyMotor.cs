@@ -94,6 +94,7 @@ namespace Enemy
         private bool _isTraversingAgentOffMeshLink;
 
         public bool IsTraversingOffMeshLink => _isTraversingOffMeshLink;
+        public bool IsMoving => _wantsMove || _isTraversingOffMeshLink;
 
         private void Awake()
         {

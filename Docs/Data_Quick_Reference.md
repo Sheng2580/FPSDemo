@@ -380,7 +380,7 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 | 1001 | 小型医疗包 | Heal | prop_runtime | HpProp | 100 | 1 | 18 | 1.4 | 30 | 0 | 0 | 0 | Heal | 空 | 拾取后恢复生命 |
 | 1002 | 弹药补给 | Ammo | prop_runtime | BulletProp | 180 | 1 | 18 | 1.4 | 0 | 30 | 0 | 0 | Ammo | 空 | 拾取后给玩家本局携带的所有武器补充备弹 |
 | 1003 | 炸弹补给 | Grenade | prop_runtime | bombProp | 65 | 2 | 18 | 1.4 | 0 | 0 | 1 | 0 | Grenade | 空 | 拾取后增加手雷技能数量 |
-| 1004 | 狂暴药剂 | Berserk | prop_runtime | RageProp | 55 | 2 | 16 | 1.4 | 0 | 0 | 0 | 6 | Berserk | Pickup_Berserk_SpeedLines | 拾取后进入短时狂暴效果，有弹不扣弹，弹夹为 0 不能开枪 |
+| 1004 | 狂暴药剂 | Berserk | prop_runtime | RageProp | 140 | 2 | 16 | 1.4 | 0 | 0 | 0 | 6 | Berserk | Pickup_Berserk_SpeedLines | 拾取后进入短时狂暴效果，有弹不扣弹，弹夹为 0 不能开枪 |
 
 字段说明：
 
@@ -389,10 +389,11 @@ Unity 数据脚本：`FPSDemo/Assets/Scripts/Pickup/Data`
 - `PickupItemConfigLoader` 读取顺序为 `Resources/PickupJson` -> `StreamingAssets` -> `MiniTemplate/GeneratedJson`。
 - `PickupItemRuntimeData` 只保存单局生成时间、剩余存活时间和拾取状态，不写回配置。
 - `PickupManager` 当前每 5 秒尝试生成一次，场上最多同时存在 6 个道具。
-- 道具按当前波次过滤后使用 `weight` 加权随机，第二波以后弹药补给概率为 45%
+- 道具按当前波次过滤后使用 `weight` 加权随机，第二波以后基础权重总和为 485，弹药补给约 37.1%，狂暴药剂约 28.9%
 - 场上没有弹药补给时，下一次成功刷新强制选择 `Ammo` 类型，保证局内始终会补充弹药道具
 - 道具事件已接入 `GameEvent.cs`：`PickupSpawned`、`PickupCollected`、`PickupExpired`、`PickupTipRequested`、`PlayerBerserkChanged`。
-- 狂暴后处理只打开或关闭 Combat Volume Profile 中名为 `SpeedLines` 的组件，不调整强度参数。
+- 狂暴后处理保留 Combat Volume Profile 中名为 `SpeedLines` 的组件，并叠加 0.65 基础强度和 0.15 脉动范围的色散
+- 狂暴音频在当前有效 AudioListener 上叠加低通 合唱和短回声，淡入淡出结束后恢复普通声音
 
 ## 敌人配置
 

@@ -480,6 +480,7 @@ GameObject:
   - component: {fileID: 6714332134256274386}
   - component: {fileID: 5217866861572259815}
   - component: {fileID: 6108128709737142340}
+  - component: {fileID: 3798363904314391353}
   m_Layer: 9
   m_Name: Enemy_ZombieNerd_LOD2
   m_TagString: Untagged
@@ -573,6 +574,7 @@ MonoBehaviour:
   view: {fileID: 7699321920151813723}
   brain: {fileID: 1819345568312142254}
   stateMachine: {fileID: 8460189656776797457}
+  audioController: {fileID: 3798363904314391353}
 --- !u!114 &1819345568312142254
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -702,6 +704,19 @@ MonoBehaviour:
   hitDistancePadding: 0.35
   maxAttackVerticalDifference: 1.15
   useAnimationHitWindow: 1
+--- !u!114 &3798363904314391353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9024130446406995669}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dba1a99cf775048d78863d6c39cb146f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  controller: {fileID: 6062544408055579389}
 --- !u!1001 &8284467968437942209
 PrefabInstance:
   m_ObjectHideFlags: 0

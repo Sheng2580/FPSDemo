@@ -10,6 +10,7 @@ using UnityEditor;
 public class MusicMgr : UnitySingleTonMono<MusicMgr>
 {
     public const string UIAudioBundleName = "ui_audio";
+    public const string EnemyAudioBundleName = "enemy_audio";
     public const string UIButtonSound = "SnappyButton1";
     public const string UISelectSound = "ClickyButton9a";
     public const string UIConfirmSound = "GenericButton4";
@@ -21,6 +22,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
 
 #if UNITY_EDITOR
     private const string EditorUIAudioRoot = "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX";
+    private const string EditorEnemyAudioRoot = "Assets/Art/Audio/Zombie Sounds Pro";
 #endif
 
     private AudioSource bkMusic; //音频组件
@@ -31,12 +33,24 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     private string currentBkMusicName;
     private int bgMusicRequestId;
     private const float DefaultBGMusicFadeDuration = 1f;
+    private const int MaxRuntimeSoundSources = 12;
+    private const float BerserkAudioFadeInTime = 0.18f;
+    private const float BerserkAudioFadeOutTime = 0.35f;
+    private const float BerserkLowPassCutoff = 5200f;
+    private const float BerserkEchoDelay = 68f;
 
     private List<AudioSource> soundlist = new List<AudioSource>();
     private readonly List<AudioSource> runtimeSoundSources = new List<AudioSource>();
     private readonly Dictionary<string, AudioClip> loadedSoundClips = new Dictionary<string, AudioClip>(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<Action<AudioClip>>> loadingSoundCallbacks = new Dictionary<string, List<Action<AudioClip>>>(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> loggedUISoundClips = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private AudioListener activeAudioListener;
+    private AudioListener berserkFilterListener;
+    private AudioLowPassFilter berserkLowPassFilter;
+    private AudioChorusFilter berserkChorusFilter;
+    private AudioEchoFilter berserkEchoFilter;
+    private Coroutine berserkAudioRoutine;
+    private float berserkAudioBlend;
 
     public override void Awake()
     {
@@ -53,11 +67,14 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     private void OnEnable()
     {
         EventCenter.Instance.AddEventListener<PickupCollectedEventData>(GameEvent.PickupCollected, OnPickupCollected);
+        EventCenter.Instance.AddEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
     }
 
     private void OnDisable()
     {
         EventCenter.Instance.RemoveEventListener<PickupCollectedEventData>(GameEvent.PickupCollected, OnPickupCollected);
+        EventCenter.Instance.RemoveEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
+        StopBerserkAudioEffect();
     }
 
     public void PreloadDefaultUISounds()
@@ -87,6 +104,151 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         }
 
         PlayUISound(PickupCollectedSound, 0.9f);
+    }
+
+    private void OnPlayerBerserkChanged(PlayerBerserkChangedEventData eventData)
+    {
+        SetBerserkAudioEffect(eventData.active);
+    }
+
+    private void SetBerserkAudioEffect(bool active)
+    {
+        if (berserkAudioRoutine != null)
+        {
+            StopCoroutine(berserkAudioRoutine);
+        }
+
+        if (active)
+        {
+            EnsureBerserkAudioFilters();
+        }
+
+        berserkAudioRoutine = StartCoroutine(BerserkAudioBlendRoutine(active));
+    }
+
+    private IEnumerator BerserkAudioBlendRoutine(bool active)
+    {
+        float target = active ? 1f : 0f;
+        float duration = active ? BerserkAudioFadeInTime : BerserkAudioFadeOutTime;
+        float start = berserkAudioBlend;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = SmoothAudioBlend(elapsed / duration);
+            SetBerserkAudioBlend(Mathf.Lerp(start, target, t));
+            yield return null;
+        }
+
+        SetBerserkAudioBlend(target);
+        berserkAudioRoutine = null;
+    }
+
+    private void SetBerserkAudioBlend(float amount)
+    {
+        berserkAudioBlend = Mathf.Clamp01(amount);
+        if (berserkAudioBlend > 0.001f && !EnsureBerserkAudioFilters())
+        {
+            return;
+        }
+
+        ApplyBerserkAudioValues();
+    }
+
+    private bool EnsureBerserkAudioFilters()
+    {
+        ResolveAudioListenerTransform();
+        if (activeAudioListener == null)
+        {
+            return false;
+        }
+
+        if (berserkFilterListener == activeAudioListener
+            && berserkLowPassFilter != null
+            && berserkChorusFilter != null
+            && berserkEchoFilter != null)
+        {
+            return true;
+        }
+
+        DisableBerserkAudioFilters();
+        berserkFilterListener = activeAudioListener;
+        berserkLowPassFilter = berserkFilterListener.gameObject.AddComponent<AudioLowPassFilter>();
+        berserkChorusFilter = berserkFilterListener.gameObject.AddComponent<AudioChorusFilter>();
+        berserkEchoFilter = berserkFilterListener.gameObject.AddComponent<AudioEchoFilter>();
+        berserkLowPassFilter.enabled = false;
+        berserkChorusFilter.enabled = false;
+        berserkEchoFilter.enabled = false;
+        return true;
+    }
+
+    private void ApplyBerserkAudioValues()
+    {
+        if (berserkLowPassFilter == null || berserkChorusFilter == null || berserkEchoFilter == null)
+        {
+            return;
+        }
+
+        float amount = SmoothAudioBlend(berserkAudioBlend);
+        bool enabled = amount > 0.001f;
+        berserkLowPassFilter.enabled = enabled;
+        berserkChorusFilter.enabled = enabled;
+        berserkEchoFilter.enabled = enabled;
+        if (!enabled)
+        {
+            return;
+        }
+
+        berserkLowPassFilter.cutoffFrequency = Mathf.Lerp(22000f, BerserkLowPassCutoff, amount);
+        berserkLowPassFilter.lowpassResonanceQ = Mathf.Lerp(1f, 1.8f, amount);
+        berserkChorusFilter.dryMix = Mathf.Lerp(1f, 0.82f, amount);
+        berserkChorusFilter.wetMix1 = Mathf.Lerp(0f, 0.2f, amount);
+        berserkChorusFilter.wetMix2 = Mathf.Lerp(0f, 0.1f, amount);
+        berserkChorusFilter.wetMix3 = Mathf.Lerp(0f, 0.06f, amount);
+        berserkChorusFilter.delay = Mathf.Lerp(8f, 22f, amount);
+        berserkChorusFilter.rate = Mathf.Lerp(0.3f, 1.6f, amount);
+        berserkChorusFilter.depth = Mathf.Lerp(0.02f, 0.35f, amount);
+        berserkEchoFilter.delay = Mathf.Lerp(10f, BerserkEchoDelay, amount);
+        berserkEchoFilter.decayRatio = Mathf.Lerp(0f, 0.22f, amount);
+        berserkEchoFilter.dryMix = Mathf.Lerp(1f, 0.92f, amount);
+        berserkEchoFilter.wetMix = Mathf.Lerp(0f, 0.18f, amount);
+    }
+
+    private void StopBerserkAudioEffect()
+    {
+        if (berserkAudioRoutine != null)
+        {
+            StopCoroutine(berserkAudioRoutine);
+            berserkAudioRoutine = null;
+        }
+
+        berserkAudioBlend = 0f;
+        DisableBerserkAudioFilters();
+    }
+
+    private void DisableBerserkAudioFilters()
+    {
+        if (berserkLowPassFilter != null)
+        {
+            berserkLowPassFilter.enabled = false;
+        }
+
+        if (berserkChorusFilter != null)
+        {
+            berserkChorusFilter.enabled = false;
+        }
+
+        if (berserkEchoFilter != null)
+        {
+            berserkEchoFilter.enabled = false;
+        }
+    }
+
+    private static float SmoothAudioBlend(float value)
+    {
+        value = Mathf.Clamp01(value);
+        return value * value * (3f - 2f * value);
     }
 
     public void PlayUISound(string soundName, float volumeScale = 1f)
@@ -161,22 +323,36 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         float volumeScale = 1f,
         float pitchRandom = 0.04f,
         float minDistance = 2f,
-        float maxDistance = 28f)
+        float maxDistance = 28f,
+        int priority = 128,
+        bool allowSteal = false)
     {
+        if (!IsWorldSoundAudible(worldPosition, maxDistance))
+        {
+            return;
+        }
+
         LoadSoundClip(abName, soundName, clip =>
         {
-            if (clip == null)
+            if (clip == null || !IsWorldSoundAudible(worldPosition, maxDistance))
             {
                 return;
             }
 
-            AudioSource source = GetRuntimeSoundSource();
+            AudioSource source = GetRuntimeSoundSource(priority, allowSteal);
+            if (source == null)
+            {
+                return;
+            }
+
+            source.Stop();
             source.transform.position = worldPosition;
             source.clip = clip;
             source.volume = soundVolume * Mathf.Clamp01(volumeScale);
             source.pitch = 1f + UnityEngine.Random.Range(-Mathf.Abs(pitchRandom), Mathf.Abs(pitchRandom));
             source.loop = false;
             source.spatialBlend = 1f;
+            source.priority = Mathf.Clamp(priority, 0, 256);
             source.rolloffMode = AudioRolloffMode.Linear;
             source.minDistance = Mathf.Max(0.1f, minDistance);
             source.maxDistance = Mathf.Max(source.minDistance, maxDistance);
@@ -422,13 +598,20 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
                 return;
             }
 
-            AudioSource source = GetRuntimeSoundSource();
+            AudioSource source = GetRuntimeSoundSource(128, true);
+            if (source == null)
+            {
+                return;
+            }
+
+            source.Stop();
             source.transform.position = worldPosition ?? transform.position;
             source.clip = clip;
             source.volume = soundVolume;
             source.pitch = 1f;
             source.loop = isLoop;
             source.spatialBlend = worldPosition.HasValue ? 1f : 0f;
+            source.priority = 128;
             source.rolloffMode = AudioRolloffMode.Linear;
             source.minDistance = 2f;
             source.maxDistance = 28f;
@@ -471,7 +654,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         loadingSoundCallbacks.Add(cacheKey, callbacks);
 
 #if UNITY_EDITOR
-        if (abName == UIAudioBundleName && TryLoadEditorUISound(soundName, out AudioClip editorClip))
+        if (TryLoadEditorSound(abName, soundName, out AudioClip editorClip))
         {
             CompleteSoundLoad(cacheKey, editorClip);
             return;
@@ -508,15 +691,39 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         }
     }
 
-    private AudioSource GetRuntimeSoundSource()
+    private AudioSource GetRuntimeSoundSource(int priority, bool allowSteal)
     {
-        for (int i = 0; i < runtimeSoundSources.Count; i++)
+        AudioSource stealCandidate = null;
+        for (int i = runtimeSoundSources.Count - 1; i >= 0; i--)
         {
             AudioSource source = runtimeSoundSources[i];
-            if (source != null && !source.isPlaying)
+            if (source == null)
+            {
+                runtimeSoundSources.RemoveAt(i);
+                continue;
+            }
+
+            if (!source.isPlaying)
             {
                 return source;
             }
+
+            if (source.priority >= priority
+                && (stealCandidate == null || source.priority > stealCandidate.priority))
+            {
+                stealCandidate = source;
+            }
+        }
+
+        if (runtimeSoundSources.Count >= MaxRuntimeSoundSources)
+        {
+            if (!allowSteal || stealCandidate == null)
+            {
+                return null;
+            }
+
+            stealCandidate.Stop();
+            return stealCandidate;
         }
 
         GameObject obj = new GameObject("RuntimeSound");
@@ -526,15 +733,68 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         obj.transform.localScale = Vector3.one;
         AudioSource audioSource = obj.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
+        audioSource.ignoreListenerPause = false;
         runtimeSoundSources.Add(audioSource);
         return audioSource;
     }
 
+    private bool IsWorldSoundAudible(Vector3 worldPosition, float maxDistance)
+    {
+        Transform listener = ResolveAudioListenerTransform();
+        if (listener == null)
+        {
+            return true;
+        }
+
+        float audibleDistance = Mathf.Max(1f, maxDistance) * 1.1f;
+        return (listener.position - worldPosition).sqrMagnitude <= audibleDistance * audibleDistance;
+    }
+
+    private Transform ResolveAudioListenerTransform()
+    {
+        if (activeAudioListener != null
+            && activeAudioListener.enabled
+            && activeAudioListener.gameObject.activeInHierarchy)
+        {
+            return activeAudioListener.transform;
+        }
+
+        AudioListener[] listeners = FindObjectsOfType<AudioListener>();
+        for (int i = 0; i < listeners.Length; i++)
+        {
+            AudioListener listener = listeners[i];
+            if (listener == null || !listener.enabled || !listener.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            activeAudioListener = listener;
+            return listener.transform;
+        }
+
+        activeAudioListener = null;
+        return null;
+    }
+
 #if UNITY_EDITOR
-    private static bool TryLoadEditorUISound(string soundName, out AudioClip clip)
+    private static bool TryLoadEditorSound(string abName, string soundName, out AudioClip clip)
     {
         clip = null;
-        string[] guids = AssetDatabase.FindAssets(soundName + " t:AudioClip", new[] { EditorUIAudioRoot });
+        string searchRoot;
+        if (abName == UIAudioBundleName)
+        {
+            searchRoot = EditorUIAudioRoot;
+        }
+        else if (abName == EnemyAudioBundleName)
+        {
+            searchRoot = EditorEnemyAudioRoot;
+        }
+        else
+        {
+            return false;
+        }
+
+        string[] guids = AssetDatabase.FindAssets(soundName + " t:AudioClip", new[] { searchRoot });
         for (int i = 0; i < guids.Length; i++)
         {
             string assetPath = AssetDatabase.GUIDToAssetPath(guids[i]);
@@ -606,6 +866,11 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
 
     private void Update()
     {
+        if (berserkAudioBlend > 0.001f && EnsureBerserkAudioFilters())
+        {
+            ApplyBerserkAudioValues();
+        }
+
         if (soundlist.Count == 0) return;
         for (int i = soundlist.Count - 1; i >= 0; i--)
         {

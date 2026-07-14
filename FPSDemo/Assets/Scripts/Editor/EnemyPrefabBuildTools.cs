@@ -238,6 +238,7 @@ public static class EnemyPrefabBuildTools
         EnemyAttack attack = GetOrAdd<EnemyAttack>(root);
         EnemyBrain brain = GetOrAdd<EnemyBrain>(root);
         EnemyStateMachine stateMachine = GetOrAdd<EnemyStateMachine>(root);
+        EnemyAudioController audioController = GetOrAdd<EnemyAudioController>(root);
         GameObject animationEventObject = animator != null ? animator.gameObject : root;
         EnemyAnimationEventReceiver animationEventReceiver = GetOrAdd<EnemyAnimationEventReceiver>(animationEventObject);
 
@@ -250,6 +251,8 @@ public static class EnemyPrefabBuildTools
         SetObject(controller, "view", view);
         SetObject(controller, "brain", brain);
         SetObject(controller, "stateMachine", stateMachine);
+        SetObject(controller, "audioController", audioController);
+        SetObject(audioController, "controller", controller);
 
         SetFloat(health, "maxHealth", definition.MaxHealth);
         SetObject(health, "controller", controller);

@@ -25,6 +25,7 @@ public static class FPSDemoBuildTools
     private const string PlayerRuntimeBundleName = "player_runtime";
     private const string CombatFeedbackBundleName = "combat_feedback";
     private const string UIAudioBundleName = "ui_audio";
+    private const string EnemyAudioBundleName = "enemy_audio";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string PropRuntimeBundleName = "prop_runtime";
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
@@ -140,6 +141,34 @@ public static class FPSDemoBuildTools
         "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/AlertsAndNotifications/GenericNotification3.wav"
     };
 
+    private static readonly string[] EnemyAudioAssetPaths =
+    {
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Attack_01.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Attack_02.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Attack_03.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Hello_02.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Sudden Growl_01.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Running_01.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Running_02.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Hit_01.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Hit_02.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Hit_03.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Hit_04.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Hit_05.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Death_01.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Death_02.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Death_03.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Death_04.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Death_05.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Death_14.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Growl_01.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Growl_02.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Growl_03.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Growl_04.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Growl_06.wav",
+        "Assets/Art/Audio/Zombie Sounds Pro/Zombie Deep_01.wav"
+    };
+
     private static readonly string[] PropRuntimeAssetPaths =
     {
         "Assets/Art/ABRes/Prop/HpProp.prefab",
@@ -155,6 +184,7 @@ public static class FPSDemoBuildTools
         PlayerRuntimeBundleName,
         CombatFeedbackBundleName,
         UIAudioBundleName,
+        EnemyAudioBundleName,
         EnemyPrefabBundleName,
         PropRuntimeBundleName
     };
@@ -589,11 +619,14 @@ public static class FPSDemoBuildTools
         bool changed = false;
         bool success = true;
 
+        success &= EnemyAudioBuildTools.ConfigureEnemyAudioComponents(false);
+        success &= ConfigureEnemyAudioImportSettings(ref changed);
         success &= TrySetAssetBundleNames(UIAssetPaths, TouchCanvasBundleName, ref changed);
         success &= TrySetAssetBundleNames(UIItemAssetPaths, UIItemBundleName, ref changed);
         success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
         success &= TrySetAssetBundleNames(UIAudioAssetPaths, UIAudioBundleName, ref changed);
+        success &= TrySetAssetBundleNames(EnemyAudioAssetPaths, EnemyAudioBundleName, ref changed);
         success &= TrySetAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName, ref changed);
         success &= TrySetAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName, ref changed);
         success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
@@ -610,6 +643,79 @@ public static class FPSDemoBuildTools
             Debug.Log(success
                 ? "[FPSDemoBuildTools] 运行时 AssetBundle 资源包名已配置"
                 : "[FPSDemoBuildTools] 运行时 AssetBundle 资源包名配置失败");
+        }
+
+        return success;
+    }
+
+    private static bool ConfigureEnemyAudioImportSettings(ref bool changed)
+    {
+        bool success = true;
+        for (int i = 0; i < EnemyAudioAssetPaths.Length; i++)
+        {
+            string assetPath = EnemyAudioAssetPaths[i];
+            AudioImporter importer = AssetImporter.GetAtPath(assetPath) as AudioImporter;
+            if (importer == null)
+            {
+                Debug.LogError($"[FPSDemoBuildTools] 找不到敌人音效 {assetPath}");
+                success = false;
+                continue;
+            }
+
+            bool assetChanged = false;
+            AudioImporterSampleSettings settings = importer.defaultSampleSettings;
+            if (settings.loadType != AudioClipLoadType.DecompressOnLoad)
+            {
+                settings.loadType = AudioClipLoadType.DecompressOnLoad;
+                assetChanged = true;
+            }
+
+            if (settings.compressionFormat != AudioCompressionFormat.Vorbis)
+            {
+                settings.compressionFormat = AudioCompressionFormat.Vorbis;
+                assetChanged = true;
+            }
+
+            if (!Mathf.Approximately(settings.quality, 0.5f))
+            {
+                settings.quality = 0.5f;
+                assetChanged = true;
+            }
+
+            if (settings.sampleRateSetting != AudioSampleRateSetting.OverrideSampleRate
+                || settings.sampleRateOverride != 22050)
+            {
+                settings.sampleRateSetting = AudioSampleRateSetting.OverrideSampleRate;
+                settings.sampleRateOverride = 22050;
+                assetChanged = true;
+            }
+
+            if (!settings.preloadAudioData)
+            {
+                settings.preloadAudioData = true;
+                assetChanged = true;
+            }
+
+            if (!importer.forceToMono)
+            {
+                importer.forceToMono = true;
+                assetChanged = true;
+            }
+
+            if (importer.loadInBackground)
+            {
+                importer.loadInBackground = false;
+                assetChanged = true;
+            }
+
+            if (!assetChanged)
+            {
+                continue;
+            }
+
+            importer.defaultSampleSettings = settings;
+            importer.SaveAndReimport();
+            changed = true;
         }
 
         return success;
@@ -699,6 +805,7 @@ public static class FPSDemoBuildTools
         isValid &= ValidateAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName);
         isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
         isValid &= ValidateAssetBundleNames(UIAudioAssetPaths, UIAudioBundleName);
+        isValid &= ValidateAssetBundleNames(EnemyAudioAssetPaths, EnemyAudioBundleName);
         isValid &= ValidateAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName);
         isValid &= ValidateAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName);
 

@@ -234,8 +234,15 @@ public static class PolygonBossZombieEnemyBuildTools
         EnemyAttack attack = root.GetComponent<EnemyAttack>();
         EnemyBrain brain = root.GetComponent<EnemyBrain>();
         EnemyStateMachine stateMachine = root.GetComponent<EnemyStateMachine>();
+        EnemyAudioController audioController = root.GetComponent<EnemyAudioController>();
+        if (audioController == null)
+        {
+            audioController = root.AddComponent<EnemyAudioController>();
+        }
 
         SetObject(controller, "view", view);
+        SetObject(controller, "audioController", audioController);
+        SetObject(audioController, "controller", controller);
         SetObject(motor, "view", view);
         SetObject(attack, "view", view);
         SetObject(brain, "view", view);

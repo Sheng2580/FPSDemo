@@ -84,6 +84,7 @@ namespace Enemy
             _hitWindowActive = false;
             _hitAppliedThisWindow = false;
             _waitingFallbackHit = false;
+            _controller.NotifyAttackStarted();
 
             if (!useAnimationHitWindow)
             {
