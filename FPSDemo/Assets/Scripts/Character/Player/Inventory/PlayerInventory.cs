@@ -82,6 +82,50 @@ public class PlayerInventory : MonoBehaviour
         OpenHpAndWeaponCanvasWhenReady();
     }
 
+    public bool HasWeapon(int weaponId)
+    {
+        if (weaponId <= 0 || carriedWeapons == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < carriedWeapons.Count; i++)
+        {
+            CarriedWeaponSlot slot = carriedWeapons[i];
+            slot?.EnsureRuntimeReady();
+            if (slot?.RuntimeConfig?.weaponId == weaponId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool TryAddRunWeapon(CarriedWeaponSlot slot)
+    {
+        if (slot == null || !slot.HasWeaponView)
+        {
+            return false;
+        }
+
+        slot.InitForNewRun();
+        int weaponId = slot.RuntimeConfig != null ? slot.RuntimeConfig.weaponId : 0;
+        if (weaponId <= 0 || HasWeapon(weaponId))
+        {
+            return false;
+        }
+
+        carriedWeapons ??= new List<CarriedWeaponSlot>();
+        slot.SetViewActive(false);
+        carriedWeapons.Add(slot);
+
+        int weaponIndex = carriedWeapons.Count - 1;
+        SendWeaponAmmoChangedEvent(weaponIndex, slot);
+        OpenHpAndWeaponCanvasWhenReady();
+        return true;
+    }
+
     public bool SwitchNextWeapon()
     {
         InitForNewRun();

@@ -25,9 +25,19 @@ namespace Blessing.Data
             List<BlessingRollResult> results = new List<BlessingRollResult>(targetCount);
             HashSet<int> selectedIds = new HashSet<int>();
 
-            for (int i = 0; i < targetCount; i++)
+            if (IsFirstRoll(context))
             {
-                BlessingConfig selected = PickWeighted(candidates, selectedIds);
+                BlessingConfig guaranteed = PickWeighted(candidates, selectedIds, true);
+                if (guaranteed != null)
+                {
+                    selectedIds.Add(guaranteed.blessingId);
+                    results.Add(new BlessingRollResult(guaranteed, selectedTier));
+                }
+            }
+
+            while (results.Count < targetCount)
+            {
+                BlessingConfig selected = PickWeighted(candidates, selectedIds, false);
                 if (selected == null)
                 {
                     break;
@@ -60,6 +70,7 @@ namespace Blessing.Data
                 if (!IsUnlocked(config, context)
                     || !MatchesWeapon(config, context)
                     || !MatchesSkill(config, context)
+                    || !CanApplyToCurrentLoadout(config, context)
                     || IsMaxStack(config, context))
                 {
                     continue;
@@ -141,13 +152,69 @@ namespace Blessing.Data
             return false;
         }
 
-        private static BlessingConfig PickWeighted(List<BlessingConfig> candidates, HashSet<int> selectedIds)
+        private static bool CanApplyToCurrentLoadout(BlessingConfig config, BlessingRollContext context)
+        {
+            if (!HasEffect(config, BlessingStatType.GrantMissingPrimaryWeapon))
+            {
+                return true;
+            }
+
+            return !ContainsWeapon(context.weaponIds, 2) || !ContainsWeapon(context.weaponIds, 3);
+        }
+
+        private static bool HasEffect(BlessingConfig config, BlessingStatType statType)
+        {
+            if (config?.effects == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < config.effects.Length; i++)
+            {
+                if (config.effects[i] != null && config.effects[i].statType == statType)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsWeapon(int[] weaponIds, int weaponId)
+        {
+            if (weaponIds == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < weaponIds.Length; i++)
+            {
+                if (weaponIds[i] == weaponId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsFirstRoll(BlessingRollContext context)
+        {
+            return context.stacks == null || context.stacks.Length == 0;
+        }
+
+        private static BlessingConfig PickWeighted(
+            List<BlessingConfig> candidates,
+            HashSet<int> selectedIds,
+            bool guaranteedOnly)
         {
             float totalWeight = 0f;
             for (int i = 0; i < candidates.Count; i++)
             {
                 BlessingConfig candidate = candidates[i];
-                if (candidate == null || selectedIds.Contains(candidate.blessingId))
+                if (candidate == null
+                    || selectedIds.Contains(candidate.blessingId)
+                    || (guaranteedOnly && !candidate.guaranteedFirstRoll))
                 {
                     continue;
                 }
@@ -164,7 +231,9 @@ namespace Blessing.Data
             for (int i = 0; i < candidates.Count; i++)
             {
                 BlessingConfig candidate = candidates[i];
-                if (candidate == null || selectedIds.Contains(candidate.blessingId))
+                if (candidate == null
+                    || selectedIds.Contains(candidate.blessingId)
+                    || (guaranteedOnly && !candidate.guaranteedFirstRoll))
                 {
                     continue;
                 }

@@ -162,6 +162,11 @@ public sealed class BlessingCandidateProvider
         }
 
         BlessingEffectConfig effect = config.effects[0];
+        if (effect.statType == BlessingStatType.GrantMissingPrimaryWeapon)
+        {
+            return "新武器";
+        }
+
         float displayValue = effect.modifyType == BlessingModifyType.PercentAdd && Mathf.Abs(value) <= 1f
             ? value * 100f
             : value;
@@ -230,7 +235,7 @@ public sealed class BlessingCandidateProvider
         PlayerInventory inventory = UnityEngine.Object.FindObjectOfType<PlayerInventory>();
         if (inventory == null || inventory.CarriedWeapons == null)
         {
-            return new[] { 1, 2, 3 };
+            return new[] { 1 };
         }
 
         List<int> ids = new List<int>();
@@ -246,7 +251,7 @@ public sealed class BlessingCandidateProvider
             }
         }
 
-        return ids.Count > 0 ? ids.ToArray() : new[] { 1, 2, 3 };
+        return ids.Count > 0 ? ids.ToArray() : new[] { 1 };
     }
 
     private SkillType[] ResolveSkillTypes()

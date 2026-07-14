@@ -26,7 +26,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1002,
@@ -55,7 +56,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1003,
@@ -84,7 +86,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1101,
@@ -113,7 +116,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1102,
@@ -142,7 +146,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1103,
@@ -171,7 +176,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1201,
@@ -200,7 +206,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1202,
@@ -229,7 +236,8 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
   },
   {
     "id": 1301,
@@ -258,6 +266,37 @@
     "triggerDamageMultiplier": 0,
     "triggerRadius": 0,
     "triggerChainCount": 0,
-    "triggerMaxActiveCount": 0
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": false
+  },
+  {
+    "id": 1104,
+    "blessingName": "双主武器",
+    "descriptionTemplate": "获得另一把主武器",
+    "category": "WeaponStat",
+    "targetType": "AllWeapons",
+    "tier": "Normal",
+    "unlockEnergyLevel": 1,
+    "unlockWave": 1,
+    "weight": 200,
+    "maxStack": 1,
+    "requiredWeaponId": 0,
+    "requiredSkillType": "",
+    "iconKey": "Blessing_ExtraPrimaryWeapon",
+    "effectTargetType": "AllWeapons",
+    "effectStatType": "GrantMissingPrimaryWeapon",
+    "modifyType": "Add",
+    "normalValue": 1,
+    "plusValue": 1,
+    "plusPlusValue": 1,
+    "triggerType": "None",
+    "triggerChance": 0,
+    "triggerCooldown": 0,
+    "triggerEffectKey": "",
+    "triggerDamageMultiplier": 0,
+    "triggerRadius": 0,
+    "triggerChainCount": 0,
+    "triggerMaxActiveCount": 0,
+    "guaranteedFirstRoll": true
   }
 ]

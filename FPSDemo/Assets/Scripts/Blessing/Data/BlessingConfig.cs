@@ -31,6 +31,8 @@ namespace Blessing.Data
         public float weight;
         // 最大层数
         public int maxStack;
+        // 是否在第一次祝福抽取时保底出现
+        public bool guaranteedFirstRoll;
         // 需求武器编号 0 表示不限制
         public int requiredWeaponId;
         // 是否需求技能类型

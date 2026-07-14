@@ -156,6 +156,9 @@ public class BlessingEffectApplier : MonoBehaviour
             case BlessingStatType.GoldGain:
                 ApplyGoldGain(effect.modifyType, value);
                 break;
+            case BlessingStatType.GrantMissingPrimaryWeapon:
+                Combat.CombatSceneManager.TryGrantMissingPrimaryWeapon(_inventory);
+                break;
         }
     }
 

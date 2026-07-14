@@ -103,6 +103,7 @@ namespace Blessing.Data
                 unlockWave = row.unlockWave,
                 weight = row.weight,
                 maxStack = row.maxStack,
+                guaranteedFirstRoll = row.guaranteedFirstRoll,
                 requiredWeaponId = row.requiredWeaponId,
                 requiresSkillType = !string.IsNullOrWhiteSpace(row.requiredSkillType),
                 requiredSkillType = ParseEnum(row.requiredSkillType, SkillType.Dodge),
@@ -197,6 +198,7 @@ namespace Blessing.Data
             public int unlockWave;
             public float weight;
             public int maxStack;
+            public bool guaranteedFirstRoll;
             public int requiredWeaponId;
             public string requiredSkillType;
             public string iconKey;

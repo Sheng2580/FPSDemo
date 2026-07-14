@@ -100,6 +100,7 @@ namespace Combat
 
         private GameObject playerInstance;
         private bool isLoading;
+        private bool isGrantingMissingPrimaryWeapon;
         private CombatEconomyManager combatEconomyManager;
         private CombatRunRecorder combatRunRecorder;
 
@@ -299,6 +300,112 @@ namespace Combat
 
             playerObject.transform.SetPositionAndRotation(position, rotation);
             playerObject.name = playerAssetName;
+        }
+
+        public static bool TryGrantMissingPrimaryWeapon(PlayerInventory inventory)
+        {
+            if (inventory == null)
+            {
+                return false;
+            }
+
+            CombatSceneManager manager = activeInstance != null
+                ? activeInstance
+                : FindObjectOfType<CombatSceneManager>();
+            return manager != null && manager.BeginGrantMissingPrimaryWeapon(inventory);
+        }
+
+        private bool BeginGrantMissingPrimaryWeapon(PlayerInventory inventory)
+        {
+            if (isGrantingMissingPrimaryWeapon || inventory == null || !IsCombatScene())
+            {
+                return false;
+            }
+
+            int weaponId = ResolveMissingPrimaryWeaponId(inventory);
+            if (weaponId <= 0)
+            {
+                return false;
+            }
+
+            RunWeaponEntry entry = FindRunWeaponEntry(weaponId);
+            if (entry == null)
+            {
+                Debug.LogWarning($"[CombatScene] 找不到额外主武器配置 Id={weaponId}", this);
+                return false;
+            }
+
+            isGrantingMissingPrimaryWeapon = true;
+            StartCoroutine(GrantMissingPrimaryWeaponRoutine(inventory, entry));
+            return true;
+        }
+
+        private IEnumerator GrantMissingPrimaryWeaponRoutine(PlayerInventory inventory, RunWeaponEntry entry)
+        {
+            Transform weaponRoot = inventory != null
+                ? FindChildRecursive(inventory.transform, weaponRootName)
+                : null;
+            if (weaponRoot == null)
+            {
+                Debug.LogWarning($"[CombatScene] 玩家缺少武器挂点 {weaponRootName}", inventory);
+                isGrantingMissingPrimaryWeapon = false;
+                yield break;
+            }
+
+            GameObject weaponObject = null;
+            yield return LoadPrefabInstance(
+                entry.assetBundleName,
+                entry.assetName,
+                entry.editorAssetPath,
+                prefabInstance => weaponObject = prefabInstance);
+
+            if (inventory == null || weaponObject == null)
+            {
+                if (weaponObject != null)
+                {
+                    Destroy(weaponObject);
+                }
+
+                Debug.LogWarning($"[CombatScene] 额外主武器加载失败 {entry.assetName}", this);
+                isGrantingMissingPrimaryWeapon = false;
+                yield break;
+            }
+
+            WeaponView weaponView = AttachWeaponView(weaponObject, weaponRoot, entry.assetName);
+            if (weaponView == null)
+            {
+                Destroy(weaponObject);
+                Debug.LogWarning($"[CombatScene] 额外主武器缺少 WeaponView {entry.assetName}", this);
+                isGrantingMissingPrimaryWeapon = false;
+                yield break;
+            }
+
+            WeaponConfigAsset configAsset = LoadWeaponConfig(entry.configResourcesPath);
+            CarriedWeaponSlot slot = new CarriedWeaponSlot();
+            slot.ConfigureRuntimeWeapon(entry.displayName, weaponView, configAsset);
+            if (!inventory.TryAddRunWeapon(slot))
+            {
+                Destroy(weaponObject);
+                Debug.LogWarning($"[CombatScene] 额外主武器加入背包失败 {entry.assetName}", this);
+            }
+            else
+            {
+                Debug.Log($"[CombatScene] 已获得额外主武器 {entry.displayName}", inventory);
+            }
+
+            isGrantingMissingPrimaryWeapon = false;
+        }
+
+        private static int ResolveMissingPrimaryWeaponId(PlayerInventory inventory)
+        {
+            bool hasRifle = inventory != null && inventory.HasWeapon(2);
+            bool hasShotgun = inventory != null && inventory.HasWeapon(3);
+            if (hasRifle && hasShotgun)
+            {
+                return 0;
+            }
+
+            return hasRifle ? 3 : 2;
         }
 
         private IEnumerator LoadRunWeapons(GameObject playerObject)

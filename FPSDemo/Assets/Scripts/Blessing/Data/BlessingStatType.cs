@@ -22,6 +22,8 @@ namespace Blessing.Data
         // 技能最大数量
         SkillMaxCount,
         // 金币获取
-        GoldGain
+        GoldGain,
+        // 获得当前未携带的另一把主武器
+        GrantMissingPrimaryWeapon
     }
 }
