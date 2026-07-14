@@ -35,6 +35,14 @@ public class PlayerCameraController : MonoBehaviour
     [SerializeField] private float dodgeSideParallax = 0.035f;
     [SerializeField] private float dodgeDownParallax = 0.025f;
 
+    [Header("推人技能镜头表现")]
+    [SerializeField] private float pushFovBoost = 4f;
+    [SerializeField] private float pushForwardParallax = 0.085f;
+    [SerializeField] private float pushDownParallax = 0.02f;
+    [SerializeField] private float pushFadeInTime = 0.055f;
+    [SerializeField] private float pushHoldTime = 0.035f;
+    [SerializeField] private float pushFadeOutTime = 0.2f;
+
     [Header("后坐力参数")]
     [SerializeField] private Vector2 recoilOffset;
     [SerializeField] private float recoilKickMultiplier = 0.2f;
@@ -116,6 +124,12 @@ public class PlayerCameraController : MonoBehaviour
         dodgeForwardParallax = Mathf.Max(0f, dodgeForwardParallax);
         dodgeSideParallax = Mathf.Max(0f, dodgeSideParallax);
         dodgeDownParallax = Mathf.Max(0f, dodgeDownParallax);
+        pushFovBoost = Mathf.Max(0f, pushFovBoost);
+        pushForwardParallax = Mathf.Max(0f, pushForwardParallax);
+        pushDownParallax = Mathf.Max(0f, pushDownParallax);
+        pushFadeInTime = Mathf.Max(0.001f, pushFadeInTime);
+        pushHoldTime = Mathf.Max(0f, pushHoldTime);
+        pushFadeOutTime = Mathf.Max(0.001f, pushFadeOutTime);
     }
 
     private void Start()
@@ -242,12 +256,16 @@ public class PlayerCameraController : MonoBehaviour
 
     private void OnSkillCastStarted(SkillCastEventData eventData)
     {
-        if (eventData.skillType != SkillType.Dodge || string.IsNullOrEmpty(eventData.fovEffectKey))
+        if (eventData.skillType == SkillType.Dodge && !string.IsNullOrEmpty(eventData.fovEffectKey))
         {
+            PlayDodgeCameraPulse(eventData.direction);
             return;
         }
 
-        PlayDodgeCameraPulse(eventData.direction);
+        if (eventData.skillType == SkillType.Push)
+        {
+            PlayPushCameraPulse();
+        }
     }
 
     private void PlayDodgeCameraPulse(Vector3 worldDirection)
@@ -272,6 +290,30 @@ public class PlayerCameraController : MonoBehaviour
         }
 
         yield return FadeSkillCamera(targetParallax, Vector3.zero, dodgeFovBoost, 0f, dodgeFovFadeOutTime);
+        _skillCameraRoutine = null;
+    }
+
+    private void PlayPushCameraPulse()
+    {
+        StopSkillCameraPulse();
+        _skillCameraRoutine = StartCoroutine(PushCameraPulseRoutine());
+    }
+
+    private IEnumerator PushCameraPulseRoutine()
+    {
+        Vector3 targetParallax = new Vector3(0f, -pushDownParallax, pushForwardParallax);
+        yield return FadeSkillCamera(Vector3.zero, targetParallax, 0f, pushFovBoost, pushFadeInTime);
+
+        float holdTimer = 0f;
+        while (holdTimer < pushHoldTime)
+        {
+            holdTimer += Time.deltaTime;
+            _skillParallaxOffset = targetParallax;
+            _skillFovOffset = pushFovBoost;
+            yield return null;
+        }
+
+        yield return FadeSkillCamera(targetParallax, Vector3.zero, pushFovBoost, 0f, pushFadeOutTime);
         _skillCameraRoutine = null;
     }
 

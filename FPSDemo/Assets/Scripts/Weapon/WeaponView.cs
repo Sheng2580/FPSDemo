@@ -41,12 +41,15 @@ namespace Weapon
         private Vector3 _recoilRotationOffset;
         private Vector3 _recoilPositionVelocity;
         private Vector3 _recoilRotationVelocity;
+        private Vector3 _skillPositionOffset;
+        private Vector3 _skillRotationOffset;
         private float _adsAmount;
         private float _lastAdsAmount;
         private bool _hasCachedDefaultTransform;
         private PlayableGraph _skillAnimationGraph;
         private AnimationMixerPlayable _skillAnimationMixer;
         private Coroutine _skillAnimationRoutine;
+        private Coroutine _proceduralSkillRoutine;
 
         public Animator Animator => animator;
         public Transform MuzzlePoint => muzzlePoint;
@@ -73,6 +76,7 @@ namespace Weapon
         private void OnDisable()
         {
             StopSkillAnimationPlayback(true);
+            StopProceduralSkillAnimation();
         }
 
         public void Init(WeaponConfig config)
@@ -115,19 +119,22 @@ namespace Weapon
                 return false;
             }
 
-            if (TryPlayAnimatorSkillState(stateName, skillDuration, transitionDuration))
+            // 技能片段优先走独立 Playable 避免枪械控制器立刻切回 Idle
+            AnimationClip skillClip = ResolveSkillAnimationClip(stateName);
+            if (skillClip != null)
             {
+                PlaySkillClip(skillClip, skillDuration, transitionDuration);
                 return true;
             }
 
-            AnimationClip skillClip = ResolveSkillAnimationClip(stateName);
-            if (skillClip == null)
-            {
-                return false;
-            }
+            return TryPlayAnimatorSkillState(stateName, skillDuration, transitionDuration);
+        }
 
-            PlaySkillClip(skillClip, skillDuration, transitionDuration);
-            return true;
+        public void PlayPushViewAnimation(float duration, float sideSign)
+        {
+            StopProceduralSkillAnimation();
+            StopSkillAnimationPlayback(true);
+            _proceduralSkillRoutine = StartCoroutine(PushViewAnimationRoutine(duration, sideSign));
         }
 
         private bool TryPlayAnimatorSkillState(string stateName, float skillDuration, float transitionDuration)
@@ -223,6 +230,7 @@ namespace Weapon
             CacheReferences();
             CacheDefaultTransform(false);
             StopSkillAnimationPlayback(true);
+            StopProceduralSkillAnimation();
 
             _adsAmount = 0f;
             _lastAdsAmount = 0f;
@@ -233,6 +241,8 @@ namespace Weapon
             _recoilRotationOffset = Vector3.zero;
             _recoilPositionVelocity = Vector3.zero;
             _recoilRotationVelocity = Vector3.zero;
+            _skillPositionOffset = Vector3.zero;
+            _skillRotationOffset = Vector3.zero;
             _smoothedViewLocalPosition = _defaultViewLocalPosition;
             _smoothedViewLocalEulerAngles = _defaultViewLocalRotation.eulerAngles;
             _smoothedViewLocalScale = _defaultViewLocalScale;
@@ -337,10 +347,75 @@ namespace Weapon
             GetViewPose(out Vector3 viewPosition, out Quaternion viewRotation, out Vector3 viewScale);
             SmoothD(viewPosition, viewRotation.eulerAngles, viewScale);
 
-            root.localPosition = _smoothedViewLocalPosition + _recoilPositionOffset;
-            root.localRotation = Quaternion.Euler(_smoothedViewLocalEulerAngles) * Quaternion.Euler(_recoilRotationOffset);
+            root.localPosition = _smoothedViewLocalPosition + _recoilPositionOffset + _skillPositionOffset;
+            root.localRotation = Quaternion.Euler(_smoothedViewLocalEulerAngles)
+                                 * Quaternion.Euler(_recoilRotationOffset + _skillRotationOffset);
             root.localScale = _smoothedViewLocalScale;
             _lastAdsAmount = _adsAmount;
+        }
+
+        private IEnumerator PushViewAnimationRoutine(float duration, float sideSign)
+        {
+            duration = Mathf.Max(0.2f, duration);
+            sideSign = sideSign < 0f ? -1f : 1f;
+
+            Vector3 windupPosition = new Vector3(0.045f * sideSign, -0.05f, -0.18f);
+            Vector3 windupRotation = new Vector3(12f, 7f * sideSign, -5f * sideSign);
+            Vector3 strikePosition = new Vector3(-0.035f * sideSign, 0.018f, 0.24f);
+            Vector3 strikeRotation = new Vector3(-16f, -9f * sideSign, 4f * sideSign);
+
+            yield return AnimateSkillPose(Vector3.zero, windupPosition, Vector3.zero, windupRotation, duration * 0.24f);
+            yield return AnimateSkillPose(windupPosition, strikePosition, windupRotation, strikeRotation, duration * 0.2f);
+
+            float holdTime = duration * 0.08f;
+            float holdTimer = 0f;
+            while (holdTimer < holdTime)
+            {
+                holdTimer += Time.deltaTime;
+                _skillPositionOffset = strikePosition;
+                _skillRotationOffset = strikeRotation;
+                yield return null;
+            }
+
+            yield return AnimateSkillPose(strikePosition, Vector3.zero, strikeRotation, Vector3.zero, duration * 0.48f);
+            _skillPositionOffset = Vector3.zero;
+            _skillRotationOffset = Vector3.zero;
+            _proceduralSkillRoutine = null;
+        }
+
+        private IEnumerator AnimateSkillPose(
+            Vector3 fromPosition,
+            Vector3 toPosition,
+            Vector3 fromRotation,
+            Vector3 toRotation,
+            float duration)
+        {
+            duration = Mathf.Max(0.01f, duration);
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                t = t * t * (3f - 2f * t);
+                _skillPositionOffset = Vector3.LerpUnclamped(fromPosition, toPosition, t);
+                _skillRotationOffset = Vector3.LerpUnclamped(fromRotation, toRotation, t);
+                yield return null;
+            }
+
+            _skillPositionOffset = toPosition;
+            _skillRotationOffset = toRotation;
+        }
+
+        private void StopProceduralSkillAnimation()
+        {
+            if (_proceduralSkillRoutine != null)
+            {
+                StopCoroutine(_proceduralSkillRoutine);
+                _proceduralSkillRoutine = null;
+            }
+
+            _skillPositionOffset = Vector3.zero;
+            _skillRotationOffset = Vector3.zero;
         }
 
         private Transform GetViewRoot()
@@ -511,6 +586,10 @@ namespace Weapon
             clipPlayable.SetTime(0f);
             clipPlayable.SetApplyFootIK(false);
             clipPlayable.SetApplyPlayableIK(false);
+            float playbackSpeed = clip.length > 0f
+                ? clip.length / Mathf.Max(0.01f, duration)
+                : 1f;
+            clipPlayable.SetSpeed(Mathf.Clamp(playbackSpeed, MinReloadAnimationSpeed, MaxReloadAnimationSpeed));
 
             bool useMixer = controller != null;
             if (useMixer)

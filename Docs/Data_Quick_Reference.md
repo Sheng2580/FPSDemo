@@ -339,7 +339,7 @@ Unity 运行时优先读取：
 | 技能 | 来源文件 | skillId | skillType | cooldown | duration | lockWeaponDuringCast | postProcessKey | 用法 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Dodge | `tbplayer_skill_config.json` | 1 | Dodge | 3.5 | 0.22 | true | Skill_Dodge_SprintPulse | 闪避位移和短暂无敌 |
-| Push | `tbplayer_skill_config.json` | 2 | Push | 6 | 0.45 | true | Skill_Push_ImpactPulse | 近战推敌解围 |
+| Push | `tbplayer_skill_config.json` | 2 | Push | 6 | 0.6 | true | Skill_Push_ImpactPulse | 玩家周围圆形范围高伤害击退 |
 | Grenade | `tbplayer_skill_config.json` | 3 | Grenade | 8 | 0.45 | true | Skill_Grenade_ExplosionPulse | 投掷炸弹范围伤害 |
 
 冷却计算规则：
@@ -355,7 +355,7 @@ Unity 运行时优先读取：
 | 技能 | distance / detect / radius / angle | damage | knockback | stun | count | resource / animation key | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Dodge | `dodgeDistance 4.2` | 0 | 0 | `invincibleDuration 0.18` | 无 | `fovEffectKey Skill_Dodge_FOV` | `collisionDisableDuration 0.12`，表现只读取 key |
-| Push | `detectDistance 2.2 / detectRadius 0.85 / detectAngle 80` | 5 | 6.5 | 0.45 | `maxHitCount 5` | `Melee Weapon_1|Attack 1` / `Melee Weapon_1|Attack 2` | 只保存动画 key，不硬引用动画资源 |
+| Push | `detectRadius 4.5 / detectAngle 360` | 60 | 30 | 0.65 | `maxHitCount 0` | `Melee Weapon_1|Attack 1` / `Melee Weapon_1|Attack 2` | 玩家为圆心全方向检测，击退距离约 5.4 米，0 表示不限制命中数量 |
 | Grenade | `explosionRadius 4.5` | 80 | 8 | 0.35 | `initialCount 2 / maxCount 3` | `projectileResourceKey Gernade` / `throwAnimationKey Grenade_1 |Throw` | `explosionDelay 1.2`，`throwForce 13`，`throwUpForce 2.5` |
 
 技能数据边界：
@@ -364,6 +364,9 @@ Unity 运行时优先读取：
 - `PlayerSkillRuntimeData` 只保存单局临时状态，不写回配置资源。
 - 表现层后续消费 `animationKey / effectKey / audioKey / fovEffectKey / postProcessKey / cameraShakeKey`。
 - 武器系统只读取技能释放锁定状态，不直接持有技能配置。
+- 推人技能使用固定数组和 `OverlapSphereNonAlloc` 获取候选目标，再按水平距离做圆形范围过滤，不产生运行时 GC
+- 推人伤害与击退在动作开始约 0.17 秒后触发，使手部动画和敌人位移保持同步
+- Akila 的 `Melee Weapon_1` 动画骨骼不能通用于三把枪，当前改为武器视图程序化蓄力 前推 回位，保证手枪 步枪 霰弹枪都能稳定显示
 
 ## 局内道具配置
 

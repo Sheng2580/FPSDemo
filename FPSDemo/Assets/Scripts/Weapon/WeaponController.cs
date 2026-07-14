@@ -643,21 +643,11 @@ namespace Weapon
                 return;
             }
 
-            string primaryState = eventData.animationKey;
-            string alternateState = eventData.alternateAnimationKey;
-            string firstState = _pushAnimationIndex % 2 == 0 || string.IsNullOrEmpty(alternateState)
-                ? primaryState
-                : alternateState;
-            string fallbackState = firstState == primaryState ? alternateState : primaryState;
+            float sideSign = _pushAnimationIndex % 2 == 0 ? 1f : -1f;
             _pushAnimationIndex++;
 
             float duration = eventData.config != null ? eventData.config.duration : 0.45f;
-            if (currentWeaponView.TryPlaySkillAnimation(firstState, duration))
-            {
-                return;
-            }
-
-            currentWeaponView.TryPlaySkillAnimation(fallbackState, duration);
+            currentWeaponView.PlayPushViewAnimation(duration, sideSign);
         }
 
         private void OnPlayerBerserkChanged(PlayerBerserkChangedEventData eventData)

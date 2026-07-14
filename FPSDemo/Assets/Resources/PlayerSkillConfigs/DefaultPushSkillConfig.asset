@@ -17,20 +17,20 @@ MonoBehaviour:
     skillName: Push
     skillType: 1
     cooldown: 6
-    duration: 0.45
+    duration: 0.6
     lockWeaponDuringCast: 1
     canBufferInput: 1
     inputBufferTime: 0.12
     dodgeDistance: 0
     invincibleDuration: 0
     collisionDisableDuration: 0
-    detectDistance: 2.2
-    detectRadius: 0.85
-    detectAngle: 80
-    maxHitCount: 5
-    damage: 5
-    knockbackForce: 6.5
-    stunDuration: 0.45
+    detectDistance: 0
+    detectRadius: 4.5
+    detectAngle: 360
+    maxHitCount: 0
+    damage: 60
+    knockbackForce: 30
+    stunDuration: 0.65
     initialCount: 0
     maxCount: 0
     explosionRadius: 0

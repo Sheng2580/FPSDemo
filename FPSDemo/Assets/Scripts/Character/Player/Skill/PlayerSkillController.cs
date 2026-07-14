@@ -10,7 +10,7 @@ using UnityEngine;
 public class PlayerSkillController : MonoBehaviour
 {
     private const float KnockbackForceToDistance = 0.18f;
-    private const float DefaultSkillHitKnockbackDuration = 0.18f;
+    private const float DefaultSkillHitKnockbackDuration = 0.32f;
 
     [Header("技能配置")]
     [SerializeField] private PlayerSkillConfigAsset dodgeConfigAsset;
@@ -28,7 +28,7 @@ public class PlayerSkillController : MonoBehaviour
 
     private readonly Dictionary<SkillType, PlayerSkillConfig> _configs = new Dictionary<SkillType, PlayerSkillConfig>();
     private readonly Dictionary<SkillType, PlayerSkillRuntimeData> _runtimeData = new Dictionary<SkillType, PlayerSkillRuntimeData>();
-    private readonly Collider[] _hitBuffer = new Collider[48];
+    private readonly Collider[] _hitBuffer = new Collider[128];
     private readonly HashSet<EnemyController> _hitEnemies = new HashSet<EnemyController>();
     private readonly List<IgnoredCollisionPair> _ignoredCollisionPairs = new List<IgnoredCollisionPair>();
 
@@ -344,7 +344,7 @@ public class PlayerSkillController : MonoBehaviour
         switch (config.skillType)
         {
             case SkillType.Push:
-                CastPush(config, runtimeData);
+                yield return CastPushRoutine(config, runtimeData);
                 break;
             case SkillType.Grenade:
                 CastGrenade(config, runtimeData);
@@ -355,7 +355,7 @@ public class PlayerSkillController : MonoBehaviour
                 break;
         }
 
-        if (config.skillType != SkillType.Dodge && config.duration > 0f)
+        if (config.skillType == SkillType.Grenade && config.duration > 0f)
         {
             yield return new WaitForSeconds(config.duration);
         }
@@ -398,9 +398,11 @@ public class PlayerSkillController : MonoBehaviour
     private void CastPush(PlayerSkillConfig config, PlayerSkillRuntimeData runtimeData)
     {
         _hitEnemies.Clear();
-        Vector3 origin = GetSkillOrigin();
-        Vector3 forward = GetSkillForward();
-        Vector3 checkCenter = origin + forward * (Mathf.Max(0.1f, config.detectDistance) * 0.55f);
+        Vector3 circleCenter = transform.position;
+        float centerHeight = _characterController != null
+            ? Mathf.Max(0.5f, _characterController.height * 0.5f)
+            : 1f;
+        Vector3 checkCenter = circleCenter + Vector3.up * centerHeight;
         float radius = Mathf.Max(0.1f, config.detectRadius);
         int hitCount = Physics.OverlapSphereNonAlloc(
             checkCenter,
@@ -423,12 +425,12 @@ public class PlayerSkillController : MonoBehaviour
                 continue;
             }
 
-            if (!IsEnemyInsidePushCone(config, origin, forward, enemy.transform.position))
+            if (!IsEnemyInsidePushCircle(circleCenter, radius, enemy.transform.position))
             {
                 continue;
             }
 
-            ApplySkillDamage(config, runtimeData, enemy, health, hitCollider, origin);
+            ApplySkillDamage(config, runtimeData, enemy, health, hitCollider, checkCenter);
             _hitEnemies.Add(enemy);
             appliedCount++;
 
@@ -440,7 +442,25 @@ public class PlayerSkillController : MonoBehaviour
 
         if (debugSkill)
         {
-            Debug.Log($"[Skill] 推敌命中数量 {appliedCount}", this);
+            Debug.Log($"[Skill] 圆形推敌 半径={radius:0.##} 命中={appliedCount}", this);
+        }
+    }
+
+    private IEnumerator CastPushRoutine(PlayerSkillConfig config, PlayerSkillRuntimeData runtimeData)
+    {
+        float duration = Mathf.Max(0f, config.duration);
+        float impactTime = Mathf.Min(0.18f, duration * 0.28f);
+        if (impactTime > 0f)
+        {
+            yield return new WaitForSeconds(impactTime);
+        }
+
+        CastPush(config, runtimeData);
+
+        float remainingTime = Mathf.Max(0f, duration - impactTime);
+        if (remainingTime > 0f)
+        {
+            yield return new WaitForSeconds(remainingTime);
         }
     }
 
@@ -539,23 +559,12 @@ public class PlayerSkillController : MonoBehaviour
         return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
     }
 
-    private bool IsEnemyInsidePushCone(PlayerSkillConfig config, Vector3 origin, Vector3 forward, Vector3 enemyPosition)
+    private static bool IsEnemyInsidePushCircle(Vector3 center, float radius, Vector3 enemyPosition)
     {
-        Vector3 toEnemy = enemyPosition - origin;
+        Vector3 toEnemy = enemyPosition - center;
         toEnemy.y = 0f;
-        float distance = toEnemy.magnitude;
-        if (distance > Mathf.Max(0.1f, config.detectDistance + config.detectRadius))
-        {
-            return false;
-        }
-
-        if (toEnemy.sqrMagnitude <= 0.0001f)
-        {
-            return true;
-        }
-
-        float angle = Vector3.Angle(forward, toEnemy.normalized);
-        return angle <= Mathf.Max(1f, config.detectAngle) * 0.5f;
+        float safeRadius = Mathf.Max(0.1f, radius);
+        return toEnemy.sqrMagnitude <= safeRadius * safeRadius;
     }
 
     private bool TryResolveEnemy(Collider hitCollider, out EnemyController enemy, out EnemyHealth health)
