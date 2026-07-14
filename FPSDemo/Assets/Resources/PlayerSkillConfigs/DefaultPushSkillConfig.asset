@@ -43,7 +43,7 @@ MonoBehaviour:
     alternateAnimationKey: Melee Weapon_1|Attack 2
     throwAnimationKey: 
     projectileResourceKey: 
-    castEffectKey: Skill_Push_Cast
+    castEffectKey: Onomatopoeia_Roar Variant
     hitEffectKey: Skill_Push_Hit
     explosionEffectKey: 
     castAudioKey: Skill_Push_Swing

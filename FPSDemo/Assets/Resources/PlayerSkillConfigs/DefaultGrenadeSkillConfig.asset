@@ -33,22 +33,22 @@ MonoBehaviour:
     stunDuration: 0.35
     initialCount: 2
     maxCount: 3
-    explosionRadius: 4.5
+    explosionRadius: 6.5
     explosionDelay: 1.2
-    throwForce: 13
-    throwUpForce: 2.5
+    throwForce: 20
+    throwUpForce: 1.2
     projectileLifeTime: 5
     iconKey: Skill_Grenade_Icon
     animationKey: 
     alternateAnimationKey: 
     throwAnimationKey: Grenade_1 |Throw
-    projectileResourceKey: Gernade
+    projectileResourceKey: bomb
     castEffectKey: 
     hitEffectKey: 
-    explosionEffectKey: Skill_Grenade_Explosion
+    explosionEffectKey: Onomatopoeia_Pow Variant
     castAudioKey: 
     hitAudioKey: 
-    explosionAudioKey: Skill_Grenade_Explosion
+    explosionAudioKey: Boom爆炸声
     fovEffectKey: 
     postProcessKey: Skill_Grenade_ExplosionPulse
     cameraShakeKey: Skill_Grenade_Shake

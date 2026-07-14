@@ -28,6 +28,9 @@ public static class FPSDemoBuildTools
     private const string EnemyAudioBundleName = "enemy_audio";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string PropRuntimeBundleName = "prop_runtime";
+    private const string SkillEffectBundleName = "skill";
+    private const string GrenadeProjectilePath = "Assets/Art/Skill/bomb.prefab";
+    private const float GrenadeCollisionRadius = 0.7f;
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
     private const string CombatScenePath = "Assets/Scenes/Combat.unity";
     private const string StreamingAssetsPath = "Assets/StreamingAssets";
@@ -119,7 +122,8 @@ public static class FPSDemoBuildTools
         "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Metal.wav",
         "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Wood.wav",
         "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Destruction_Fruit.wav",
-        "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Glass.wav"
+        "Assets/Art/ABRes/CombatFeedback/Audio/Impacts/SFX_Vefects_Shots_Squib_Glass.wav",
+        "Assets/Art/Audio/hit.mp3"
     };
 
     private static readonly string[] EnemyPrefabAssetPaths =
@@ -177,6 +181,14 @@ public static class FPSDemoBuildTools
         "Assets/Art/ABRes/Prop/RageProp.prefab"
     };
 
+    private static readonly string[] SkillEffectAssetPaths =
+    {
+        "Assets/Art/Skill/Onomatopoeia_Roar Variant.prefab",
+        "Assets/Art/Skill/Onomatopoeia_Pow Variant.prefab",
+        GrenadeProjectilePath,
+        "Assets/Art/Audio/Boom爆炸声.wav"
+    };
+
     private static readonly string[] RequiredRuntimeBundleNames =
     {
         TouchCanvasBundleName,
@@ -186,7 +198,8 @@ public static class FPSDemoBuildTools
         UIAudioBundleName,
         EnemyAudioBundleName,
         EnemyPrefabBundleName,
-        PropRuntimeBundleName
+        PropRuntimeBundleName,
+        SkillEffectBundleName
     };
 
     private static readonly string[] PlatformBundleDirectoryNames =
@@ -621,6 +634,7 @@ public static class FPSDemoBuildTools
 
         success &= EnemyAudioBuildTools.ConfigureEnemyAudioComponents(false);
         success &= ConfigureEnemyAudioImportSettings(ref changed);
+        success &= ConfigureGrenadeProjectilePrefab(ref changed);
         success &= TrySetAssetBundleNames(UIAssetPaths, TouchCanvasBundleName, ref changed);
         success &= TrySetAssetBundleNames(UIItemAssetPaths, UIItemBundleName, ref changed);
         success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
@@ -629,6 +643,7 @@ public static class FPSDemoBuildTools
         success &= TrySetAssetBundleNames(EnemyAudioAssetPaths, EnemyAudioBundleName, ref changed);
         success &= TrySetAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName, ref changed);
         success &= TrySetAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName, ref changed);
+        success &= TrySetAssetBundleNames(SkillEffectAssetPaths, SkillEffectBundleName, ref changed);
         success &= TryClearAssetBundleNames(ObsoleteAssetBundleAssetPaths, ref changed);
         success &= TryClearAssetBundleNames(SceneMaterialAssetPaths, ref changed);
 
@@ -646,6 +661,82 @@ public static class FPSDemoBuildTools
         }
 
         return success;
+    }
+
+    private static bool ConfigureGrenadeProjectilePrefab(ref bool changed)
+    {
+        GameObject prefabRoot = PrefabUtility.LoadPrefabContents(GrenadeProjectilePath);
+        if (prefabRoot == null)
+        {
+            Debug.LogError($"[FPSDemoBuildTools] 找不到炸弹 Prefab {GrenadeProjectilePath}");
+            return false;
+        }
+
+        bool prefabChanged = false;
+        try
+        {
+            Rigidbody rigidbody = prefabRoot.GetComponent<Rigidbody>();
+            if (rigidbody == null)
+            {
+                rigidbody = prefabRoot.AddComponent<Rigidbody>();
+                prefabChanged = true;
+            }
+
+            if (!rigidbody.useGravity)
+            {
+                rigidbody.useGravity = true;
+                prefabChanged = true;
+            }
+
+            if (rigidbody.isKinematic)
+            {
+                rigidbody.isKinematic = false;
+                prefabChanged = true;
+            }
+
+            if (rigidbody.interpolation != RigidbodyInterpolation.Interpolate)
+            {
+                rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+                prefabChanged = true;
+            }
+
+            if (rigidbody.collisionDetectionMode != CollisionDetectionMode.ContinuousDynamic)
+            {
+                rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                prefabChanged = true;
+            }
+
+            if (prefabRoot.GetComponent<SkillGrenadeProjectile>() == null)
+            {
+                prefabRoot.AddComponent<SkillGrenadeProjectile>();
+                prefabChanged = true;
+            }
+
+            SphereCollider sphereCollider = prefabRoot.GetComponent<SphereCollider>();
+            if (sphereCollider == null)
+            {
+                sphereCollider = prefabRoot.AddComponent<SphereCollider>();
+                prefabChanged = true;
+            }
+
+            if (!Mathf.Approximately(sphereCollider.radius, GrenadeCollisionRadius))
+            {
+                sphereCollider.radius = GrenadeCollisionRadius;
+                prefabChanged = true;
+            }
+
+            if (prefabChanged)
+            {
+                PrefabUtility.SaveAsPrefabAsset(prefabRoot, GrenadeProjectilePath);
+                changed = true;
+            }
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(prefabRoot);
+        }
+
+        return true;
     }
 
     private static bool ConfigureEnemyAudioImportSettings(ref bool changed)
@@ -808,6 +899,7 @@ public static class FPSDemoBuildTools
         isValid &= ValidateAssetBundleNames(EnemyAudioAssetPaths, EnemyAudioBundleName);
         isValid &= ValidateAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName);
         isValid &= ValidateAssetBundleNames(PropRuntimeAssetPaths, PropRuntimeBundleName);
+        isValid &= ValidateAssetBundleNames(SkillEffectAssetPaths, SkillEffectBundleName);
 
         if (logResult && isValid)
         {

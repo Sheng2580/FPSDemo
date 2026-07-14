@@ -11,6 +11,7 @@ public class PlayerSkillController : MonoBehaviour
 {
     private const float KnockbackForceToDistance = 0.18f;
     private const float DefaultSkillHitKnockbackDuration = 0.32f;
+    private const float GrenadeCollisionRadius = 0.7f;
 
     [Header("技能配置")]
     [SerializeField] private PlayerSkillConfigAsset dodgeConfigAsset;
@@ -466,16 +467,42 @@ public class PlayerSkillController : MonoBehaviour
 
     private void CastGrenade(PlayerSkillConfig config, PlayerSkillRuntimeData runtimeData)
     {
-        Vector3 spawnPosition = GetGrenadeSpawnPosition();
-        Vector3 direction = GetSkillForward();
-        GameObject grenadeObject = CreateGrenadeObject(config, spawnPosition, Quaternion.LookRotation(direction, Vector3.up));
-        SkillGrenadeProjectile projectile = grenadeObject.GetComponent<SkillGrenadeProjectile>();
-        if (projectile == null)
+        if (config == null)
         {
-            projectile = grenadeObject.AddComponent<SkillGrenadeProjectile>();
+            return;
         }
 
-        projectile.Init(_player, config, runtimeData, direction);
+        Vector3 spawnPosition = GetGrenadeSpawnPosition();
+        Vector3 direction = GetSkillForward();
+        Quaternion rotation = Quaternion.LookRotation(direction, Vector3.up);
+        PlayerSkillConfig projectileConfig = config.Clone();
+        string projectileKey = string.IsNullOrEmpty(projectileConfig.projectileResourceKey)
+            ? "bomb"
+            : projectileConfig.projectileResourceKey;
+
+        PoolMgr.Instance.GetObjForAB(EffectMgr.SkillEffectBundleName, projectileKey, grenadeObject =>
+        {
+            if (grenadeObject == null)
+            {
+                Debug.LogError($"[Skill] 炸弹资源加载失败 {projectileKey}", this);
+                return;
+            }
+
+            if (this == null || _player == null)
+            {
+                PoolMgr.Instance.pushObj(projectileKey, grenadeObject);
+                return;
+            }
+
+            PrepareGrenadeObject(grenadeObject, projectileKey, spawnPosition, rotation);
+            SkillGrenadeProjectile projectile = grenadeObject.GetComponent<SkillGrenadeProjectile>();
+            if (projectile == null)
+            {
+                projectile = grenadeObject.AddComponent<SkillGrenadeProjectile>();
+            }
+
+            projectile.Init(_player, projectileConfig, runtimeData, direction, projectileKey);
+        });
     }
 
     private void ApplySkillDamage(
@@ -591,20 +618,15 @@ public class PlayerSkillController : MonoBehaviour
         return enemy != null && health != null;
     }
 
-    private GameObject CreateGrenadeObject(PlayerSkillConfig config, Vector3 position, Quaternion rotation)
+    private static void PrepareGrenadeObject(
+        GameObject grenadeObject,
+        string projectileKey,
+        Vector3 position,
+        Quaternion rotation)
     {
-        GameObject prefab = !string.IsNullOrEmpty(config.projectileResourceKey)
-            ? Resources.Load<GameObject>(config.projectileResourceKey)
-            : null;
-        GameObject grenadeObject = prefab != null
-            ? Instantiate(prefab, position, rotation)
-            : GameObject.CreatePrimitive(PrimitiveType.Sphere);
-
-        grenadeObject.name = string.IsNullOrEmpty(config.projectileResourceKey)
-            ? "SkillGrenade"
-            : config.projectileResourceKey;
+        grenadeObject.name = projectileKey;
+        grenadeObject.transform.SetParent(null, true);
         grenadeObject.transform.SetPositionAndRotation(position, rotation);
-        grenadeObject.transform.localScale = prefab != null ? grenadeObject.transform.localScale : Vector3.one * 0.22f;
 
         Rigidbody rigidbody = grenadeObject.GetComponent<Rigidbody>();
         if (rigidbody == null)
@@ -613,8 +635,20 @@ public class PlayerSkillController : MonoBehaviour
         }
 
         rigidbody.useGravity = true;
+        rigidbody.isKinematic = false;
+        rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        return grenadeObject;
+
+        SphereCollider sphereCollider = grenadeObject.GetComponent<SphereCollider>();
+        if (sphereCollider == null && grenadeObject.GetComponentInChildren<Collider>(true) == null)
+        {
+            sphereCollider = grenadeObject.AddComponent<SphereCollider>();
+        }
+
+        if (sphereCollider != null)
+        {
+            sphereCollider.radius = Mathf.Max(sphereCollider.radius, GrenadeCollisionRadius);
+        }
     }
 
     private Vector3 GetSkillOrigin()
@@ -700,7 +734,7 @@ public class PlayerSkillController : MonoBehaviour
     {
         EventCenter.Instance.EventTrigger(
             GameEvent.SkillVisualStarted,
-            new SkillVisualEventData(config, effectKey, audioKey, position, direction, duration, intensity));
+            new SkillVisualEventData(_player, config, effectKey, audioKey, position, direction, duration, intensity));
     }
 
     private IEnumerator InvincibleRoutine(float duration)

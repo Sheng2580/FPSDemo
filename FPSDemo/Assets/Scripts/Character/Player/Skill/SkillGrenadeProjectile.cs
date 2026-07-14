@@ -18,30 +18,77 @@ public class SkillGrenadeProjectile : MonoBehaviour
     private PlayerSkillConfig _config;
     private PlayerSkillRuntimeData _runtimeData;
     private Rigidbody _rigidbody;
+    private string _poolKey;
+    private Coroutine _explodeRoutine;
     private bool _exploded;
 
     public void Init(
         PlayerController owner,
         PlayerSkillConfig config,
         PlayerSkillRuntimeData runtimeData,
-        Vector3 direction)
+        Vector3 direction,
+        string poolKey)
     {
+        StopAllCoroutines();
         _owner = owner;
         _config = config != null ? config.Clone() : PlayerSkillConfig.CreateDefaultGrenade();
         _runtimeData = runtimeData;
+        _poolKey = string.IsNullOrEmpty(poolKey) ? _config.projectileResourceKey : poolKey;
         _rigidbody = GetComponent<Rigidbody>();
+        _exploded = false;
+
+        if (_rigidbody == null)
+        {
+            _rigidbody = gameObject.AddComponent<Rigidbody>();
+        }
+
+        _rigidbody.useGravity = true;
+        _rigidbody.isKinematic = false;
+        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        _rigidbody.velocity = Vector3.zero;
+        _rigidbody.angularVelocity = Vector3.zero;
+
+        TrailRenderer[] trails = GetComponentsInChildren<TrailRenderer>(true);
+        for (int i = 0; i < trails.Length; i++)
+        {
+            trails[i].Clear();
+        }
 
         Vector3 throwDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
         Vector3 velocity = throwDirection * Mathf.Max(0f, _config.throwForce) + Vector3.up * Mathf.Max(0f, _config.throwUpForce);
         _rigidbody.velocity = velocity;
 
-        StartCoroutine(ExplodeAfterDelay());
+        _explodeRoutine = StartCoroutine(ExplodeAfterDelay());
     }
 
     private IEnumerator ExplodeAfterDelay()
     {
         float delay = _config != null ? Mathf.Max(0f, _config.explosionDelay) : 1.2f;
         yield return new WaitForSeconds(delay);
+        _explodeRoutine = null;
+        Explode();
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        TryExplodeOnEnemy(collision != null ? collision.collider : null);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        TryExplodeOnEnemy(other);
+    }
+
+    private void TryExplodeOnEnemy(Collider hitCollider)
+    {
+        if (_exploded
+            || !IsEnemyLayer(hitCollider)
+            || !TryResolveEnemy(hitCollider, out EnemyController enemy, out _)
+            || enemy.IsDead)
+        {
+            return;
+        }
+
         Explode();
     }
 
@@ -53,19 +100,26 @@ public class SkillGrenadeProjectile : MonoBehaviour
         }
 
         _exploded = true;
+        if (_explodeRoutine != null)
+        {
+            StopCoroutine(_explodeRoutine);
+            _explodeRoutine = null;
+        }
+
         PlayerSkillConfig config = _config ?? PlayerSkillConfig.CreateDefaultGrenade();
         Vector3 position = transform.position;
         float radiusMultiplier = _runtimeData != null ? Mathf.Max(0f, _runtimeData.radiusMultiplier) : 1f;
         EventCenter.Instance.EventTrigger(
             GameEvent.SkillVisualStarted,
-            new SkillVisualEventData(config, config.explosionEffectKey, config.explosionAudioKey, position, Vector3.up, 0.35f, 1f));
+            new SkillVisualEventData(_owner, config, config.explosionEffectKey, config.explosionAudioKey, position, Vector3.up, 0.35f, 1f));
 
         _hitEnemies.Clear();
+        int enemyLayer = CombatLayerNames.EnemyLayer;
         int hitCount = Physics.OverlapSphereNonAlloc(
             position,
             Mathf.Max(0.1f, config.explosionRadius * radiusMultiplier),
             _hitBuffer,
-            Physics.DefaultRaycastLayers,
+            enemyLayer >= 0 ? 1 << enemyLayer : Physics.DefaultRaycastLayers,
             QueryTriggerInteraction.Collide);
 
         for (int i = 0; i < hitCount; i++)
@@ -82,7 +136,7 @@ public class SkillGrenadeProjectile : MonoBehaviour
             _hitEnemies.Add(enemy);
         }
 
-        Destroy(gameObject);
+        ReturnToPool();
     }
 
     private void ApplyExplosionDamage(
@@ -149,5 +203,33 @@ public class SkillGrenadeProjectile : MonoBehaviour
         }
 
         return enemy != null && health != null;
+    }
+
+    private static bool IsEnemyLayer(Collider hitCollider)
+    {
+        return hitCollider != null
+               && CombatLayerNames.IsEnemyLayer(hitCollider.gameObject.layer);
+    }
+
+    private void ReturnToPool()
+    {
+        if (_rigidbody != null)
+        {
+            _rigidbody.velocity = Vector3.zero;
+            _rigidbody.angularVelocity = Vector3.zero;
+            _rigidbody.isKinematic = true;
+        }
+
+        string poolKey = string.IsNullOrEmpty(_poolKey) ? gameObject.name : _poolKey;
+        PoolMgr.Instance.pushObj(poolKey, gameObject);
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        _explodeRoutine = null;
+        _owner = null;
+        _runtimeData = null;
+        _exploded = false;
     }
 }

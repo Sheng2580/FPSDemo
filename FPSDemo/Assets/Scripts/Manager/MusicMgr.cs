@@ -11,6 +11,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
 {
     public const string UIAudioBundleName = "ui_audio";
     public const string EnemyAudioBundleName = "enemy_audio";
+    public const string CombatFeedbackAudioBundleName = "combat_feedback";
     public const string UIButtonSound = "SnappyButton1";
     public const string UISelectSound = "ClickyButton9a";
     public const string UIConfirmSound = "GenericButton4";
@@ -19,10 +20,12 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     public const string UISuccessSound = "Success3";
     public const string UIErrorSound = "Error2";
     public const string PickupCollectedSound = "GenericNotification3";
+    public const string PlayerHitSound = "hit";
 
 #if UNITY_EDITOR
     private const string EditorUIAudioRoot = "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX";
     private const string EditorEnemyAudioRoot = "Assets/Art/Audio/Zombie Sounds Pro";
+    private const string EditorCombatAudioRoot = "Assets/Art/Audio";
 #endif
 
     private AudioSource bkMusic; //音频组件
@@ -38,6 +41,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     private const float BerserkAudioFadeOutTime = 0.35f;
     private const float BerserkLowPassCutoff = 5200f;
     private const float BerserkEchoDelay = 68f;
+    private const float PlayerHitSoundInterval = 0.08f;
 
     private List<AudioSource> soundlist = new List<AudioSource>();
     private readonly List<AudioSource> runtimeSoundSources = new List<AudioSource>();
@@ -51,6 +55,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     private AudioEchoFilter berserkEchoFilter;
     private Coroutine berserkAudioRoutine;
     private float berserkAudioBlend;
+    private float lastPlayerHitSoundTime = float.NegativeInfinity;
 
     public override void Awake()
     {
@@ -68,12 +73,14 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     {
         EventCenter.Instance.AddEventListener<PickupCollectedEventData>(GameEvent.PickupCollected, OnPickupCollected);
         EventCenter.Instance.AddEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
+        EventCenter.Instance.AddEventListener<PlayerDamagedEventData>(GameEvent.PlayerDamaged, OnPlayerDamaged);
     }
 
     private void OnDisable()
     {
         EventCenter.Instance.RemoveEventListener<PickupCollectedEventData>(GameEvent.PickupCollected, OnPickupCollected);
         EventCenter.Instance.RemoveEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
+        EventCenter.Instance.RemoveEventListener<PlayerDamagedEventData>(GameEvent.PlayerDamaged, OnPlayerDamaged);
         StopBerserkAudioEffect();
     }
 
@@ -109,6 +116,19 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     private void OnPlayerBerserkChanged(PlayerBerserkChangedEventData eventData)
     {
         SetBerserkAudioEffect(eventData.active);
+    }
+
+    private void OnPlayerDamaged(PlayerDamagedEventData eventData)
+    {
+        if (eventData.player == null
+            || eventData.damage <= 0
+            || Time.unscaledTime - lastPlayerHitSoundTime < PlayerHitSoundInterval)
+        {
+            return;
+        }
+
+        lastPlayerHitSoundTime = Time.unscaledTime;
+        PlaySoundForAB(PlayerHitSound, CombatFeedbackAudioBundleName);
     }
 
     private void SetBerserkAudioEffect(bool active)
@@ -325,7 +345,9 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         float minDistance = 2f,
         float maxDistance = 28f,
         int priority = 128,
-        bool allowSteal = false)
+        bool allowSteal = false,
+        float basePitch = 1f,
+        float maxPlaybackDuration = 0f)
     {
         if (!IsWorldSoundAudible(worldPosition, maxDistance))
         {
@@ -349,7 +371,10 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
             source.transform.position = worldPosition;
             source.clip = clip;
             source.volume = soundVolume * Mathf.Clamp01(volumeScale);
-            source.pitch = 1f + UnityEngine.Random.Range(-Mathf.Abs(pitchRandom), Mathf.Abs(pitchRandom));
+            source.pitch = Mathf.Clamp(
+                basePitch + UnityEngine.Random.Range(-Mathf.Abs(pitchRandom), Mathf.Abs(pitchRandom)),
+                0.1f,
+                3f);
             source.loop = false;
             source.spatialBlend = 1f;
             source.priority = Mathf.Clamp(priority, 0, 256);
@@ -358,6 +383,11 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
             source.maxDistance = Mathf.Max(source.minDistance, maxDistance);
             source.dopplerLevel = 0f;
             source.Play();
+            if (maxPlaybackDuration > 0f
+                && clip.length / source.pitch > maxPlaybackDuration)
+            {
+                source.SetScheduledEndTime(AudioSettings.dspTime + maxPlaybackDuration);
+            }
         });
     }
 
@@ -788,6 +818,10 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         else if (abName == EnemyAudioBundleName)
         {
             searchRoot = EditorEnemyAudioRoot;
+        }
+        else if (abName == CombatFeedbackAudioBundleName)
+        {
+            searchRoot = EditorCombatAudioRoot;
         }
         else
         {

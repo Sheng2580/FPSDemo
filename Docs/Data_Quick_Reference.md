@@ -355,8 +355,8 @@ Unity 运行时优先读取：
 | 技能 | distance / detect / radius / angle | damage | knockback | stun | count | resource / animation key | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Dodge | `dodgeDistance 4.2` | 0 | 0 | `invincibleDuration 0.18` | 无 | `fovEffectKey Skill_Dodge_FOV` | `collisionDisableDuration 0.12`，表现只读取 key |
-| Push | `detectRadius 4.5 / detectAngle 360` | 60 | 30 | 0.65 | `maxHitCount 0` | `Melee Weapon_1|Attack 1` / `Melee Weapon_1|Attack 2` | 玩家为圆心全方向检测，击退距离约 5.4 米，0 表示不限制命中数量 |
-| Grenade | `explosionRadius 4.5` | 80 | 8 | 0.35 | `initialCount 2 / maxCount 3` | `projectileResourceKey Gernade` / `throwAnimationKey Grenade_1 |Throw` | `explosionDelay 1.2`，`throwForce 13`，`throwUpForce 2.5` |
+| Push | `detectRadius 4.5 / detectAngle 360` | 60 | 30 | 0.65 | `maxHitCount 0` | `skill / Onomatopoeia_Roar Variant` | 玩家为圆心全方向检测，击退距离约 5.4 米，特效生成在玩家摄像机局部原点 |
+| Grenade | `explosionRadius 6.5` | 80 | 8 | 0.35 | `initialCount 2 / maxCount 3` | `skill / bomb` / `skill / Onomatopoeia_Pow Variant` | `throwForce 20 / throwUpForce 1.2`，投掷物碰撞半径 0.7，碰到敌人立即爆炸，音效使用 `skill / Boom爆炸声` 并以 1.18 倍音高播放，长尾限制为 2.1 秒 |
 
 技能数据边界：
 
@@ -367,6 +367,11 @@ Unity 运行时优先读取：
 - 推人技能使用固定数组和 `OverlapSphereNonAlloc` 获取候选目标，再按水平距离做圆形范围过滤，不产生运行时 GC
 - 推人伤害与击退在动作开始约 0.17 秒后触发，使手部动画和敌人位移保持同步
 - Akila 的 `Melee Weapon_1` 动画骨骼不能通用于三把枪，当前改为武器视图程序化蓄力 前推 回位，保证手枪 步枪 霰弹枪都能稳定显示
+- 推人释放特效由 `EffectMgr` 监听 `SkillVisualStarted`，从 `skill` AB 包加载并挂到事件玩家的摄像机下，局部位置和旋转为零
+- `Assets/Art/Skill/Onomatopoeia_Roar Variant.prefab` 是 `skill` 包入口，依赖材质 贴图 模型和 Shader 随 AssetBundle 依赖关系打包
+- 炸弹投掷物 `bomb` 使用 `skill` AB 包和对象池，爆炸后归还对象池，不再动态销毁
+- 炸弹爆炸特效使用 `Onomatopoeia_Pow Variant`，爆炸音效使用 `Assets/Art/Audio/Boom爆炸声.wav`
+- 玩家实际扣血后触发 `PlayerDamaged`，`MusicMgr` 播放 `combat_feedback / hit` 作为第一人称受击音效
 
 ## 局内道具配置
 

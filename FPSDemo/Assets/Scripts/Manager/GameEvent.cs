@@ -573,6 +573,7 @@ public readonly struct SkillHitEnemyEventData
 
 public readonly struct SkillVisualEventData
 {
+    public readonly PlayerController player;
     public readonly int skillId;
     public readonly string skillName;
     public readonly SkillType skillType;
@@ -587,6 +588,7 @@ public readonly struct SkillVisualEventData
     public readonly float intensity;
 
     public SkillVisualEventData(
+        PlayerController player,
         PlayerSkillConfig config,
         string effectKey,
         string audioKey,
@@ -595,6 +597,7 @@ public readonly struct SkillVisualEventData
         float duration,
         float intensity)
     {
+        this.player = player;
         skillId = config != null ? config.skillId : 0;
         skillName = config != null ? config.skillName : string.Empty;
         skillType = config != null ? config.skillType : SkillType.Dodge;
