@@ -1119,7 +1119,7 @@ MonoBehaviour:
   enableKeyboardTest: 1
   normalTabColor: {r: 1, g: 1, b: 1, a: 1}
   selectedTabColor: {r: 1, g: 0.82, b: 0.36, a: 1}
-  fixedWeaponColor: {r: 1, g: 0.78, b: 0.78, a: 0.92}
+  fixedWeaponColor: {r: 0.9019608, g: 0.37019685, b: 0.05490197, a: 1}
   selectedWeaponColor: {r: 1, g: 0.82, b: 0.36, a: 0.92}
   normalWeaponColor: {r: 1, g: 1, b: 1, a: 0.35}
   selectedWeaponScale: 1.035
@@ -1483,7 +1483,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.3962264, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.15686275, g: 0.15686275, b: 0.15686275, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3439,11 +3439,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1534757674}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 319.1747, y: 130.6229}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchoredPosition: {x: 140, y: 0}
+  m_SizeDelta: {x: 330, y: 100}
+  m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &1005630633
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3474,7 +3474,7 @@ MonoBehaviour:
     m_Alignment: 3
     m_AlignByGeometry: 0
     m_RichText: 1
-    m_HorizontalOverflow: 0
+    m_HorizontalOverflow: 1
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: 100000
@@ -5033,7 +5033,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1534757674}
   - component: {fileID: 1534757676}
-  - component: {fileID: 1534757675}
   m_Layer: 5
   m_Name: Gold
   m_TagString: Untagged
@@ -5062,32 +5061,6 @@ RectTransform:
   m_AnchoredPosition: {x: -235.469, y: -182}
   m_SizeDelta: {x: 470.938, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1534757675
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1534757673}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 4
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 1
-  m_ChildForceExpandHeight: 1
-  m_ChildControlWidth: 0
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
 --- !u!222 &1534757676
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7491,11 +7464,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1534757674}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 0, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 110.2221, y: 130.6229}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_SizeDelta: {x: 125, y: 100}
+  m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &2045939524
 MonoBehaviour:
   m_ObjectHideFlags: 0

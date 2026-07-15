@@ -116,7 +116,8 @@ namespace Enemy.Data
             config.prefabKey = "ZombieNerdOneHanded";
             config.prefabResourceKey = "Enemy_ZombieNerd_LOD2";
             config.maxHealth = 90f;
-            config.moveSpeed = 2.45f;
+            config.moveSpeed = 7.2f;
+            config.acceleration = 28f;
             config.attackDamage = 9f;
             config.attackDistance = 1.35f;
             config.attackInterval = 1.1f;
@@ -149,9 +150,9 @@ namespace Enemy.Data
             config.enemyName = "Zombie Old Crone OneHanded";
             config.prefabKey = "ZombieOldCroneOneHanded";
             config.prefabResourceKey = "Enemy_ZombieOldCrone_LOD2";
-            config.maxHealth = 180f;
+            config.maxHealth = 360f;
             config.moveSpeed = 1.45f;
-            config.attackDamage = 14f;
+            config.attackDamage = 24f;
             config.attackDistance = 1.45f;
             config.attackInterval = 1.45f;
             config.attackHitDelay = 0.42f;

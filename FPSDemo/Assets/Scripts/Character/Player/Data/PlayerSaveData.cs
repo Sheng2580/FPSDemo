@@ -934,6 +934,12 @@ namespace PlayerData
 
     public static class PermanentUpgradeRules
     {
+        private const float DamageIncreasePerLevel = 0.08f;
+        private const float FireIntervalReductionPerLevel = 0.015f;
+        private const float ControlReductionPerLevel = 0.025f;
+        private const float MinimumFireIntervalMultiplier = 0.45f;
+        private const float MinimumControlMultiplier = 0.4f;
+
         public static void ApplyWeaponLevel(WeaponConfig config, int level)
         {
             if (config == null || level <= 0)
@@ -978,6 +984,50 @@ namespace PlayerData
                 : config.magazineSize;
         }
 
+        public static void ApplyWeaponBonusLevels(WeaponConfig config, int previousBonusLevel, int nextBonusLevel)
+        {
+            if (config == null)
+            {
+                return;
+            }
+
+            int safePreviousBonusLevel = Mathf.Max(0, previousBonusLevel);
+            int safeNextBonusLevel = Mathf.Max(safePreviousBonusLevel, nextBonusLevel);
+            if (safeNextBonusLevel <= safePreviousBonusLevel)
+            {
+                return;
+            }
+
+            int permanentLevel = PlayerProgressSaveService.GetWeaponUpgradeLevel(config.weaponId);
+            WeaponProgressionSnapshot previous = ResolveWeaponProgression(
+                config.weaponId,
+                permanentLevel + safePreviousBonusLevel);
+            WeaponProgressionSnapshot next = ResolveWeaponProgression(
+                config.weaponId,
+                permanentLevel + safeNextBonusLevel);
+
+            config.damage *= ResolveRatio(next.damageMultiplier, previous.damageMultiplier);
+            config.magazineSize += Mathf.Max(0, next.magazineAdd - previous.magazineAdd);
+            config.maxReserveAmmo += Mathf.Max(0, next.reserveAmmoAdd - previous.reserveAmmoAdd);
+            config.fireInterval *= ResolveRatio(next.fireIntervalMultiplier, previous.fireIntervalMultiplier);
+
+            float reloadRatio = ResolveRatio(next.reloadTimeMultiplier, previous.reloadTimeMultiplier);
+            config.reloadTime *= reloadRatio;
+            config.reloadStartTime *= reloadRatio;
+            config.reloadSingleRoundTime *= reloadRatio;
+            config.reloadEndTime *= reloadRatio;
+
+            float recoilRatio = ResolveRatio(next.recoilMultiplier, previous.recoilMultiplier);
+            config.recoilPitch *= recoilRatio;
+            config.recoilYaw *= recoilRatio;
+            config.viewRecoilPosition *= recoilRatio;
+            config.viewRecoilRotation *= recoilRatio;
+            config.spreadAngle *= ResolveRatio(next.spreadMultiplier, previous.spreadMultiplier);
+            config.reloadAmmoPerStep = config.reloadMode == WeaponReloadMode.SingleRound
+                ? 1
+                : config.magazineSize;
+        }
+
         private static void ApplyWeaponConfig(
             WeaponConfig config,
             WeaponPermanentUpgradeConfig upgradeConfig)
@@ -1002,6 +1052,117 @@ namespace PlayerData
             config.reloadAmmoPerStep = config.reloadMode == WeaponReloadMode.SingleRound
                 ? 1
                 : config.magazineSize;
+        }
+
+        private static WeaponProgressionSnapshot ResolveWeaponProgression(int weaponId, int level)
+        {
+            int safeLevel = Mathf.Max(0, level);
+            if (safeLevel <= 0)
+            {
+                return WeaponProgressionSnapshot.CreateDefault();
+            }
+
+            int maxLevel = PlayerProgressSaveService.GetWeaponMaxUpgradeLevel(weaponId);
+            if (safeLevel <= maxLevel
+                && PermanentUpgradeConfigLoader.TryGetWeaponConfig(
+                    weaponId,
+                    safeLevel,
+                    out WeaponPermanentUpgradeConfig exactConfig))
+            {
+                return WeaponProgressionSnapshot.FromConfig(exactConfig);
+            }
+
+            if (maxLevel > 0
+                && PermanentUpgradeConfigLoader.TryGetWeaponConfig(
+                    weaponId,
+                    maxLevel,
+                    out WeaponPermanentUpgradeConfig maxConfig))
+            {
+                int extraLevel = Mathf.Max(0, safeLevel - maxLevel);
+                WeaponProgressionSnapshot snapshot = WeaponProgressionSnapshot.FromConfig(maxConfig);
+                snapshot.damageMultiplier += extraLevel * DamageIncreasePerLevel;
+                snapshot.magazineAdd += GetMagazineIncrease(weaponId, safeLevel) - GetMagazineIncrease(weaponId, maxLevel);
+                snapshot.reserveAmmoAdd += GetReserveAmmoIncrease(weaponId, safeLevel) - GetReserveAmmoIncrease(weaponId, maxLevel);
+                snapshot.fireIntervalMultiplier = Mathf.Max(
+                    MinimumFireIntervalMultiplier,
+                    snapshot.fireIntervalMultiplier - extraLevel * FireIntervalReductionPerLevel);
+                snapshot.reloadTimeMultiplier = Mathf.Max(
+                    MinimumControlMultiplier,
+                    snapshot.reloadTimeMultiplier - extraLevel * ControlReductionPerLevel);
+                snapshot.recoilMultiplier = Mathf.Max(
+                    MinimumControlMultiplier,
+                    snapshot.recoilMultiplier - extraLevel * ControlReductionPerLevel);
+                snapshot.spreadMultiplier = Mathf.Max(
+                    MinimumControlMultiplier,
+                    snapshot.spreadMultiplier - extraLevel * ControlReductionPerLevel);
+                return snapshot;
+            }
+
+            return new WeaponProgressionSnapshot
+            {
+                damageMultiplier = 1f + safeLevel * DamageIncreasePerLevel,
+                magazineAdd = GetMagazineIncrease(weaponId, safeLevel),
+                reserveAmmoAdd = GetReserveAmmoIncrease(weaponId, safeLevel),
+                fireIntervalMultiplier = Mathf.Max(
+                    MinimumFireIntervalMultiplier,
+                    1f - safeLevel * FireIntervalReductionPerLevel),
+                reloadTimeMultiplier = Mathf.Max(
+                    MinimumControlMultiplier,
+                    1f - safeLevel * ControlReductionPerLevel),
+                recoilMultiplier = Mathf.Max(
+                    MinimumControlMultiplier,
+                    1f - safeLevel * ControlReductionPerLevel),
+                spreadMultiplier = Mathf.Max(
+                    MinimumControlMultiplier,
+                    1f - safeLevel * ControlReductionPerLevel)
+            };
+        }
+
+        private static float ResolveRatio(float nextValue, float previousValue)
+        {
+            return Mathf.Max(0.01f, nextValue) / Mathf.Max(0.01f, previousValue);
+        }
+
+        private struct WeaponProgressionSnapshot
+        {
+            public float damageMultiplier;
+            public int magazineAdd;
+            public int reserveAmmoAdd;
+            public float fireIntervalMultiplier;
+            public float reloadTimeMultiplier;
+            public float recoilMultiplier;
+            public float spreadMultiplier;
+
+            public static WeaponProgressionSnapshot CreateDefault()
+            {
+                return new WeaponProgressionSnapshot
+                {
+                    damageMultiplier = 1f,
+                    fireIntervalMultiplier = 1f,
+                    reloadTimeMultiplier = 1f,
+                    recoilMultiplier = 1f,
+                    spreadMultiplier = 1f
+                };
+            }
+
+            public static WeaponProgressionSnapshot FromConfig(WeaponPermanentUpgradeConfig config)
+            {
+                if (config == null)
+                {
+                    return CreateDefault();
+                }
+
+                return new WeaponProgressionSnapshot
+                {
+                    damageMultiplier = Mathf.Max(0.01f, config.damageMultiplier),
+                    magazineAdd = Mathf.Max(0, config.magazineAdd),
+                    reserveAmmoAdd = Mathf.Max(0, config.reserveAmmoAdd),
+                    fireIntervalMultiplier = Mathf.Max(0.01f, config.fireIntervalMultiplier),
+                    reloadTimeMultiplier = Mathf.Max(0.01f, config.reloadTimeMultiplier),
+                    recoilMultiplier = Mathf.Max(0.01f, config.recoilMultiplier),
+                    spreadMultiplier = Mathf.Max(0.01f, config.spreadMultiplier)
+                };
+            }
         }
 
         private static int GetMagazineIncrease(int weaponId, int level)

@@ -33,6 +33,8 @@ namespace Blessing.Data
         public int maxStack;
         // 是否在第一次祝福抽取时保底出现
         public bool guaranteedFirstRoll;
+        // 从指定抽取次数开始持续保底 0表示关闭
+        public int guaranteedUntilSelectedFromRoll;
         // 需求武器编号 0 表示不限制
         public int requiredWeaponId;
         // 是否需求技能类型
@@ -87,6 +89,7 @@ namespace Blessing.Data
             unlockWave = Mathf.Max(1, unlockWave);
             weight = Mathf.Max(0f, weight);
             maxStack = Mathf.Max(1, maxStack);
+            guaranteedUntilSelectedFromRoll = Mathf.Max(0, guaranteedUntilSelectedFromRoll);
             requiredWeaponId = Mathf.Max(0, requiredWeaponId);
 
             if (string.IsNullOrEmpty(iconKey))

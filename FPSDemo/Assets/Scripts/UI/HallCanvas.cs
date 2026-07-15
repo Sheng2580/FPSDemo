@@ -50,6 +50,7 @@ public class HallCanvas : MonoBehaviour
 
     private void Awake()
     {
+        Time.timeScale = 1f;
         ResolveMissingReferences();
         LoadProgress();
         SetGold(_saveData != null ? _saveData.gold : 0, true);

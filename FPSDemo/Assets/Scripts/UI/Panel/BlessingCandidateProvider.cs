@@ -183,6 +183,7 @@ public sealed class BlessingCandidateProvider
             : config.descriptionTemplate;
 
         return description
+            .Replace("{0}", FormatTemplateValue(value))
             .Replace("{value:P0}", FormatPercentTemplateValue(value, 0))
             .Replace("{value:P1}", FormatPercentTemplateValue(value, 1))
             .Replace("{value:P2}", FormatPercentTemplateValue(value, 2))

@@ -9,6 +9,8 @@ using UnityEditor;
 
 public class MusicMgr : UnitySingleTonMono<MusicMgr>
 {
+    public const string BGMusicBundleName = "bgm";
+    public const string DefaultBGMusicName = "bgm";
     public const string UIAudioBundleName = "ui_audio";
     public const string EnemyAudioBundleName = "enemy_audio";
     public const string CombatFeedbackAudioBundleName = "combat_feedback";
@@ -26,6 +28,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     private const string EditorUIAudioRoot = "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX";
     private const string EditorEnemyAudioRoot = "Assets/Art/Audio/Zombie Sounds Pro";
     private const string EditorCombatAudioRoot = "Assets/Art/Audio";
+    private const string EditorDefaultBGMusicPath = "Assets/Art/Audio/bgm.mp3";
 #endif
 
     private AudioSource bkMusic; //音频组件
@@ -411,7 +414,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
     public void PlayBGMusicForAB(string name)
     {
         int requestId = ++bgMusicRequestId;
-        ABManager.Instance.LoadResAsync<AudioClip>("bgm", name, clip =>
+        ABManager.Instance.LoadResAsync<AudioClip>(BGMusicBundleName, name, clip =>
         {
             if (requestId != bgMusicRequestId)
             {
@@ -424,8 +427,22 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
                 return;
             }
 
-            SwitchBGMusic(clip, "AB:bgm/" + name, DefaultBGMusicFadeDuration);
+            SwitchBGMusic(clip, $"AB:{BGMusicBundleName}/" + name, DefaultBGMusicFadeDuration);
         });
+    }
+
+    public void PlayDefaultBGMusic()
+    {
+#if UNITY_EDITOR
+        AudioClip editorClip = AssetDatabase.LoadAssetAtPath<AudioClip>(EditorDefaultBGMusicPath);
+        if (editorClip != null)
+        {
+            SwitchBGMusic(editorClip, "Editor:" + DefaultBGMusicName, DefaultBGMusicFadeDuration);
+            return;
+        }
+#endif
+
+        PlayBGMusicForAB(DefaultBGMusicName);
     }
 
 
@@ -548,6 +565,12 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
         obj.transform.localScale = Vector3.one;
         bkMusic = obj.AddComponent<AudioSource>();
         bkMusic.playOnAwake = false;
+        bkMusic.loop = true;
+        bkMusic.spatialBlend = 0f;
+        bkMusic.volume = bkVolume;
+        bkMusic.mute = false;
+        bkMusic.ignoreListenerPause = true;
+        bkMusic.priority = 0;
     }
 
     private void EnsureUISoundSource()
@@ -820,6 +843,10 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
             searchRoot = EditorEnemyAudioRoot;
         }
         else if (abName == CombatFeedbackAudioBundleName)
+        {
+            searchRoot = EditorCombatAudioRoot;
+        }
+        else if (abName == EffectMgr.SkillEffectBundleName)
         {
             searchRoot = EditorCombatAudioRoot;
         }

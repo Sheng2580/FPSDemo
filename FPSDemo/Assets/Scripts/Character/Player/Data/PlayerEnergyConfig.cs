@@ -31,11 +31,11 @@ namespace PlayerData
         {
             return new PlayerEnergyConfig
             {
-                maxEnergy = 100f,
-                requiredEnergyLinearGrowth = 15f,
-                requiredEnergyQuadraticGrowth = 2.5f,
+                maxEnergy = 80f,
+                requiredEnergyLinearGrowth = 8f,
+                requiredEnergyQuadraticGrowth = 1.2f,
                 startLevel = 1,
-                damageToEnergyRate = 0.05f,
+                damageToEnergyRate = 0.08f,
                 autoLevelUp = false,
                 onlyGainFromPlayerDamage = true,
                 maxPermanentEnergyGainBonus = 1f

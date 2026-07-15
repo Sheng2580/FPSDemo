@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: DefaultPlayerEnergyConfig
   m_EditorClassIdentifier: 
   config:
-    maxEnergy: 100
-    requiredEnergyLinearGrowth: 15
-    requiredEnergyQuadraticGrowth: 2.5
+    maxEnergy: 80
+    requiredEnergyLinearGrowth: 8
+    requiredEnergyQuadraticGrowth: 1.2
     startLevel: 1
-    damageToEnergyRate: 0.05
+    damageToEnergyRate: 0.08
     autoLevelUp: 0
     onlyGainFromPlayerDamage: 1
     maxPermanentEnergyGainBonus: 1

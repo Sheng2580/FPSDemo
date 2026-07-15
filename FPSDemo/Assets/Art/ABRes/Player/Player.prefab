@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 6824186387950918711}
   - component: {fileID: 1026591075294092676}
   - component: {fileID: 3008036074051731131}
-  m_Layer: 0
+  m_Layer: 16
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -102,6 +102,7 @@ MonoBehaviour:
   playerModel: {fileID: 0}
   defaultConfigAsset: {fileID: 11400000, guid: f8bd72d452cf245ba8d7500ddc65a17d, type: 2}
   inventory: {fileID: 3008036074051731131}
+  debugDamageLog: 0
 --- !u!114 &7691947819577527116
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -124,6 +125,19 @@ MonoBehaviour:
   invertY: 0
   lockCursorOnStart: 0
   aimFovSmoothTime: 0.06
+  dodgeFovBoost: 9
+  dodgeFovFadeInTime: 0.045
+  dodgeFovHoldTime: 0.035
+  dodgeFovFadeOutTime: 0.18
+  dodgeForwardParallax: 0.055
+  dodgeSideParallax: 0.035
+  dodgeDownParallax: 0.025
+  pushFovBoost: 4
+  pushForwardParallax: 0.085
+  pushDownParallax: 0.02
+  pushFadeInTime: 0.055
+  pushHoldTime: 0.035
+  pushFadeOutTime: 0.2
   recoilOffset: {x: 0, y: 0}
   recoilKickMultiplier: 0.2
   recoilFollowSmoothTime: 0.045
@@ -192,6 +206,8 @@ MonoBehaviour:
     impactEffectKey: KriptoFX Concrete Impact
     muzzleFlashEffectKey: KriptoFX Assault Rifle Muzzle Flash
     muzzleSmokeEffectKey: None
+    muzzleSmokeInterval: 0.22
+    muzzleSmokeIntensity: 0.35
     fireAudioKey: Assault Rifle_1 Fire
     fireVolume: 1
     firePitchRandom: 0.04
@@ -306,6 +322,8 @@ MonoBehaviour:
       impactEffectKey: KriptoFX Concrete Impact
       muzzleFlashEffectKey: KriptoFX Pistol Muzzle Flash
       muzzleSmokeEffectKey: None
+      muzzleSmokeInterval: 0.22
+      muzzleSmokeIntensity: 0.35
       fireAudioKey: Pistol_1 Fire
       fireVolume: 1
       firePitchRandom: 0.04
@@ -405,6 +423,8 @@ MonoBehaviour:
       impactEffectKey: KriptoFX Concrete Impact
       muzzleFlashEffectKey: KriptoFX Assault Rifle Muzzle Flash
       muzzleSmokeEffectKey: None
+      muzzleSmokeInterval: 0.22
+      muzzleSmokeIntensity: 0.35
       fireAudioKey: Assault Rifle_1 Fire
       fireVolume: 1
       firePitchRandom: 0.04
@@ -482,7 +502,7 @@ GameObject:
   - component: {fileID: 1161174524743118253}
   - component: {fileID: 3083919207829165399}
   - component: {fileID: 6403580852078014184}
-  m_Layer: 0
+  m_Layer: 16
   m_Name: Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
@@ -617,7 +637,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8247376314910137479}
-  m_Layer: 0
+  m_Layer: 16
   m_Name: WeaponViewRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -648,7 +668,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5914884403741803737}
-  m_Layer: 0
+  m_Layer: 16
   m_Name: CameraRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}

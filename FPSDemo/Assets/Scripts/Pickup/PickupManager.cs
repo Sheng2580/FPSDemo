@@ -159,6 +159,15 @@ namespace Pickup
             EventCenter.Instance.RemoveEventListener<EnemyWaveEventData>(GameEvent.EnemyWaveStarted, OnEnemyWaveChanged);
             EventCenter.Instance.RemoveEventListener<EnemyWaveEventData>(GameEvent.EnemyWaveProgressChanged, OnEnemyWaveChanged);
             StopSpawnTimer();
+            RecycleAllActivePickups();
+        }
+
+        private void OnDestroy()
+        {
+            if (activeInstance == this)
+            {
+                activeInstance = null;
+            }
         }
 
         public void RegisterActivePickup(BasePickupItem pickupItem)
@@ -278,8 +287,14 @@ namespace Pickup
         {
             PoolMgr.Instance.GetObjForAB(config.assetBundleName, config.assetName, obj =>
             {
-                if (this == null || obj == null)
+                if (obj == null)
                 {
+                    return;
+                }
+
+                if (this == null || SceneManager.GetActiveScene().name != CombatSceneName)
+                {
+                    PoolMgr.Instance.pushObj(config.assetName, obj);
                     return;
                 }
 
@@ -456,6 +471,20 @@ namespace Pickup
                     _activePickups.RemoveAt(i);
                 }
             }
+        }
+
+        private void RecycleAllActivePickups()
+        {
+            for (int i = _activePickups.Count - 1; i >= 0; i--)
+            {
+                BasePickupItem pickupItem = _activePickups[i];
+                if (pickupItem != null)
+                {
+                    ReturnPickupToPool(pickupItem);
+                }
+            }
+
+            _activePickups.Clear();
         }
 
         private void ReturnPickupToPool(BasePickupItem pickupItem)

@@ -22,7 +22,7 @@ namespace Enemy.Data
         public int wavesPerDifficultyTier = 3;
         public int waveTotalSpawnCount = 12;
         public int waveTotalSpawnGrowth = 3;
-        public float waveClearDelay = 5f;
+        public float waveClearDelay = 2f;
         public bool waitForAvailableSpawnSlot = true;
         public List<EnemySpawnEntry> entries = new List<EnemySpawnEntry>();
 

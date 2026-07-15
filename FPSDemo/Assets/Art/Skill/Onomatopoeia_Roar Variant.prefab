@@ -83,6 +83,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Onomatopoeia_Roar Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 7997833386629316651, guid: 4f632f51e8aaa78418ae9653f7308706,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

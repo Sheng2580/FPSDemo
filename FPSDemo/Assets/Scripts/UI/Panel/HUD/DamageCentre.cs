@@ -151,6 +151,7 @@ public class DamageCentre : MonoBehaviour
             targetPosition,
             damageInfo.finalDamage,
             damageInfo.isCritical,
+            damageInfo.isExplosionDamage,
             RecycleItem);
 
         if (followEnemyDuringStay && eventData.enemy != null)

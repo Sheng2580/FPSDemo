@@ -1,4 +1,5 @@
 using DG.Tweening;
+using PlayerData;
 using TMPro;
 using UnityEngine;
 
@@ -59,6 +60,7 @@ public class EnergyCentre : MonoBehaviour
         EventCenter.Instance.AddEventListener<PlayerEnergyChangedEventData>(GameEvent.PlayerEnergyChanged, OnPlayerEnergyChanged);
         EventCenter.Instance.AddEventListener<PlayerEnergyLevelUpEventData>(GameEvent.PlayerEnergyLevelUpReady, OnPlayerEnergyLevelUpReady);
         EventCenter.Instance.AddEventListener<PlayerEnergyLevelUpEventData>(GameEvent.PlayerEnergyLevelUp, OnPlayerEnergyLevelUp);
+        SyncFromRuntime();
     }
 
     private void OnDisable()
@@ -190,6 +192,31 @@ public class EnergyCentre : MonoBehaviour
     {
         RefreshEnergyText();
         RefreshLevelText();
+    }
+
+    private void SyncFromRuntime()
+    {
+        KillTweens();
+        PlayerEnergyRuntime runtime = FindObjectOfType<PlayerEnergyRuntime>();
+        PlayerEnergyRuntimeData runtimeData = runtime != null ? runtime.RuntimeData : null;
+        if (runtimeData == null)
+        {
+            _level = 1;
+            _displayEnergy = 0f;
+            _targetEnergy = 0f;
+            RefreshText();
+            return;
+        }
+
+        _level = Mathf.Max(1, runtimeData.level);
+        _displayEnergy = Mathf.Clamp(runtimeData.NormalizedEnergy * 100f, 0f, 100f);
+        _targetEnergy = _displayEnergy;
+        RefreshText();
+
+        if (runtimeData.state == PlayerEnergyState.LevelUpReady)
+        {
+            PlayLevelReadyLoop();
+        }
     }
 
     private void RefreshEnergyText()

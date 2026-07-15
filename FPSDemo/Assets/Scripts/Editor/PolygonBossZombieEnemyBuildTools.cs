@@ -38,8 +38,8 @@ public static class PolygonBossZombieEnemyBuildTools
             "Enemy_ZombieNerd_LOD2",
             "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieNerd_LOD2.prefab",
             "Assets/PolygonBossZombies/Prefabs/SM_Chr_ZombieBoss_Wretch_01.prefab",
-            "Assets/Art/ABRes/Enemies/Prefabs/Animator/ZombieNerd_OneHanded.controller",
-            "ZombieNerd_OneHanded",
+            "Assets/Knife/Zombie Collection/Zombie Old Crone/Animations/TwoHanded/ZombieOldCrone_TwoHanded.controller",
+            "ZombieOldCrone_TwoHanded",
             string.Empty,
             string.Empty,
             Vector3.zero,
@@ -61,8 +61,8 @@ public static class PolygonBossZombieEnemyBuildTools
             "Enemy_ZombieOldCrone_LOD2",
             "Assets/Art/ABRes/Enemies/Prefabs/Enemy_ZombieOldCrone_LOD2.prefab",
             "Assets/PolygonBossZombies/Prefabs/SM_Chr_ZombieBoss_Brute_01.prefab",
-            "Assets/Knife/Zombie Collection/Zombie Old Crone/Animations/OneHanded/ZombieOldCrone_OneHanded.controller",
-            "ZombieOldCrone_OneHanded",
+            "Assets/Knife/Zombie Collection/Zombie Nerd/Animations/Torch/ZombieNerd_Torch.controller",
+            "ZombieNerd_Torch",
             string.Empty,
             string.Empty,
             Vector3.zero,
@@ -93,6 +93,44 @@ public static class PolygonBossZombieEnemyBuildTools
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[PolygonBossZombieEnemyBuildTools] PolygonBossZombies 敌人模型替换完成");
+    }
+
+    [MenuItem("FPSDemo/Enemy/绑定普通敌人 HitBox 到骨骼")]
+    public static void BindExistingHitBoxesToBones()
+    {
+        int boundPrefabCount = 0;
+        for (int i = 0; i < Definitions.Length; i++)
+        {
+            ReplacementDefinition definition = Definitions[i];
+            GameObject root = PrefabUtility.LoadPrefabContents(definition.OutputPrefabPath);
+            try
+            {
+                Animator animator = root.GetComponentInChildren<Animator>(true);
+                if (animator == null)
+                {
+                    Debug.LogError($"[PolygonBossZombieEnemyBuildTools] 找不到 Animator {definition.OutputPrefabName}");
+                    continue;
+                }
+
+                if (!BindHitBoxesToBones(root, animator.transform, definition))
+                {
+                    continue;
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, definition.OutputPrefabPath);
+                SetAssetBundleName(definition.OutputPrefabPath, EnemyPrefabBundleName);
+                boundPrefabCount++;
+                Debug.Log($"[PolygonBossZombieEnemyBuildTools] HitBox 已绑定到骨骼 {definition.OutputPrefabName}");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[PolygonBossZombieEnemyBuildTools] HitBox 骨骼绑定完成 PrefabCount={boundPrefabCount}");
     }
 
     private static void ReplaceEnemyVisual(ReplacementDefinition definition)
@@ -136,7 +174,7 @@ public static class PolygonBossZombieEnemyBuildTools
             ConfigureEnemyView(view, animator, definition);
             ConfigureRootComponents(root, view, receiver, definition);
             AttachWeaponIfNeeded(visualRoot, definition);
-            RebuildHitBoxes(root, definition);
+            RebuildHitBoxes(root, visualRoot, definition);
 
             PrefabUtility.SaveAsPrefabAsset(root, definition.OutputPrefabPath);
             SetAssetBundleName(definition.OutputPrefabPath, EnemyPrefabBundleName);
@@ -183,7 +221,7 @@ public static class PolygonBossZombieEnemyBuildTools
 
         animator.runtimeAnimatorController = controller;
         animator.applyRootMotion = true;
-        animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         animator.updateMode = AnimatorUpdateMode.Normal;
     }
 
@@ -198,11 +236,33 @@ public static class PolygonBossZombieEnemyBuildTools
         SetString(view, "attackStateName", definition.AnimationPrefix + "_Attack_1");
         SetString(view, "damageStateName", definition.AnimationPrefix + "_Damage");
         SetString(view, "deathStateName", definition.AnimationPrefix + "_Death");
-        SetFloat(view, "locomotionTransition", 0.18f);
-        SetFloat(view, "attackTransition", 0.1f);
-        SetFloat(view, "hitTransition", 0.14f);
-        SetFloat(view, "deathTransition", 0.18f);
-        SetFloat(view, "recoverTransition", 0.18f);
+        float locomotionTransition = 0.18f;
+        float attackTransition = 0.1f;
+        float hitTransition = 0.14f;
+        float deathTransition = 0.18f;
+        float recoverTransition = 0.18f;
+
+        if (definition.AnimationPrefix == "ZombieNerd_Torch")
+        {
+            locomotionTransition = 0.08f;
+            attackTransition = 0.06f;
+            hitTransition = 0.08f;
+            recoverTransition = 0.08f;
+        }
+        else if (definition.AnimationPrefix == "ZombieOldCrone_TwoHanded")
+        {
+            locomotionTransition = 0.28f;
+            attackTransition = 0.16f;
+            hitTransition = 0.2f;
+            deathTransition = 0.28f;
+            recoverTransition = 0.25f;
+        }
+
+        SetFloat(view, "locomotionTransition", locomotionTransition);
+        SetFloat(view, "attackTransition", attackTransition);
+        SetFloat(view, "hitTransition", hitTransition);
+        SetFloat(view, "deathTransition", deathTransition);
+        SetFloat(view, "recoverTransition", recoverTransition);
     }
 
     private static void ConfigureRootComponents(
@@ -280,7 +340,7 @@ public static class PolygonBossZombieEnemyBuildTools
         OptimizeRenderers(weapon);
     }
 
-    private static void RebuildHitBoxes(GameObject root, ReplacementDefinition definition)
+    private static void RebuildHitBoxes(GameObject root, GameObject visualRoot, ReplacementDefinition definition)
     {
         Transform oldHitBoxRoot = root.transform.Find("HitBoxes");
         if (oldHitBoxRoot != null)
@@ -299,6 +359,68 @@ public static class PolygonBossZombieEnemyBuildTools
         for (int i = 0; i < definition.HitBoxes.Length; i++)
         {
             CreateHitBox(hitBoxRoot.transform, definition.HitBoxes[i], health);
+        }
+
+        BindHitBoxesToBones(root, visualRoot.transform, definition);
+    }
+
+    private static bool BindHitBoxesToBones(
+        GameObject root,
+        Transform visualRoot,
+        ReplacementDefinition definition)
+    {
+        if (root == null || visualRoot == null)
+        {
+            return false;
+        }
+
+        bool allBound = true;
+        for (int i = 0; i < definition.HitBoxes.Length; i++)
+        {
+            HitBoxDefinition hitBoxDefinition = definition.HitBoxes[i];
+            Transform hitBox = FindDeepChild(root.transform, hitBoxDefinition.Name);
+            Transform bone = FindDeepChild(visualRoot, ResolveHitBoxBoneName(hitBoxDefinition.Name));
+            if (hitBox == null || bone == null)
+            {
+                Debug.LogError(
+                    $"[PolygonBossZombieEnemyBuildTools] HitBox 骨骼绑定失败 Prefab={definition.OutputPrefabName} HitBox={hitBoxDefinition.Name}",
+                    root);
+                allBound = false;
+                continue;
+            }
+
+            // 保持当前世界位置和尺寸 只把判定盒静态挂到对应骨骼
+            hitBox.SetParent(bone, true);
+            hitBox.gameObject.layer = ResolveEnemyLayer();
+        }
+
+        Transform hitBoxRoot = root.transform.Find("HitBoxes");
+        if (hitBoxRoot != null && hitBoxRoot.childCount == 0)
+        {
+            Object.DestroyImmediate(hitBoxRoot.gameObject);
+        }
+
+        return allBound;
+    }
+
+    private static string ResolveHitBoxBoneName(string hitBoxName)
+    {
+        switch (hitBoxName)
+        {
+            case "HeadHitBox":
+                return "Head";
+            case "BodyHitBox":
+                return "Spine_02";
+            case "LeftArmHitBox":
+                return "Shoulder_L";
+            case "RightArmHitBox":
+                return "Shoulder_R";
+            case "LeftLegHitBox":
+                return "UpperLeg_L";
+            case "RightLegHitBox":
+                return "UpperLeg_R";
+            default:
+                return string.Empty;
         }
     }
 

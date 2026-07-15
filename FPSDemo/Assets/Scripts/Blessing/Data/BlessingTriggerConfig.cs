@@ -17,6 +17,8 @@ namespace Blessing.Data
         public float cooldown;
         // 效果 key
         public string effectKey;
+        // 音效 key
+        public string audioKey;
         // 伤害倍率
         public float damageMultiplier;
         // 半径

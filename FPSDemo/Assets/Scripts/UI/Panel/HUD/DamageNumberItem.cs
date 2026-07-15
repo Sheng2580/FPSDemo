@@ -14,6 +14,7 @@ public class DamageNumberItem : MonoBehaviour
     [SerializeField] private TMP_Text damageText;
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private RectTransform rectTransform;
+    [SerializeField] private Color explosionDamageColor = new Color(1f, 0.08f, 0.05f, 1f);
 
     [Header("出现动画")]
     [SerializeField] private float spawnDuration = 0.16f;
@@ -33,6 +34,8 @@ public class DamageNumberItem : MonoBehaviour
     private Action<DamageNumberItem> _onComplete;
     private bool _isCritical;
     private bool _isFollowing;
+    private Color _defaultDamageColor = Color.white;
+    private bool _defaultDamageColorCached;
 
     public RectTransform RectTransform => rectTransform;
     public bool IsCritical => _isCritical;
@@ -58,6 +61,7 @@ public class DamageNumberItem : MonoBehaviour
         Vector2 targetPosition,
         float damage,
         bool isCritical,
+        bool isExplosionDamage,
         Action<DamageNumberItem> onComplete)
     {
         CacheReferences();
@@ -71,7 +75,7 @@ public class DamageNumberItem : MonoBehaviour
         rectTransform.anchoredPosition = startPosition;
         rectTransform.localScale = Vector3.one * spawnStartScale;
         SetAlpha(0f);
-        SetDamageText(damage);
+        SetDamageText(damage, isExplosionDamage);
 
         // 先放大淡入 停留后飞向能量文字
         _sequence = DOTween.Sequence();
@@ -93,6 +97,7 @@ public class DamageNumberItem : MonoBehaviour
         _onComplete = null;
         _isCritical = false;
         _isFollowing = false;
+        RestoreDefaultDamageColor();
         SetAlpha(0f);
         gameObject.SetActive(false);
     }
@@ -114,7 +119,7 @@ public class DamageNumberItem : MonoBehaviour
         callback?.Invoke(this);
     }
 
-    private void SetDamageText(float damage)
+    private void SetDamageText(float damage, bool isExplosionDamage)
     {
         if (damageText == null)
         {
@@ -122,6 +127,8 @@ public class DamageNumberItem : MonoBehaviour
         }
 
         float safeDamage = Mathf.Max(0f, damage);
+        CacheDefaultDamageColor();
+        damageText.color = isExplosionDamage ? explosionDamageColor : _defaultDamageColor;
         damageText.text = Mathf.Approximately(safeDamage % 1f, 0f)
             ? safeDamage.ToString("0")
             : safeDamage.ToString("0.#");
@@ -152,5 +159,26 @@ public class DamageNumberItem : MonoBehaviour
         canvasGroup ??= GetComponent<CanvasGroup>();
         canvasGroup ??= gameObject.AddComponent<CanvasGroup>();
         damageText ??= GetComponentInChildren<TMP_Text>(true);
+        CacheDefaultDamageColor();
+    }
+
+    private void CacheDefaultDamageColor()
+    {
+        if (_defaultDamageColorCached || damageText == null)
+        {
+            return;
+        }
+
+        _defaultDamageColor = damageText.color;
+        _defaultDamageColorCached = true;
+    }
+
+    private void RestoreDefaultDamageColor()
+    {
+        CacheDefaultDamageColor();
+        if (damageText != null)
+        {
+            damageText.color = _defaultDamageColor;
+        }
     }
 }

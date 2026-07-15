@@ -16,7 +16,7 @@ MonoBehaviour:
     weaponId: 3
     weaponName: Default Shotgun
     fireMode: 0
-    damage: 8
+    damage: 18
     fireInterval: 0.72
     magazineSize: 6
     maxReserveAmmo: 36
@@ -29,7 +29,7 @@ MonoBehaviour:
     reloadEndTime: 0
     canInterruptReloadByFire: 1
     attackType: 1
-    spreadAngle: 5.5
+    spreadAngle: 4.5
     pelletCount: 8
     maxPenetrationCount: 0
     penetrationDamageMultiplier: 0.5

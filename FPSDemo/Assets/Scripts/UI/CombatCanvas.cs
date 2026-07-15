@@ -51,6 +51,7 @@ public class CombatCanvas : BaseCanvas
     private void OnEnable()
     {
         CacheReferences();
+        ResetDisplay();
         AddListeners();
         SyncInitialWave();
         SyncInitialGold();

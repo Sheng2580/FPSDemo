@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Blessing.Data;
 using PlayerData;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Weapon;
 using Weapon.Data;
 
@@ -12,6 +13,8 @@ using Weapon.Data;
 public class BlessingEffectApplier : MonoBehaviour
 {
     private readonly Dictionary<int, BlessingConfig> _configMap = new Dictionary<int, BlessingConfig>();
+    private readonly Dictionary<WeaponConfig, int> _weaponBonusLevels = new Dictionary<WeaponConfig, int>();
+    private readonly BlessingTriggerRuntime _triggerRuntime = new BlessingTriggerRuntime();
     private PlayerController _player;
     private PlayerInventory _inventory;
     private PlayerEnergyRuntime _energyRuntime;
@@ -34,12 +37,34 @@ public class BlessingEffectApplier : MonoBehaviour
 
     private void OnEnable()
     {
+        SceneManager.sceneLoaded += OnSceneLoaded;
         EventCenter.Instance.AddEventListener<PlayerEnergyBlessingSelectedEventData>(GameEvent.PlayerEnergyBlessingSelected, OnBlessingSelected);
+        EventCenter.Instance.AddEventListener<EnemyDiedEventData>(GameEvent.EnemyDied, OnEnemyDied);
     }
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         EventCenter.Instance.RemoveEventListener<PlayerEnergyBlessingSelectedEventData>(GameEvent.PlayerEnergyBlessingSelected, OnBlessingSelected);
+        EventCenter.Instance.RemoveEventListener<EnemyDiedEventData>(GameEvent.EnemyDied, OnEnemyDied);
+        _weaponBonusLevels.Clear();
+        _triggerRuntime.Reset();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        _weaponBonusLevels.Clear();
+        _triggerRuntime.Reset();
+        _player = null;
+        _inventory = null;
+        _energyRuntime = null;
+        _skillController = null;
+        _weaponController = null;
+    }
+
+    private void OnEnemyDied(EnemyDiedEventData eventData)
+    {
+        _triggerRuntime.OnEnemyDied(eventData);
     }
 
     private void OnBlessingSelected(PlayerEnergyBlessingSelectedEventData eventData)
@@ -113,21 +138,21 @@ public class BlessingEffectApplier : MonoBehaviour
 
     private void ApplyBlessingConfig(BlessingConfig config, BlessingTier tier)
     {
-        if (config.effects == null)
+        if (config.effects != null)
         {
-            return;
-        }
-
-        for (int i = 0; i < config.effects.Length; i++)
-        {
-            BlessingEffectConfig effect = config.effects[i];
-            if (effect == null)
+            for (int i = 0; i < config.effects.Length; i++)
             {
-                continue;
-            }
+                BlessingEffectConfig effect = config.effects[i];
+                if (effect == null)
+                {
+                    continue;
+                }
 
-            ApplyEffect(config, effect, tier);
+                ApplyEffect(config, effect, tier);
+            }
         }
+
+        _triggerRuntime.ApplyConfig(config);
     }
 
     private void ApplyEffect(BlessingConfig config, BlessingEffectConfig effect, BlessingTier tier)
@@ -141,10 +166,20 @@ public class BlessingEffectApplier : MonoBehaviour
             case BlessingStatType.MoveSpeed:
                 ApplyMoveSpeed(effect.modifyType, value);
                 break;
+            case BlessingStatType.JumpHeight:
+                ApplyJumpHeight(effect.modifyType, value);
+                break;
+            case BlessingStatType.BerserkDuration:
+            case BlessingStatType.ExplosionDamage:
+            case BlessingStatType.PickupAmmoGain:
+            case BlessingStatType.PickupHealing:
+                ApplyPlayerRuntimeMultiplier(effect.statType, effect.modifyType, value);
+                break;
             case BlessingStatType.EnergyGain:
                 ApplyEnergyGain(effect.modifyType, value);
                 break;
             case BlessingStatType.WeaponDamage:
+            case BlessingStatType.WeaponUpgradeLevel:
             case BlessingStatType.WeaponMagazine:
             case BlessingStatType.WeaponRecoil:
                 ApplyWeaponStat(config, effect, value);
@@ -192,6 +227,50 @@ public class BlessingEffectApplier : MonoBehaviour
         }
 
         runtimeData.moveSpeedMultiplier = Mathf.Max(0.01f, ApplyNumericModifier(runtimeData.moveSpeedMultiplier, modifyType, value));
+    }
+
+    private void ApplyJumpHeight(BlessingModifyType modifyType, float value)
+    {
+        PlayerRuntimeData runtimeData = _player != null && _player.Stats != null ? _player.Stats.RuntimeData : null;
+        if (runtimeData == null)
+        {
+            return;
+        }
+
+        runtimeData.jumpHeightMultiplier = Mathf.Max(0.01f, ApplyNumericModifier(runtimeData.jumpHeightMultiplier, modifyType, value));
+    }
+
+    private void ApplyPlayerRuntimeMultiplier(BlessingStatType statType, BlessingModifyType modifyType, float value)
+    {
+        PlayerRuntimeData runtimeData = _player != null && _player.Stats != null ? _player.Stats.RuntimeData : null;
+        if (runtimeData == null)
+        {
+            return;
+        }
+
+        switch (statType)
+        {
+            case BlessingStatType.BerserkDuration:
+                runtimeData.berserkDurationMultiplier = Mathf.Max(
+                    0.01f,
+                    ApplyNumericModifier(runtimeData.berserkDurationMultiplier, modifyType, value));
+                break;
+            case BlessingStatType.ExplosionDamage:
+                runtimeData.explosionDamageMultiplier = Mathf.Max(
+                    0.01f,
+                    ApplyNumericModifier(runtimeData.explosionDamageMultiplier, modifyType, value));
+                break;
+            case BlessingStatType.PickupAmmoGain:
+                runtimeData.pickupAmmoMultiplier = Mathf.Max(
+                    0.01f,
+                    ApplyNumericModifier(runtimeData.pickupAmmoMultiplier, modifyType, value));
+                break;
+            case BlessingStatType.PickupHealing:
+                runtimeData.pickupHealingMultiplier = Mathf.Max(
+                    0.01f,
+                    ApplyNumericModifier(runtimeData.pickupHealingMultiplier, modifyType, value));
+                break;
+        }
     }
 
     private void ApplyEnergyGain(BlessingModifyType modifyType, float value)
@@ -269,6 +348,8 @@ public class BlessingEffectApplier : MonoBehaviour
             case BlessingStatType.WeaponDamage:
                 weaponConfig.damage = Mathf.Max(0f, ApplyNumericModifier(weaponConfig.damage, modifyType, value));
                 return true;
+            case BlessingStatType.WeaponUpgradeLevel:
+                return ApplyWeaponUpgradeLevels(weaponConfig, runtimeData, Mathf.RoundToInt(value));
             case BlessingStatType.WeaponMagazine:
                 return ApplyWeaponMagazine(weaponConfig, runtimeData, modifyType, value);
             case BlessingStatType.WeaponRecoil:
@@ -281,6 +362,39 @@ public class BlessingEffectApplier : MonoBehaviour
         }
 
         return false;
+    }
+
+    private bool ApplyWeaponUpgradeLevels(WeaponConfig weaponConfig, WeaponRuntimeData runtimeData, int addedLevels)
+    {
+        int safeAddedLevels = Mathf.Max(0, addedLevels);
+        if (weaponConfig == null || safeAddedLevels <= 0)
+        {
+            return false;
+        }
+
+        _weaponBonusLevels.TryGetValue(weaponConfig, out int previousBonusLevel);
+        int nextBonusLevel = previousBonusLevel + safeAddedLevels;
+        int previousMagazineSize = Mathf.Max(1, weaponConfig.magazineSize);
+        int previousReserveAmmo = Mathf.Max(0, weaponConfig.maxReserveAmmo);
+
+        PermanentUpgradeRules.ApplyWeaponBonusLevels(weaponConfig, previousBonusLevel, nextBonusLevel);
+        _weaponBonusLevels[weaponConfig] = nextBonusLevel;
+
+        if (runtimeData != null)
+        {
+            int magazineDelta = Mathf.Max(0, weaponConfig.magazineSize - previousMagazineSize);
+            int reserveDelta = Mathf.Max(0, weaponConfig.maxReserveAmmo - previousReserveAmmo);
+            runtimeData.currentAmmoInMagazine = Mathf.Clamp(
+                runtimeData.currentAmmoInMagazine + magazineDelta,
+                0,
+                weaponConfig.magazineSize);
+            runtimeData.currentReserveAmmo = Mathf.Clamp(
+                runtimeData.currentReserveAmmo + reserveDelta,
+                0,
+                weaponConfig.maxReserveAmmo);
+        }
+
+        return true;
     }
 
     private bool ApplyWeaponMagazine(WeaponConfig weaponConfig, WeaponRuntimeData runtimeData, BlessingModifyType modifyType, float value)

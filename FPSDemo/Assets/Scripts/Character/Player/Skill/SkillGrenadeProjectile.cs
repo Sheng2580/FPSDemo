@@ -30,6 +30,7 @@ public class SkillGrenadeProjectile : MonoBehaviour
         string poolKey)
     {
         StopAllCoroutines();
+        _explodeRoutine = null;
         _owner = owner;
         _config = config != null ? config.Clone() : PlayerSkillConfig.CreateDefaultGrenade();
         _runtimeData = runtimeData;
@@ -42,11 +43,12 @@ public class SkillGrenadeProjectile : MonoBehaviour
             _rigidbody = gameObject.AddComponent<Rigidbody>();
         }
 
-        _rigidbody.useGravity = true;
-        _rigidbody.isKinematic = false;
-        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        _rigidbody.detectCollisions = false;
         _rigidbody.velocity = Vector3.zero;
         _rigidbody.angularVelocity = Vector3.zero;
+        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        _rigidbody.isKinematic = true;
+        _rigidbody.useGravity = true;
 
         TrailRenderer[] trails = GetComponentsInChildren<TrailRenderer>(true);
         for (int i = 0; i < trails.Length; i++)
@@ -55,7 +57,16 @@ public class SkillGrenadeProjectile : MonoBehaviour
         }
 
         Vector3 throwDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
-        Vector3 velocity = throwDirection * Mathf.Max(0f, _config.throwForce) + Vector3.up * Mathf.Max(0f, _config.throwUpForce);
+        Vector3 velocity = throwDirection * Mathf.Max(0f, _config.throwForce)
+                           + Vector3.up * Mathf.Max(0f, _config.throwUpForce);
+
+        IgnoreOwnerCollisions();
+        _rigidbody.position = transform.position;
+        _rigidbody.rotation = transform.rotation;
+        Physics.SyncTransforms();
+        _rigidbody.isKinematic = false;
+        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        _rigidbody.detectCollisions = true;
         _rigidbody.velocity = velocity;
 
         _explodeRoutine = StartCoroutine(ExplodeAfterDelay());
@@ -154,9 +165,12 @@ public class SkillGrenadeProjectile : MonoBehaviour
             knockbackDirection = enemy.transform.position - (_owner != null ? _owner.transform.position : explosionPosition);
         }
 
-        float damageMultiplier = _runtimeData != null ? Mathf.Max(0f, _runtimeData.damageMultiplier) : 1f;
+        float skillDamageMultiplier = _runtimeData != null ? Mathf.Max(0f, _runtimeData.damageMultiplier) : 1f;
+        float explosionDamageMultiplier = _owner != null && _owner.Stats != null && _owner.Stats.RuntimeData != null
+            ? Mathf.Max(0f, _owner.Stats.RuntimeData.explosionDamageMultiplier)
+            : 1f;
         float radiusMultiplier = _runtimeData != null ? Mathf.Max(0f, _runtimeData.radiusMultiplier) : 1f;
-        float finalDamage = Mathf.Max(0f, config.damage * damageMultiplier);
+        float finalDamage = Mathf.Max(0f, config.damage * skillDamageMultiplier * explosionDamageMultiplier);
         float knockbackDistance = config.knockbackForce * radiusMultiplier * KnockbackForceToDistance;
 
         DamageInfo damageInfo = new DamageInfo(
@@ -168,6 +182,7 @@ public class SkillGrenadeProjectile : MonoBehaviour
             hitPoint,
             -knockbackDirection.normalized);
         damageInfo.ApplyBodyPart(EnemyHitBodyPart.Body, 1f, false);
+        damageInfo.MarkExplosionDamage();
         damageInfo.ApplyCustomHitReaction(
             knockbackDirection,
             knockbackDistance,
@@ -179,6 +194,34 @@ public class SkillGrenadeProjectile : MonoBehaviour
         EventCenter.Instance.EventTrigger(
             GameEvent.SkillHitEnemy,
             new SkillHitEnemyEventData(config, enemy, damageInfo.finalDamage, hitPoint, knockbackDirection));
+    }
+
+    private void IgnoreOwnerCollisions()
+    {
+        if (_owner == null)
+        {
+            return;
+        }
+
+        Collider[] grenadeColliders = GetComponentsInChildren<Collider>(true);
+        Collider[] ownerColliders = _owner.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < grenadeColliders.Length; i++)
+        {
+            Collider grenadeCollider = grenadeColliders[i];
+            if (grenadeCollider == null)
+            {
+                continue;
+            }
+
+            for (int j = 0; j < ownerColliders.Length; j++)
+            {
+                Collider ownerCollider = ownerColliders[j];
+                if (ownerCollider != null)
+                {
+                    Physics.IgnoreCollision(grenadeCollider, ownerCollider, true);
+                }
+            }
+        }
     }
 
     private bool TryResolveEnemy(Collider hitCollider, out EnemyController enemy, out EnemyHealth health)
@@ -215,8 +258,10 @@ public class SkillGrenadeProjectile : MonoBehaviour
     {
         if (_rigidbody != null)
         {
+            _rigidbody.detectCollisions = false;
             _rigidbody.velocity = Vector3.zero;
             _rigidbody.angularVelocity = Vector3.zero;
+            _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             _rigidbody.isKinematic = true;
         }
 
@@ -228,8 +273,18 @@ public class SkillGrenadeProjectile : MonoBehaviour
     {
         StopAllCoroutines();
         _explodeRoutine = null;
+        if (_rigidbody != null)
+        {
+            _rigidbody.detectCollisions = false;
+            _rigidbody.velocity = Vector3.zero;
+            _rigidbody.angularVelocity = Vector3.zero;
+            _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            _rigidbody.isKinematic = true;
+        }
+
         _owner = null;
         _runtimeData = null;
         _exploded = false;
     }
+
 }

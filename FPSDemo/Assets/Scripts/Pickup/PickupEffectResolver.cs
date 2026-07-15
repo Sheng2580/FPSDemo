@@ -15,7 +15,7 @@ namespace Pickup
         private const float TipDuration = 1.8f;
 
         [Header("调试")]
-        [SerializeField] private bool debugPickupTip = true;
+        [SerializeField] private bool debugPickupTip;
 
         private string _activeBerserkPostProcessKey;
         private Timer _berserkTimer;
@@ -53,7 +53,7 @@ namespace Pickup
                     displayValue = ApplyGrenade(player, config);
                     break;
                 case PickupItemType.Berserk:
-                    displayValue = ApplyBerserk(config);
+                    displayValue = ApplyBerserk(player, config);
                     break;
             }
 
@@ -74,7 +74,9 @@ namespace Pickup
                 return 0f;
             }
 
-            return player.Heal(Mathf.RoundToInt(config.healValue));
+            PlayerRuntimeData runtimeData = ResolveRuntimeData(player);
+            float multiplier = runtimeData != null ? Mathf.Max(0f, runtimeData.pickupHealingMultiplier) : 1f;
+            return player.Heal(Mathf.RoundToInt(config.healValue * multiplier));
         }
 
         private float ApplyAmmo(PlayerController player, PickupItemConfig config)
@@ -85,7 +87,10 @@ namespace Pickup
                 return 0f;
             }
 
-            return inventory.AddReserveAmmoToAllWeapons(config.ammoAmount);
+            PlayerRuntimeData runtimeData = ResolveRuntimeData(player);
+            float multiplier = runtimeData != null ? Mathf.Max(0f, runtimeData.pickupAmmoMultiplier) : 1f;
+            int ammoAmount = Mathf.Max(0, Mathf.RoundToInt(config.ammoAmount * multiplier));
+            return inventory.AddReserveAmmoToAllWeapons(ammoAmount);
         }
 
         private float ApplyGrenade(PlayerController player, PickupItemConfig config)
@@ -99,9 +104,11 @@ namespace Pickup
             return skillController.AddCurrentCount(SkillType.Grenade, config.grenadeAmount);
         }
 
-        private float ApplyBerserk(PickupItemConfig config)
+        private float ApplyBerserk(PlayerController player, PickupItemConfig config)
         {
-            float addedDuration = Mathf.Max(0f, config.berserkDuration);
+            PlayerRuntimeData runtimeData = ResolveRuntimeData(player);
+            float multiplier = runtimeData != null ? Mathf.Max(0f, runtimeData.berserkDurationMultiplier) : 1f;
+            float addedDuration = Mathf.Max(0f, config.berserkDuration * multiplier);
             if (addedDuration <= 0f)
             {
                 return 0f;
@@ -243,6 +250,11 @@ namespace Pickup
             }
 
             return FindObjectOfType<PlayerInventory>();
+        }
+
+        private static PlayerRuntimeData ResolveRuntimeData(PlayerController player)
+        {
+            return player != null && player.Stats != null ? player.Stats.RuntimeData : null;
         }
 
         private PlayerSkillController ResolveSkillController(PlayerController player)

@@ -9,10 +9,22 @@ namespace Blessing.Data
         MaxHp,
         // 移动速度
         MoveSpeed,
+        // 跳跃高度
+        JumpHeight,
+        // 狂暴持续时间
+        BerserkDuration,
+        // 爆炸伤害
+        ExplosionDamage,
+        // 弹药道具获取
+        PickupAmmoGain,
+        // 医疗道具恢复
+        PickupHealing,
         // 能量获取
         EnergyGain,
         // 武器伤害
         WeaponDamage,
+        // 武器额外等级
+        WeaponUpgradeLevel,
         // 武器弹匣
         WeaponMagazine,
         // 武器后坐力

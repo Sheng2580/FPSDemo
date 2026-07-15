@@ -17,6 +17,7 @@ namespace Combat
         public EnemyHitBodyPart hitPart;
         public float partMultiplier;
         public bool isCritical;
+        public bool isExplosionDamage;
         public bool hasCustomHitReaction;
         public bool forceFullHitReaction;
         public Vector3 customKnockbackDirection;
@@ -44,6 +45,7 @@ namespace Combat
             hitPart = EnemyHitBodyPart.Body;
             partMultiplier = 1f;
             isCritical = false;
+            isExplosionDamage = false;
             hasCustomHitReaction = false;
             forceFullHitReaction = false;
             customKnockbackDirection = Vector3.zero;
@@ -78,6 +80,11 @@ namespace Combat
             customKnockbackDistance = Mathf.Max(0f, knockbackDistance);
             customKnockbackDuration = Mathf.Max(0.01f, knockbackDuration);
             customHitStunDuration = Mathf.Max(0.01f, hitStunDuration);
+        }
+
+        public void MarkExplosionDamage()
+        {
+            isExplosionDamage = true;
         }
     }
 }

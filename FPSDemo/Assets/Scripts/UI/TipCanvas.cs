@@ -25,7 +25,7 @@ public class TipCanvas : BaseCanvas
     [SerializeField] private Ease hideEase = Ease.InQuad;
 
     [Header("调试")]
-    [SerializeField] private bool debugTip = true;
+    [SerializeField] private bool debugTip;
 
     private RectTransform _tipRoot;
     private Vector2 _baseAnchoredPosition;

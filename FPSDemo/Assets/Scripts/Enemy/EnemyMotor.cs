@@ -38,6 +38,9 @@ namespace Enemy
         [SerializeField] private float rootMotionFallbackMinDelta = 0.001f;
         [SerializeField] private float rootMotionFallbackSpeedMultiplier = 0.7f;
         [SerializeField] private float rootMotionSpeedMultiplier = 1f;
+        [SerializeField] private float rootMotionReferenceSpeed = 2.2f;
+        [SerializeField] private float rootMotionMinSpeedScale = 0.35f;
+        [SerializeField] private float rootMotionMaxSpeedScale = 4.5f;
         [SerializeField] private float gravity = -20f;
 
         [Header("导航链接")]
@@ -310,8 +313,15 @@ namespace Enemy
 
             _lastRootMotionFrame = Time.frameCount;
 
-            // 根运动提供基础步伐，导航只修正朝向和路径方向
-            Vector3 motion = _wantsMove ? deltaPosition * Mathf.Max(0f, rootMotionSpeedMultiplier) : Vector3.zero;
+            // 根运动保留动画步伐，并按照敌人配置速度缩放实际位移
+            float referenceSpeed = Mathf.Max(0.1f, rootMotionReferenceSpeed);
+            float speedScale = Mathf.Clamp(
+                _moveSpeed / referenceSpeed,
+                Mathf.Max(0f, rootMotionMinSpeedScale),
+                Mathf.Max(rootMotionMinSpeedScale, rootMotionMaxSpeedScale));
+            Vector3 motion = _wantsMove
+                ? deltaPosition * Mathf.Max(0f, rootMotionSpeedMultiplier) * speedScale
+                : Vector3.zero;
             Vector3 horizontalMotion = motion;
             horizontalMotion.y = 0f;
             if (_wantsMove

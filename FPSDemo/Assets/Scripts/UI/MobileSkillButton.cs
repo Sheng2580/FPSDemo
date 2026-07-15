@@ -15,6 +15,7 @@ public class MobileSkillButton : MonoBehaviour, IPointerDownHandler
     private float _cooldownRemaining;
     private int _currentCount = -1;
     private int _maxCount;
+    private PlayerSkillController _skillController;
 
     public SkillType SkillType => skillType;
 
@@ -28,6 +29,8 @@ public class MobileSkillButton : MonoBehaviour, IPointerDownHandler
     {
         EventCenter.Instance.AddEventListener<SkillCooldownEventData>(GameEvent.SkillCooldownChanged, OnSkillCooldownChanged);
         EventCenter.Instance.AddEventListener<SkillChargeEventData>(GameEvent.SkillChargeChanged, OnSkillChargeChanged);
+        ResetRuntimeState();
+        SyncRuntimeState();
         UpdateVisual();
     }
 
@@ -47,6 +50,7 @@ public class MobileSkillButton : MonoBehaviour, IPointerDownHandler
             label.text = displayText;
         }
 
+        SyncRuntimeState();
         UpdateVisual();
     }
 
@@ -94,6 +98,36 @@ public class MobileSkillButton : MonoBehaviour, IPointerDownHandler
     {
         targetGraphic ??= GetComponent<Graphic>();
         label ??= GetComponentInChildren<Text>(true);
+    }
+
+    private void ResetRuntimeState()
+    {
+        _cooldownRemaining = 0f;
+        _currentCount = -1;
+        _maxCount = 0;
+    }
+
+    private void SyncRuntimeState()
+    {
+        if (_skillController == null)
+        {
+            _skillController = FindObjectOfType<PlayerSkillController>();
+        }
+
+        if (_skillController == null
+            || !_skillController.TryGetRuntimeState(
+                skillType,
+                out float cooldownRemaining,
+                out _,
+                out int currentCount,
+                out int maxCount))
+        {
+            return;
+        }
+
+        _cooldownRemaining = cooldownRemaining;
+        _currentCount = currentCount;
+        _maxCount = maxCount;
     }
 
     private void UpdateVisual()

@@ -329,9 +329,10 @@ namespace Weapon
         {
             Vector3 direction = CreatePelletDirection(raycastCamera, pelletIndex, pelletCount);
             Ray ray = new Ray(raycastCamera.transform.position, direction);
-            LayerMask hitLayerMask = _config.hitLayerMask.value != 0
+            int configuredHitLayerMask = _config.hitLayerMask.value != 0
                 ? _config.hitLayerMask
                 : Physics.DefaultRaycastLayers;
+            int hitLayerMask = CombatLayerNames.ExcludePlayerAndBoundaryLayers(configuredHitLayerMask);
 
             if (!Physics.Raycast(ray, out RaycastHit hit, _config.range, hitLayerMask, QueryTriggerInteraction.Collide))
             {

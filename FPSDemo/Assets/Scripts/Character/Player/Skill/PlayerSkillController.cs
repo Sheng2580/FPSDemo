@@ -11,7 +11,10 @@ public class PlayerSkillController : MonoBehaviour
 {
     private const float KnockbackForceToDistance = 0.18f;
     private const float DefaultSkillHitKnockbackDuration = 0.32f;
-    private const float GrenadeCollisionRadius = 0.7f;
+    private const float GrenadePhysicalRadius = 0.22f;
+    private const float GrenadeEnemyTriggerRadius = 0.7f;
+    private const float GrenadeSpawnForwardOffset = 0.65f;
+    private const float GrenadeSpawnDownOffset = 0.12f;
 
     [Header("技能配置")]
     [SerializeField] private PlayerSkillConfigAsset dodgeConfigAsset;
@@ -22,7 +25,6 @@ public class PlayerSkillController : MonoBehaviour
     [Header("检测")]
     [SerializeField] private LayerMask skillHitLayerMask = ~0;
     [SerializeField] private QueryTriggerInteraction hitTriggerInteraction = QueryTriggerInteraction.Collide;
-    [SerializeField] private Transform grenadeSpawnPoint;
 
     [Header("调试")]
     [SerializeField] private bool debugSkill;
@@ -167,6 +169,32 @@ public class PlayerSkillController : MonoBehaviour
         }
 
         return addedCount;
+    }
+
+    public bool TryGetRuntimeState(
+        SkillType skillType,
+        out float cooldownRemaining,
+        out float cooldownDuration,
+        out int currentCount,
+        out int maxCount)
+    {
+        cooldownRemaining = 0f;
+        cooldownDuration = 0f;
+        currentCount = 0;
+        maxCount = 0;
+        if (!_configs.TryGetValue(skillType, out PlayerSkillConfig config)
+            || !_runtimeData.TryGetValue(skillType, out PlayerSkillRuntimeData runtimeData)
+            || config == null
+            || runtimeData == null)
+        {
+            return false;
+        }
+
+        cooldownRemaining = Mathf.Max(0f, runtimeData.cooldownRemaining);
+        cooldownDuration = GetCooldown(config, runtimeData);
+        currentCount = Mathf.Max(0, runtimeData.currentCount);
+        maxCount = Mathf.Max(0, runtimeData.maxCount);
+        return true;
     }
 
     private void CacheReferences()
@@ -472,9 +500,6 @@ public class PlayerSkillController : MonoBehaviour
             return;
         }
 
-        Vector3 spawnPosition = GetGrenadeSpawnPosition();
-        Vector3 direction = GetSkillForward();
-        Quaternion rotation = Quaternion.LookRotation(direction, Vector3.up);
         PlayerSkillConfig projectileConfig = config.Clone();
         string projectileKey = string.IsNullOrEmpty(projectileConfig.projectileResourceKey)
             ? "bomb"
@@ -493,6 +518,11 @@ public class PlayerSkillController : MonoBehaviour
                 PoolMgr.Instance.pushObj(projectileKey, grenadeObject);
                 return;
             }
+
+            // AB 异步返回后重新读取玩家和摄像机位置 避免移动时使用旧坐标
+            Vector3 direction = GetSkillForward();
+            Vector3 spawnPosition = GetGrenadeSpawnPosition(direction);
+            Quaternion rotation = Quaternion.LookRotation(direction, Vector3.up);
 
             PrepareGrenadeObject(grenadeObject, projectileKey, spawnPosition, rotation);
             SkillGrenadeProjectile projectile = grenadeObject.GetComponent<SkillGrenadeProjectile>();
@@ -626,7 +656,6 @@ public class PlayerSkillController : MonoBehaviour
     {
         grenadeObject.name = projectileKey;
         grenadeObject.transform.SetParent(null, true);
-        grenadeObject.transform.SetPositionAndRotation(position, rotation);
 
         Rigidbody rigidbody = grenadeObject.GetComponent<Rigidbody>();
         if (rigidbody == null)
@@ -634,20 +663,97 @@ public class PlayerSkillController : MonoBehaviour
             rigidbody = grenadeObject.AddComponent<Rigidbody>();
         }
 
-        rigidbody.useGravity = true;
-        rigidbody.isKinematic = false;
-        rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-        rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        // 定位前先冻结刚体 避免对象池激活时和玩家碰撞体发生解穿
+        rigidbody.detectCollisions = false;
+        rigidbody.velocity = Vector3.zero;
+        rigidbody.angularVelocity = Vector3.zero;
+        rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        rigidbody.isKinematic = true;
+        rigidbody.interpolation = RigidbodyInterpolation.None;
+        grenadeObject.transform.SetPositionAndRotation(position, rotation);
+        rigidbody.position = position;
+        rigidbody.rotation = rotation;
+        Physics.SyncTransforms();
 
-        SphereCollider sphereCollider = grenadeObject.GetComponent<SphereCollider>();
-        if (sphereCollider == null && grenadeObject.GetComponentInChildren<Collider>(true) == null)
+        rigidbody.useGravity = true;
+        rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+
+        SphereCollider physicalCollider = null;
+        SphereCollider enemyTrigger = null;
+        SphereCollider[] sphereColliders = grenadeObject.GetComponents<SphereCollider>();
+        for (int i = 0; i < sphereColliders.Length; i++)
         {
-            sphereCollider = grenadeObject.AddComponent<SphereCollider>();
+            SphereCollider sphereCollider = sphereColliders[i];
+            if (sphereCollider.isTrigger)
+            {
+                enemyTrigger ??= sphereCollider;
+            }
+            else
+            {
+                physicalCollider ??= sphereCollider;
+            }
         }
 
-        if (sphereCollider != null)
+        if (physicalCollider == null && grenadeObject.GetComponentInChildren<Collider>(true) == null)
         {
-            sphereCollider.radius = Mathf.Max(sphereCollider.radius, GrenadeCollisionRadius);
+            physicalCollider = grenadeObject.AddComponent<SphereCollider>();
+        }
+
+        if (physicalCollider != null)
+        {
+            physicalCollider.radius = GrenadePhysicalRadius;
+        }
+
+        if (enemyTrigger != null)
+        {
+            enemyTrigger.radius = GrenadeEnemyTriggerRadius;
+        }
+
+        ExcludeGrenadeIgnoredLayers(grenadeObject);
+    }
+
+    private static void ExcludeGrenadeIgnoredLayers(GameObject grenadeObject)
+    {
+        int playerLayer = CombatLayerNames.PlayerLayer;
+        int wallLayer = CombatLayerNames.PlayerBoundaryLayer;
+        int enemyLayer = CombatLayerNames.EnemyLayer;
+        if (grenadeObject == null)
+        {
+            return;
+        }
+
+        int commonExcludedMask = 0;
+        if (playerLayer >= 0)
+        {
+            commonExcludedMask |= 1 << playerLayer;
+        }
+
+        if (wallLayer >= 0)
+        {
+            commonExcludedMask |= 1 << wallLayer;
+        }
+
+        int physicalExcludedMask = commonExcludedMask;
+        if (enemyLayer >= 0)
+        {
+            physicalExcludedMask |= 1 << enemyLayer;
+        }
+
+        if (physicalExcludedMask == 0)
+        {
+            return;
+        }
+
+        Collider[] colliders = grenadeObject.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider targetCollider = colliders[i];
+            if (targetCollider != null)
+            {
+                targetCollider.excludeLayers |= targetCollider.isTrigger
+                    ? commonExcludedMask
+                    : physicalExcludedMask;
+            }
         }
     }
 
@@ -663,19 +769,17 @@ public class PlayerSkillController : MonoBehaviour
 
     private Vector3 GetSkillForward()
     {
-        Transform source = _playerCamera != null ? _playerCamera.transform : transform;
-        Vector3 forward = source.forward;
+        Vector3 forward = _playerCamera != null
+            ? _playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)).direction
+            : transform.forward;
         return forward.sqrMagnitude > 0.0001f ? forward.normalized : transform.forward;
     }
 
-    private Vector3 GetGrenadeSpawnPosition()
+    private Vector3 GetGrenadeSpawnPosition(Vector3 direction)
     {
-        if (grenadeSpawnPoint != null)
-        {
-            return grenadeSpawnPoint.position;
-        }
-
-        return GetSkillOrigin() + GetSkillForward() * 0.45f + Vector3.down * 0.12f;
+        return GetSkillOrigin()
+               + direction * GrenadeSpawnForwardOffset
+               + Vector3.down * GrenadeSpawnDownOffset;
     }
 
     private float GetCooldown(PlayerSkillConfig config, PlayerSkillRuntimeData runtimeData)

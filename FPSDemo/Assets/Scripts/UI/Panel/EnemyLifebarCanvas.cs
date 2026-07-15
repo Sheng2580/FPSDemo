@@ -228,15 +228,29 @@ public class EnemyLifebarCanvas : BaseCanvas
 
     private void RecycleAll()
     {
+        ClearAllHideTimers();
         foreach (KeyValuePair<EnemyController, LifebarView> pair in _activeViews)
         {
-            ClearHideTimer(pair.Key);
             pair.Value.Release();
             _freeViews.Enqueue(pair.Value);
         }
 
         _activeViews.Clear();
         _removeBuffer.Clear();
+    }
+
+    private void ClearAllHideTimers()
+    {
+        MultiTimerManager timerManager = MultiTimerManager.Instance;
+        if (timerManager != null)
+        {
+            foreach (string timerId in _activeTimerIds)
+            {
+                timerManager.RemoveTimer(timerId);
+            }
+        }
+
+        _activeTimerIds.Clear();
     }
 
     private void RestartHideTimer(EnemyController enemy)

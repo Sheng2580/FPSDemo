@@ -9,6 +9,7 @@ namespace Akila.FPSFramework
     [InitializeOnLoad]
     internal static class ReviewReminder
     {
+        private static readonly bool ReviewReminderEnabled = false;
         // ==== CONFIG ====
         private static readonly TimeSpan ReminderInterval = TimeSpan.FromDays(7); // wait 7 days
         private static string AssetStoreUrl = FPSFrameworkSettings.reviewUrl;
@@ -23,6 +24,13 @@ namespace Akila.FPSFramework
 
         static ReviewReminder()
         {
+            if (!ReviewReminderEnabled)
+            {
+                EditorPrefs.SetBool(DisabledKey, true);
+                EditorPrefs.SetBool(PendingKey, false);
+                return;
+            }
+
             if (!EditorPrefs.HasKey(NextTriggerKey))
             {
                 ScheduleNext(DateTime.UtcNow + ReminderInterval);

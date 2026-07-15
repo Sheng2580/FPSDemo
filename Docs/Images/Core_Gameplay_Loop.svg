@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#14213d" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#344054"/>
+    </marker>
+    <marker id="arrowTeal" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#00897b"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#f7f8fa"/>
+
+  <text x="800" y="72" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="38" font-weight="700" fill="#182230">核心玩法循环</text>
+  <text x="800" y="112" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="20" fill="#667085">局内成长强化当前战斗，结算与永久升级推动下一局</text>
+
+  <text x="360" y="170" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" font-weight="600" fill="#31578a">局外准备</text>
+  <line x1="290" y1="182" x2="430" y2="182" stroke="#8fb3df" stroke-width="3"/>
+
+  <text x="1065" y="170" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" font-weight="600" fill="#a23b36">局内战斗</text>
+  <line x1="995" y1="182" x2="1135" y2="182" stroke="#df918b" stroke-width="3"/>
+
+  <!-- Main flow arrows -->
+  <line x1="330" y1="290" x2="382" y2="290" stroke="#344054" stroke-width="5" marker-end="url(#arrow)"/>
+  <line x1="650" y1="290" x2="702" y2="290" stroke="#344054" stroke-width="5" marker-end="url(#arrow)"/>
+  <line x1="970" y1="290" x2="1022" y2="290" stroke="#344054" stroke-width="5" marker-end="url(#arrow)"/>
+
+  <!-- Fight to growth and back -->
+  <path d="M 1160 365 C 1160 408 1160 430 1160 472" fill="none" stroke="#00897b" stroke-width="5" marker-end="url(#arrowTeal)"/>
+  <text x="1178" y="424" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="16" fill="#00796b">获得能量与道具</text>
+  <path d="M 1280 475 C 1280 430 1280 410 1280 368" fill="none" stroke="#00897b" stroke-width="5" marker-end="url(#arrowTeal)"/>
+  <text x="1298" y="438" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="16" fill="#00796b">强化后继续战斗</text>
+
+  <!-- Fight to result -->
+  <path d="M 1060 350 C 1020 430 940 460 860 492" fill="none" stroke="#344054" stroke-width="5" marker-end="url(#arrow)"/>
+  <text x="950" y="431" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="16" fill="#667085">玩家死亡</text>
+
+  <!-- Result to save -->
+  <line x1="710" y1="565" x2="658" y2="565" stroke="#344054" stroke-width="5" marker-end="url(#arrow)"/>
+
+  <!-- Save back to hall -->
+  <path d="M 520 490 C 520 440 520 415 520 368" fill="none" stroke="#344054" stroke-width="5" marker-end="url(#arrow)"/>
+  <text x="540" y="434" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="16" fill="#667085">下一局</text>
+
+  <!-- Node 1 -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="220" width="260" height="145" rx="8" fill="#ffffff" stroke="#cfd5dd" stroke-width="2"/>
+    <circle cx="105" cy="255" r="20" fill="#475467"/>
+    <text x="105" y="262" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">1</text>
+    <text x="200" y="273" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="24" font-weight="700" fill="#182230">开始游戏</text>
+    <text x="200" y="315" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#667085">创建新游戏</text>
+    <text x="200" y="342" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#667085">或读取已有存档</text>
+  </g>
+
+  <!-- Node 2 -->
+  <g filter="url(#shadow)">
+    <rect x="390" y="220" width="260" height="145" rx="8" fill="#eef5ff" stroke="#76a5dc" stroke-width="2"/>
+    <circle cx="425" cy="255" r="20" fill="#31578a"/>
+    <text x="425" y="262" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">2</text>
+    <text x="520" y="273" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="24" font-weight="700" fill="#183b66">大厅准备</text>
+    <text x="520" y="315" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#31578a">升级玩家与武器</text>
+    <text x="520" y="342" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#31578a">选择本局携带武器</text>
+  </g>
+
+  <!-- Node 3 -->
+  <g filter="url(#shadow)">
+    <rect x="710" y="220" width="260" height="145" rx="8" fill="#fff1f0" stroke="#dd817b" stroke-width="2"/>
+    <circle cx="745" cy="255" r="20" fill="#a23b36"/>
+    <text x="745" y="262" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">3</text>
+    <text x="840" y="273" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="24" font-weight="700" fill="#7c2d28">进入战斗</text>
+    <text x="840" y="315" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#a23b36">异步加载 Combat</text>
+    <text x="840" y="342" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#a23b36">初始化局内状态</text>
+  </g>
+
+  <!-- Node 4 -->
+  <g filter="url(#shadow)">
+    <rect x="1030" y="220" width="330" height="145" rx="8" fill="#fff1f0" stroke="#c84d44" stroke-width="3"/>
+    <circle cx="1065" cy="255" r="20" fill="#b42318"/>
+    <text x="1065" y="262" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">4</text>
+    <text x="1195" y="273" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="24" font-weight="700" fill="#7a271a">持续战斗</text>
+    <text x="1195" y="315" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#9b2c24">移动、射击、释放技能</text>
+    <text x="1195" y="342" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#9b2c24">击杀敌人并推进波次</text>
+  </g>
+
+  <!-- Node 5 -->
+  <g filter="url(#shadow)">
+    <rect x="1030" y="475" width="330" height="180" rx="8" fill="#eaf8f5" stroke="#42a99d" stroke-width="3"/>
+    <circle cx="1065" cy="510" r="20" fill="#00897b"/>
+    <text x="1065" y="517" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">5</text>
+    <text x="1195" y="528" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="24" font-weight="700" fill="#00695c">局内成长</text>
+    <text x="1195" y="570" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#00796b">获得祝福能量</text>
+    <text x="1195" y="599" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#00796b">三选一祝福强化</text>
+    <text x="1195" y="628" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#00796b">拾取治疗、弹药与狂暴道具</text>
+  </g>
+
+  <!-- Node 6 -->
+  <g filter="url(#shadow)">
+    <rect x="710" y="490" width="260" height="150" rx="8" fill="#fff8e7" stroke="#d6a53b" stroke-width="2"/>
+    <circle cx="745" cy="525" r="20" fill="#b88216"/>
+    <text x="745" y="532" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">6</text>
+    <text x="840" y="543" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="24" font-weight="700" fill="#7a5510">战斗结算</text>
+    <text x="840" y="585" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#946c1d">获得金币</text>
+    <text x="840" y="614" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#946c1d">更新最高时间与击杀纪录</text>
+  </g>
+
+  <!-- Node 7 -->
+  <g filter="url(#shadow)">
+    <rect x="390" y="490" width="260" height="150" rx="8" fill="#f2f4f7" stroke="#98a2b3" stroke-width="2"/>
+    <circle cx="425" cy="525" r="20" fill="#475467"/>
+    <text x="425" y="532" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">7</text>
+    <text x="520" y="543" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="24" font-weight="700" fill="#344054">保存并返回</text>
+    <text x="520" y="585" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#667085">保存金币与永久成长</text>
+    <text x="520" y="614" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="18" fill="#667085">返回大厅进入下一局</text>
+  </g>
+
+  <rect x="260" y="735" width="1080" height="78" rx="8" fill="#ffffff" stroke="#d0d5dd" stroke-width="2"/>
+  <text x="800" y="783" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif" font-size="22" font-weight="600" fill="#344054">核心闭环：局内祝福提升单局战斗能力，结算金币转化为局外永久成长</text>
+</svg>

@@ -25,13 +25,22 @@ namespace Blessing.Data
             List<BlessingRollResult> results = new List<BlessingRollResult>(targetCount);
             HashSet<int> selectedIds = new HashSet<int>();
 
-            if (IsFirstRoll(context))
+            BlessingConfig persistentGuaranteed = PickPersistentGuaranteed(candidates, selectedIds, context);
+            if (persistentGuaranteed != null)
+            {
+                selectedIds.Add(persistentGuaranteed.blessingId);
+                results.Add(new BlessingRollResult(
+                    persistentGuaranteed,
+                    ResolveTier(persistentGuaranteed, selectedTier)));
+            }
+
+            if (results.Count < targetCount && IsFirstRoll(context))
             {
                 BlessingConfig guaranteed = PickWeighted(candidates, selectedIds, true);
                 if (guaranteed != null)
                 {
                     selectedIds.Add(guaranteed.blessingId);
-                    results.Add(new BlessingRollResult(guaranteed, selectedTier));
+                    results.Add(new BlessingRollResult(guaranteed, ResolveTier(guaranteed, selectedTier)));
                 }
             }
 
@@ -44,10 +53,89 @@ namespace Blessing.Data
                 }
 
                 selectedIds.Add(selected.blessingId);
-                results.Add(new BlessingRollResult(selected, selectedTier));
+                results.Add(new BlessingRollResult(selected, ResolveTier(selected, selectedTier)));
             }
 
             return results.ToArray();
+        }
+
+        private static BlessingConfig PickPersistentGuaranteed(
+            List<BlessingConfig> candidates,
+            HashSet<int> selectedIds,
+            BlessingRollContext context)
+        {
+            int currentRoll = GetSelectedBlessingCount(context) + 1;
+            float totalWeight = 0f;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                BlessingConfig candidate = candidates[i];
+                if (!IsPersistentGuaranteeActive(candidate, selectedIds, currentRoll))
+                {
+                    continue;
+                }
+
+                totalWeight += Mathf.Max(0f, candidate.weight);
+            }
+
+            if (totalWeight <= 0f)
+            {
+                return null;
+            }
+
+            float roll = Random.value * totalWeight;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                BlessingConfig candidate = candidates[i];
+                if (!IsPersistentGuaranteeActive(candidate, selectedIds, currentRoll))
+                {
+                    continue;
+                }
+
+                roll -= Mathf.Max(0f, candidate.weight);
+                if (roll <= 0f)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsPersistentGuaranteeActive(
+            BlessingConfig config,
+            HashSet<int> selectedIds,
+            int currentRoll)
+        {
+            return config != null
+                   && !selectedIds.Contains(config.blessingId)
+                   && config.guaranteedUntilSelectedFromRoll > 0
+                   && currentRoll >= config.guaranteedUntilSelectedFromRoll;
+        }
+
+        private static int GetSelectedBlessingCount(BlessingRollContext context)
+        {
+            if (context.stacks == null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < context.stacks.Length; i++)
+            {
+                count += Mathf.Max(0, context.stacks[i].stackCount);
+            }
+
+            return count;
+        }
+
+        private static BlessingTier ResolveTier(BlessingConfig config, BlessingTier rolledTier)
+        {
+            return config != null
+                   && (config.effects == null || config.effects.Length == 0)
+                   && config.triggers != null
+                   && config.triggers.Length > 0
+                ? config.tier
+                : rolledTier;
         }
 
         private static List<BlessingConfig> BuildCandidateList(IReadOnlyList<BlessingConfig> configs, BlessingRollContext context)

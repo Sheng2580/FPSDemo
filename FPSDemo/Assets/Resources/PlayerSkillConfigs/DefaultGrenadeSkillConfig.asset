@@ -35,7 +35,7 @@ MonoBehaviour:
     maxCount: 3
     explosionRadius: 6.5
     explosionDelay: 1.2
-    throwForce: 20
+    throwForce: 12
     throwUpForce: 1.2
     projectileLifeTime: 5
     iconKey: Skill_Grenade_Icon

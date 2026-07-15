@@ -592,6 +592,17 @@ namespace Combat
             GameObject prefabInstance = null;
             ABManager.Instance.LoadResAsync<GameObject>(assetBundleName, assetName, loadedObject =>
             {
+                if (this == null || !IsCombatScene())
+                {
+                    if (loadedObject != null)
+                    {
+                        Destroy(loadedObject);
+                    }
+
+                    loaded = true;
+                    return;
+                }
+
                 prefabInstance = loadedObject;
                 loaded = true;
             });

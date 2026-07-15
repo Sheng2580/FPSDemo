@@ -104,22 +104,25 @@ namespace Blessing.Data
                 weight = row.weight,
                 maxStack = row.maxStack,
                 guaranteedFirstRoll = row.guaranteedFirstRoll,
+                guaranteedUntilSelectedFromRoll = row.guaranteedUntilSelectedFromRoll,
                 requiredWeaponId = row.requiredWeaponId,
                 requiresSkillType = !string.IsNullOrWhiteSpace(row.requiredSkillType),
                 requiredSkillType = ParseEnum(row.requiredSkillType, SkillType.Dodge),
                 iconKey = row.iconKey,
-                effects = new[]
-                {
-                    new BlessingEffectConfig
+                effects = string.IsNullOrWhiteSpace(row.effectStatType)
+                    ? Array.Empty<BlessingEffectConfig>()
+                    : new[]
                     {
-                        targetType = ParseEnum(row.effectTargetType, targetType),
-                        statType = ParseEnum(row.effectStatType, BlessingStatType.MaxHp),
-                        modifyType = ParseEnum(row.modifyType, BlessingModifyType.Add),
-                        normalValue = row.normalValue,
-                        plusValue = row.plusValue,
-                        plusPlusValue = row.plusPlusValue
-                    }
-                },
+                        new BlessingEffectConfig
+                        {
+                            targetType = ParseEnum(row.effectTargetType, targetType),
+                            statType = ParseEnum(row.effectStatType, BlessingStatType.MaxHp),
+                            modifyType = ParseEnum(row.modifyType, BlessingModifyType.Add),
+                            normalValue = row.normalValue,
+                            plusValue = row.plusValue,
+                            plusPlusValue = row.plusPlusValue
+                        }
+                    },
                 triggers = triggerType == BlessingTriggerType.None
                     ? Array.Empty<BlessingTriggerConfig>()
                     : new[]
@@ -130,6 +133,7 @@ namespace Blessing.Data
                             chance = row.triggerChance,
                             cooldown = row.triggerCooldown,
                             effectKey = row.triggerEffectKey,
+                            audioKey = row.triggerAudioKey,
                             damageMultiplier = row.triggerDamageMultiplier,
                             radius = row.triggerRadius,
                             chainCount = row.triggerChainCount,
@@ -199,6 +203,7 @@ namespace Blessing.Data
             public float weight;
             public int maxStack;
             public bool guaranteedFirstRoll;
+            public int guaranteedUntilSelectedFromRoll;
             public int requiredWeaponId;
             public string requiredSkillType;
             public string iconKey;
@@ -212,6 +217,7 @@ namespace Blessing.Data
             public float triggerChance;
             public float triggerCooldown;
             public string triggerEffectKey;
+            public string triggerAudioKey;
             public float triggerDamageMultiplier;
             public float triggerRadius;
             public int triggerChainCount;

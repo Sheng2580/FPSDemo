@@ -16,9 +16,12 @@ public class GameManager : MonoBehaviour
     {
         // 每次进入播放都清理事件中心 兼容编辑器关闭域重载
         EventCenter.Instance.Clear();
+        ConfigurePlayerBoundaryPhysics();
         CombatFeedbackManager.EnsureExists();
         _ = EffectMgr.Instance;
-        MusicMgr.Instance?.PreloadDefaultUISounds();
+        MusicMgr musicMgr = MusicMgr.Instance;
+        musicMgr?.PreloadDefaultUISounds();
+        musicMgr?.PlayDefaultBGMusic();
 
         if (instance != null)
         {
@@ -42,6 +45,7 @@ public class GameManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         ApplyMobileScreenSettings();
         ApplyMobileGraphicsSettings();
+        ConfigurePlayerBoundaryPhysics();
     }
 
     private void OnApplicationFocus(bool hasFocus)
@@ -76,5 +80,25 @@ public class GameManager : MonoBehaviour
         // 编辑器也应用移动端默认画质 方便用同一套画面压力测试 Combat
         MobileGraphicsQuality.ApplyDefaultMobileProfile();
 #endif
+    }
+
+    private static void ConfigurePlayerBoundaryPhysics()
+    {
+        int enemyLayer = CombatLayerNames.EnemyLayer;
+        if (enemyLayer < 0)
+        {
+            return;
+        }
+
+        IgnoreBoundaryCollision(CombatLayerNames.PlayerBoundary, enemyLayer);
+    }
+
+    private static void IgnoreBoundaryCollision(string boundaryLayerName, int enemyLayer)
+    {
+        int boundaryLayer = LayerMask.NameToLayer(boundaryLayerName);
+        if (boundaryLayer >= 0 && boundaryLayer != enemyLayer)
+        {
+            Physics.IgnoreLayerCollision(boundaryLayer, enemyLayer, true);
+        }
     }
 }

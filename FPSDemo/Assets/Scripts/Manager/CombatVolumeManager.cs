@@ -204,6 +204,7 @@ public class CombatVolumeManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        ResetTransientEffectsForSceneChange();
         if (combatVolume == null || usingRuntimeCreatedVolume)
         {
             if (usingRuntimeCreatedVolume && combatVolume != null)
@@ -223,6 +224,15 @@ public class CombatVolumeManager : MonoBehaviour
         EnsurePlayerDamageConfig();
         EnsureCombatVolume();
         RefreshCameraPostProcessing();
+    }
+
+    private void ResetTransientEffectsForSceneChange()
+    {
+        StopDamagePulseRoutine();
+        StopSkillPulseRoutine();
+        StopBerserkPulseRoutine();
+        damageHoldEndTime = 0f;
+        RestoreBaseValues();
     }
 
     public void PlayPlayerDamagePulse(float intensity)

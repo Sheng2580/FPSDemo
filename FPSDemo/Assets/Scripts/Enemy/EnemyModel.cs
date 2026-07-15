@@ -71,18 +71,7 @@ namespace Enemy
                 return;
             }
 
-            // 不同敌人共用同一套执行代码，只替换动画状态名和过渡参数
-            idleStateName = string.IsNullOrEmpty(runtimeStats.idleStateName) ? idleStateName : runtimeStats.idleStateName;
-            walkStateName = string.IsNullOrEmpty(runtimeStats.walkStateName) ? walkStateName : runtimeStats.walkStateName;
-            runStateName = string.IsNullOrEmpty(runtimeStats.runStateName) ? runStateName : runtimeStats.runStateName;
-            attackStateName = string.IsNullOrEmpty(runtimeStats.attackStateName) ? attackStateName : runtimeStats.attackStateName;
-            damageStateName = string.IsNullOrEmpty(runtimeStats.damageStateName) ? damageStateName : runtimeStats.damageStateName;
-            deathStateName = string.IsNullOrEmpty(runtimeStats.deathStateName) ? deathStateName : runtimeStats.deathStateName;
-            locomotionTransition = Mathf.Max(0.01f, runtimeStats.locomotionTransition);
-            attackTransition = Mathf.Max(0.01f, runtimeStats.attackTransition);
-            hitTransition = Mathf.Max(0.01f, runtimeStats.hitTransition);
-            deathTransition = Mathf.Max(0.01f, runtimeStats.deathTransition);
-            recoverTransition = Mathf.Max(0.01f, runtimeStats.recoverTransition);
+            // Animator Controller 状态名和过渡时间由每个敌人 Prefab 静态配置
         }
 
         public bool TryGetAnimator(out Animator targetAnimator)

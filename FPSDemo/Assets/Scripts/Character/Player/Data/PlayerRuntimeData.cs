@@ -18,6 +18,14 @@ namespace PlayerData
         public float moveSpeedMultiplier = 1f;
         // 跳跃高度倍率
         public float jumpHeightMultiplier = 1f;
+        // 狂暴持续时间倍率
+        public float berserkDurationMultiplier = 1f;
+        // 爆炸伤害倍率
+        public float explosionDamageMultiplier = 1f;
+        // 弹药道具获取倍率
+        public float pickupAmmoMultiplier = 1f;
+        // 医疗道具恢复倍率
+        public float pickupHealingMultiplier = 1f;
         // 是否无敌
         public bool isInvincible;
         // 是否霸体
@@ -29,6 +37,10 @@ namespace PlayerData
             currentHp = maxHp;
             moveSpeedMultiplier = 1f;
             jumpHeightMultiplier = 1f;
+            berserkDurationMultiplier = 1f;
+            explosionDamageMultiplier = 1f;
+            pickupAmmoMultiplier = 1f;
+            pickupHealingMultiplier = 1f;
             isInvincible = false;
             isSuperArmor = false;
         }

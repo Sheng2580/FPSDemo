@@ -9,23 +9,40 @@ namespace Combat
     public static class CombatLayerNames
     {
         public const string Enemy = "Enemy";
+        public const string Player = "Player";
+        public const string PlayerBoundary = "Wall";
         public const string SurfaceStone = "Surface_Stone";
         public const string SurfaceMetal = "Surface_Metal";
         public const string SurfaceWood = "Surface_Wood";
         public const string SurfaceGlass = "Surface_Glass";
 
         private static int enemyLayer = int.MinValue;
+        private static int playerLayer = int.MinValue;
+        private static int playerBoundaryLayer = int.MinValue;
         private static int surfaceStoneLayer = int.MinValue;
         private static int surfaceMetalLayer = int.MinValue;
         private static int surfaceWoodLayer = int.MinValue;
         private static int surfaceGlassLayer = int.MinValue;
 
         public static int EnemyLayer => GetCachedLayer(ref enemyLayer, Enemy);
+        public static int PlayerLayer => GetCachedLayer(ref playerLayer, Player);
+        public static int PlayerBoundaryLayer => GetCachedLayer(ref playerBoundaryLayer, PlayerBoundary);
 
         public static bool IsEnemyLayer(int layer)
         {
             int targetLayer = EnemyLayer;
             return targetLayer >= 0 && layer == targetLayer;
+        }
+
+        public static int ExcludePlayerBoundaryLayer(int layerMask)
+        {
+            return ExcludeLayer(layerMask, ref playerBoundaryLayer, PlayerBoundary);
+        }
+
+        public static int ExcludePlayerAndBoundaryLayers(int layerMask)
+        {
+            int result = ExcludeLayer(layerMask, ref playerLayer, Player);
+            return ExcludeLayer(result, ref playerBoundaryLayer, PlayerBoundary);
         }
 
         public static HitSurfaceType ResolveSurfaceType(int layer)
@@ -57,6 +74,12 @@ namespace Combat
         {
             int targetLayer = GetCachedLayer(ref cachedLayer, layerName);
             return targetLayer >= 0 && layer == targetLayer;
+        }
+
+        private static int ExcludeLayer(int layerMask, ref int cachedLayer, string layerName)
+        {
+            int layer = GetCachedLayer(ref cachedLayer, layerName);
+            return layer >= 0 ? layerMask & ~(1 << layer) : layerMask;
         }
 
         private static int GetCachedLayer(ref int cachedLayer, string layerName)

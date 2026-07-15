@@ -24,13 +24,15 @@ public static class FPSDemoBuildTools
     private const string UIItemBundleName = "uiitem";
     private const string PlayerRuntimeBundleName = "player_runtime";
     private const string CombatFeedbackBundleName = "combat_feedback";
+    private const string BGMusicBundleName = "bgm";
     private const string UIAudioBundleName = "ui_audio";
     private const string EnemyAudioBundleName = "enemy_audio";
     private const string EnemyPrefabBundleName = "enemy_prefabs";
     private const string PropRuntimeBundleName = "prop_runtime";
     private const string SkillEffectBundleName = "skill";
     private const string GrenadeProjectilePath = "Assets/Art/Skill/bomb.prefab";
-    private const float GrenadeCollisionRadius = 0.7f;
+    private const float GrenadePhysicalRadius = 0.22f;
+    private const float GrenadeEnemyTriggerRadius = 0.7f;
     private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
     private const string CombatScenePath = "Assets/Scenes/Combat.unity";
     private const string StreamingAssetsPath = "Assets/StreamingAssets";
@@ -145,6 +147,11 @@ public static class FPSDemoBuildTools
         "Assets/Art/ABRes/CombatFeedback/Audio/Cyberleaf - Modern UI SFX/AlertsAndNotifications/GenericNotification3.wav"
     };
 
+    private static readonly string[] BGMusicAssetPaths =
+    {
+        "Assets/Art/Audio/bgm.mp3"
+    };
+
     private static readonly string[] EnemyAudioAssetPaths =
     {
         "Assets/Art/Audio/Zombie Sounds Pro/Zombie Attack_01.wav",
@@ -185,8 +192,10 @@ public static class FPSDemoBuildTools
     {
         "Assets/Art/Skill/Onomatopoeia_Roar Variant.prefab",
         "Assets/Art/Skill/Onomatopoeia_Pow Variant.prefab",
+        "Assets/Art/Skill/Onomatopoeia_Bam Variant.prefab",
         GrenadeProjectilePath,
-        "Assets/Art/Audio/Boom爆炸声.wav"
+        "Assets/Art/Audio/Boom爆炸声.wav",
+        "Assets/Art/Audio/SkillBoom.mp3"
     };
 
     private static readonly string[] RequiredRuntimeBundleNames =
@@ -195,6 +204,7 @@ public static class FPSDemoBuildTools
         UIItemBundleName,
         PlayerRuntimeBundleName,
         CombatFeedbackBundleName,
+        BGMusicBundleName,
         UIAudioBundleName,
         EnemyAudioBundleName,
         EnemyPrefabBundleName,
@@ -634,11 +644,13 @@ public static class FPSDemoBuildTools
 
         success &= EnemyAudioBuildTools.ConfigureEnemyAudioComponents(false);
         success &= ConfigureEnemyAudioImportSettings(ref changed);
+        success &= ConfigureBGMusicImportSettings(ref changed);
         success &= ConfigureGrenadeProjectilePrefab(ref changed);
         success &= TrySetAssetBundleNames(UIAssetPaths, TouchCanvasBundleName, ref changed);
         success &= TrySetAssetBundleNames(UIItemAssetPaths, UIItemBundleName, ref changed);
         success &= TrySetAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName, ref changed);
         success &= TrySetAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName, ref changed);
+        success &= TrySetAssetBundleNames(BGMusicAssetPaths, BGMusicBundleName, ref changed);
         success &= TrySetAssetBundleNames(UIAudioAssetPaths, UIAudioBundleName, ref changed);
         success &= TrySetAssetBundleNames(EnemyAudioAssetPaths, EnemyAudioBundleName, ref changed);
         success &= TrySetAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName, ref changed);
@@ -688,9 +700,9 @@ public static class FPSDemoBuildTools
                 prefabChanged = true;
             }
 
-            if (rigidbody.isKinematic)
+            if (!rigidbody.isKinematic)
             {
-                rigidbody.isKinematic = false;
+                rigidbody.isKinematic = true;
                 prefabChanged = true;
             }
 
@@ -700,9 +712,9 @@ public static class FPSDemoBuildTools
                 prefabChanged = true;
             }
 
-            if (rigidbody.collisionDetectionMode != CollisionDetectionMode.ContinuousDynamic)
+            if (rigidbody.collisionDetectionMode != CollisionDetectionMode.ContinuousSpeculative)
             {
-                rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
                 prefabChanged = true;
             }
 
@@ -712,16 +724,78 @@ public static class FPSDemoBuildTools
                 prefabChanged = true;
             }
 
-            SphereCollider sphereCollider = prefabRoot.GetComponent<SphereCollider>();
-            if (sphereCollider == null)
+            SphereCollider physicalCollider = null;
+            SphereCollider enemyTrigger = null;
+            SphereCollider[] sphereColliders = prefabRoot.GetComponents<SphereCollider>();
+            for (int i = 0; i < sphereColliders.Length; i++)
             {
-                sphereCollider = prefabRoot.AddComponent<SphereCollider>();
+                SphereCollider sphereCollider = sphereColliders[i];
+                if (sphereCollider.isTrigger)
+                {
+                    enemyTrigger ??= sphereCollider;
+                }
+                else
+                {
+                    physicalCollider ??= sphereCollider;
+                }
+            }
+
+            if (physicalCollider == null)
+            {
+                physicalCollider = prefabRoot.AddComponent<SphereCollider>();
                 prefabChanged = true;
             }
 
-            if (!Mathf.Approximately(sphereCollider.radius, GrenadeCollisionRadius))
+            if (!Mathf.Approximately(physicalCollider.radius, GrenadePhysicalRadius))
             {
-                sphereCollider.radius = GrenadeCollisionRadius;
+                physicalCollider.radius = GrenadePhysicalRadius;
+                prefabChanged = true;
+            }
+
+            if (enemyTrigger == null)
+            {
+                enemyTrigger = prefabRoot.AddComponent<SphereCollider>();
+                enemyTrigger.isTrigger = true;
+                prefabChanged = true;
+            }
+
+            if (!Mathf.Approximately(enemyTrigger.radius, GrenadeEnemyTriggerRadius))
+            {
+                enemyTrigger.radius = GrenadeEnemyTriggerRadius;
+                prefabChanged = true;
+            }
+
+            int playerLayer = LayerMask.NameToLayer(Combat.CombatLayerNames.Player);
+            int wallLayer = LayerMask.NameToLayer(Combat.CombatLayerNames.PlayerBoundary);
+            int enemyLayer = LayerMask.NameToLayer(Combat.CombatLayerNames.Enemy);
+            int commonExcludedMask = 0;
+            if (playerLayer >= 0)
+            {
+                commonExcludedMask |= 1 << playerLayer;
+            }
+
+            if (wallLayer >= 0)
+            {
+                commonExcludedMask |= 1 << wallLayer;
+            }
+
+            int physicalExcludedMask = commonExcludedMask;
+            if (enemyLayer >= 0)
+            {
+                physicalExcludedMask |= 1 << enemyLayer;
+            }
+
+            if (physicalExcludedMask != 0
+                && (physicalCollider.excludeLayers.value & physicalExcludedMask) != physicalExcludedMask)
+            {
+                physicalCollider.excludeLayers |= physicalExcludedMask;
+                prefabChanged = true;
+            }
+
+            if (commonExcludedMask != 0
+                && (enemyTrigger.excludeLayers.value & commonExcludedMask) != commonExcludedMask)
+            {
+                enemyTrigger.excludeLayers |= commonExcludedMask;
                 prefabChanged = true;
             }
 
@@ -812,6 +886,69 @@ public static class FPSDemoBuildTools
         return success;
     }
 
+    private static bool ConfigureBGMusicImportSettings(ref bool changed)
+    {
+        for (int i = 0; i < BGMusicAssetPaths.Length; i++)
+        {
+            string assetPath = BGMusicAssetPaths[i];
+            AudioImporter importer = AssetImporter.GetAtPath(assetPath) as AudioImporter;
+            if (importer == null)
+            {
+                Debug.LogError($"[FPSDemoBuildTools] 找不到背景音乐 {assetPath}");
+                return false;
+            }
+
+            bool assetChanged = false;
+            AudioImporterSampleSettings settings = importer.defaultSampleSettings;
+            if (settings.loadType != AudioClipLoadType.Streaming)
+            {
+                settings.loadType = AudioClipLoadType.Streaming;
+                assetChanged = true;
+            }
+
+            if (settings.compressionFormat != AudioCompressionFormat.Vorbis)
+            {
+                settings.compressionFormat = AudioCompressionFormat.Vorbis;
+                assetChanged = true;
+            }
+
+            if (!Mathf.Approximately(settings.quality, 0.7f))
+            {
+                settings.quality = 0.7f;
+                assetChanged = true;
+            }
+
+            if (settings.preloadAudioData)
+            {
+                settings.preloadAudioData = false;
+                assetChanged = true;
+            }
+
+            if (!importer.loadInBackground)
+            {
+                importer.loadInBackground = true;
+                assetChanged = true;
+            }
+
+            if (importer.forceToMono)
+            {
+                importer.forceToMono = false;
+                assetChanged = true;
+            }
+
+            if (!assetChanged)
+            {
+                continue;
+            }
+
+            importer.defaultSampleSettings = settings;
+            importer.SaveAndReimport();
+            changed = true;
+        }
+
+        return true;
+    }
+
     private static bool TrySetAssetBundleNames(IEnumerable<string> assetPaths, string bundleName, ref bool changed)
     {
         bool success = true;
@@ -825,13 +962,19 @@ public static class FPSDemoBuildTools
 
     private static bool TryClearAssetBundleNames(IEnumerable<string> assetPaths, ref bool changed)
     {
-        bool success = true;
         foreach (string assetPath in assetPaths)
         {
-            success &= TrySetAssetBundleName(assetPath, string.Empty, ref changed);
+            AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+            if (importer == null || string.IsNullOrEmpty(importer.assetBundleName))
+            {
+                continue;
+            }
+
+            importer.assetBundleName = string.Empty;
+            changed = true;
         }
 
-        return success;
+        return true;
     }
 
     private static bool TrySetAssetBundleName(string assetPath, string bundleName, ref bool changed)
@@ -895,6 +1038,7 @@ public static class FPSDemoBuildTools
         isValid &= ValidateAssetBundleNames(UIItemAssetPaths, UIItemBundleName);
         isValid &= ValidateAssetBundleNames(PlayerRuntimeAssetPaths, PlayerRuntimeBundleName);
         isValid &= ValidateAssetBundleNames(CombatFeedbackAssetPaths, CombatFeedbackBundleName);
+        isValid &= ValidateAssetBundleNames(BGMusicAssetPaths, BGMusicBundleName);
         isValid &= ValidateAssetBundleNames(UIAudioAssetPaths, UIAudioBundleName);
         isValid &= ValidateAssetBundleNames(EnemyAudioAssetPaths, EnemyAudioBundleName);
         isValid &= ValidateAssetBundleNames(GetEnemyRuntimeAssetPaths(), EnemyPrefabBundleName);
