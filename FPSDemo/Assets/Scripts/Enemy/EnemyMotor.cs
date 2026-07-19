@@ -253,6 +253,58 @@ namespace Enemy
             StopAgentPath(clearPath: true);
         }
 
+        public bool TryRelocate(Vector3 position)
+        {
+            AutoBind();
+            if (!NavMesh.SamplePosition(position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
+            {
+                return false;
+            }
+
+            StopImmediately();
+            bool controllerWasEnabled = characterController != null && characterController.enabled;
+            if (controllerWasEnabled)
+            {
+                characterController.enabled = false;
+            }
+
+            transform.position = hit.position;
+
+            bool agentReady = true;
+            if (agent != null)
+            {
+                if (!agent.enabled)
+                {
+                    agent.enabled = true;
+                }
+
+                agentReady = agent.isOnNavMesh && agent.Warp(hit.position);
+                if (agentReady)
+                {
+                    agent.ResetPath();
+                    agent.isStopped = false;
+                    agent.nextPosition = hit.position;
+                }
+            }
+
+            if (controllerWasEnabled)
+            {
+                characterController.enabled = true;
+            }
+
+            if (!agentReady)
+            {
+                return false;
+            }
+
+            _verticalVelocity = 0f;
+            _nextDestinationTime = 0f;
+            _nextNavMeshClampTime = 0f;
+            RefreshTargetScatterOffset(true);
+            RefreshWaitAroundOffset(true);
+            return true;
+        }
+
         public void SetRootMotionEnabled(bool enabled)
         {
             useRootMotion = enabled;

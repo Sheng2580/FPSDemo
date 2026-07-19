@@ -21,7 +21,9 @@ public readonly struct BlessingCardViewData
 
     public bool IsValid => BlessingId > 0;
     public string TierText => ToTierText(Tier);
-    public string StackText => MaxStack > 0 ? $"{StackCount}/{MaxStack}" : string.Empty;
+    public string StackText => MaxStack > 0
+        ? $"{StackCount}/{MaxStack}"
+        : StackCount > 0 ? $"x{StackCount}" : string.Empty;
 
     public BlessingCardViewData(
         int blessingId,

@@ -149,6 +149,19 @@ public class PlayerSkillController : MonoBehaviour
         return true;
     }
 
+    public bool ApplyDamageMultiplier(SkillType skillType, float multiplier)
+    {
+        if (!_runtimeData.TryGetValue(skillType, out PlayerSkillRuntimeData runtimeData))
+        {
+            return false;
+        }
+
+        runtimeData.damageMultiplier = Mathf.Max(
+            0f,
+            runtimeData.damageMultiplier * Mathf.Max(0f, multiplier));
+        return true;
+    }
+
     public int AddCurrentCount(SkillType skillType, int count)
     {
         if (count <= 0

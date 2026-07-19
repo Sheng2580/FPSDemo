@@ -109,6 +109,7 @@ namespace Enemy.Data
 
             int wavesSinceUnlock = Mathf.Max(0, absoluteWaveIndex - resolved.EffectiveUnlockWaveIndex);
             int tiersSinceStart = Mathf.Max(0, difficultyTierGrowthStep);
+            bool useExponentialCombatGrowth = absoluteWaveIndex >= 7 && resolved.minWaveIndex >= 7;
             resolved.weight = ResolveWeight(resolved, wavesSinceUnlock, tiersSinceStart);
             resolved.healthMultiplier = ResolveMultiplier(
                 resolved.healthMultiplier,
@@ -117,7 +118,8 @@ namespace Enemy.Data
                 resolved.maxHealthMultiplier,
                 wavesSinceUnlock,
                 tiersSinceStart,
-                0.01f);
+                0.01f,
+                useExponentialCombatGrowth);
             resolved.damageMultiplier = ResolveMultiplier(
                 resolved.damageMultiplier,
                 resolved.damageMultiplierGrowthPerWave,
@@ -125,7 +127,8 @@ namespace Enemy.Data
                 resolved.maxDamageMultiplier,
                 wavesSinceUnlock,
                 tiersSinceStart,
-                0.01f);
+                0.01f,
+                useExponentialCombatGrowth);
             resolved.moveSpeedMultiplier = ResolveMultiplier(
                 resolved.moveSpeedMultiplier,
                 resolved.moveSpeedMultiplierGrowthPerWave,
@@ -133,7 +136,8 @@ namespace Enemy.Data
                 resolved.maxMoveSpeedMultiplier,
                 wavesSinceUnlock,
                 tiersSinceStart,
-                0.01f);
+                0.01f,
+                false);
             resolved.goldMultiplier = ResolveMultiplier(
                 resolved.goldMultiplier,
                 resolved.goldMultiplierGrowthPerWave,
@@ -141,7 +145,8 @@ namespace Enemy.Data
                 resolved.maxGoldMultiplier,
                 wavesSinceUnlock,
                 tiersSinceStart,
-                0f);
+                0f,
+                false);
 
             return resolved;
         }
@@ -167,11 +172,29 @@ namespace Enemy.Data
             float maxMultiplier,
             int wavesSinceUnlock,
             int tiersSinceStart,
-            float minMultiplier)
+            float minMultiplier,
+            bool useExponentialGrowth)
         {
-            float resolvedMultiplier = baseMultiplier
-                + wavesSinceUnlock * growthPerWave
-                + tiersSinceStart * growthPerDifficultyTier;
+            float resolvedMultiplier;
+            if (useExponentialGrowth)
+            {
+                float safeBaseMultiplier = Mathf.Max(minMultiplier, baseMultiplier);
+                float waveGrowthFactor = Mathf.Max(
+                    0.01f,
+                    1f + growthPerWave / Mathf.Max(0.01f, safeBaseMultiplier));
+                float tierGrowthFactor = Mathf.Max(
+                    0.01f,
+                    1f + growthPerDifficultyTier / Mathf.Max(0.01f, safeBaseMultiplier));
+                resolvedMultiplier = safeBaseMultiplier
+                                     * Mathf.Pow(waveGrowthFactor, wavesSinceUnlock)
+                                     * Mathf.Pow(tierGrowthFactor, tiersSinceStart);
+            }
+            else
+            {
+                resolvedMultiplier = baseMultiplier
+                                     + wavesSinceUnlock * growthPerWave
+                                     + tiersSinceStart * growthPerDifficultyTier;
+            }
 
             if (maxMultiplier > 0f)
             {

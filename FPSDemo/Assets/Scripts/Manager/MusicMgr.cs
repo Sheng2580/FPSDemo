@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -74,6 +75,7 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
 
     private void OnEnable()
     {
+        SceneManager.sceneLoaded += OnSceneLoaded;
         EventCenter.Instance.AddEventListener<PickupCollectedEventData>(GameEvent.PickupCollected, OnPickupCollected);
         EventCenter.Instance.AddEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
         EventCenter.Instance.AddEventListener<PlayerDamagedEventData>(GameEvent.PlayerDamaged, OnPlayerDamaged);
@@ -81,9 +83,15 @@ public class MusicMgr : UnitySingleTonMono<MusicMgr>
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         EventCenter.Instance.RemoveEventListener<PickupCollectedEventData>(GameEvent.PickupCollected, OnPickupCollected);
         EventCenter.Instance.RemoveEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
         EventCenter.Instance.RemoveEventListener<PlayerDamagedEventData>(GameEvent.PlayerDamaged, OnPlayerDamaged);
+        StopBerserkAudioEffect();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
         StopBerserkAudioEffect();
     }
 

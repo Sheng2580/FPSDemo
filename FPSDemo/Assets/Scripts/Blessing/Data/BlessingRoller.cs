@@ -25,9 +25,14 @@ namespace Blessing.Data
             List<BlessingRollResult> results = new List<BlessingRollResult>(targetCount);
             HashSet<int> selectedIds = new HashSet<int>();
 
-            BlessingConfig persistentGuaranteed = PickPersistentGuaranteed(candidates, selectedIds, context);
-            if (persistentGuaranteed != null)
+            while (results.Count < targetCount)
             {
+                BlessingConfig persistentGuaranteed = PickPersistentGuaranteed(candidates, selectedIds, context);
+                if (persistentGuaranteed == null)
+                {
+                    break;
+                }
+
                 selectedIds.Add(persistentGuaranteed.blessingId);
                 results.Add(new BlessingRollResult(
                     persistentGuaranteed,
@@ -223,7 +228,7 @@ namespace Blessing.Data
 
         private static bool IsMaxStack(BlessingConfig config, BlessingRollContext context)
         {
-            if (context.stacks == null)
+            if (config.maxStack <= 0 || context.stacks == null)
             {
                 return false;
             }

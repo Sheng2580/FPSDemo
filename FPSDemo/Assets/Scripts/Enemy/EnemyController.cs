@@ -30,6 +30,8 @@ namespace Enemy
         private bool _active;
         private bool _deathNotified;
         private EnemyRuntimeStats _runtimeStats;
+        private float _lastDamagedTime = float.NegativeInfinity;
+        private float _lastAttackTime = float.NegativeInfinity;
 
         public int EnemyId => enemyId;
         public string EnemyName => enemyName;
@@ -39,6 +41,7 @@ namespace Enemy
         public float AttackDistance => attack != null ? attack.AttackDistance : 1.4f;
         public EnemyView View => view;
         public EnemyRuntimeStats RuntimeStats => _runtimeStats;
+        public float LastCombatActivityTime => Mathf.Max(_lastDamagedTime, _lastAttackTime);
 
         private void Awake()
         {
@@ -82,6 +85,8 @@ namespace Enemy
             _sourcePrefab = sourcePrefab;
             _active = true;
             _deathNotified = false;
+            _lastDamagedTime = float.NegativeInfinity;
+            _lastAttackTime = float.NegativeInfinity;
 
             health?.Init(definition.maxHealth);
             view?.ResetView(enemyName);
@@ -119,6 +124,8 @@ namespace Enemy
             _sourcePrefab = sourcePrefab;
             _active = true;
             _deathNotified = false;
+            _lastDamagedTime = float.NegativeInfinity;
+            _lastAttackTime = float.NegativeInfinity;
 
             view?.ApplyRuntimeStats(runtimeStats);
             health?.Init(runtimeStats.maxHealth);
@@ -158,6 +165,7 @@ namespace Enemy
                 return;
             }
 
+            _lastDamagedTime = Time.time;
             audioController?.PlayHit();
             brain?.MarkHitStunned(damageInfo);
         }
@@ -169,7 +177,13 @@ namespace Enemy
                 return;
             }
 
+            _lastAttackTime = Time.time;
             audioController?.PlayAttack();
+        }
+
+        public bool TryRelocate(Vector3 position)
+        {
+            return _active && !IsDead && motor != null && motor.TryRelocate(position);
         }
 
         public void ReturnToPool()

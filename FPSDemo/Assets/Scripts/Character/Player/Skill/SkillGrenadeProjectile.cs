@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Combat;
@@ -10,6 +11,8 @@ public class SkillGrenadeProjectile : MonoBehaviour
 {
     private const float KnockbackForceToDistance = 0.18f;
     private const float DefaultExplosionKnockbackDuration = 0.22f;
+    private const float ExplosionHapticIntensity = 1f;
+    private const float ExplosionHapticMaxDistance = 22f;
 
     private readonly Collider[] _hitBuffer = new Collider[64];
     private readonly HashSet<EnemyController> _hitEnemies = new HashSet<EnemyController>();
@@ -21,13 +24,18 @@ public class SkillGrenadeProjectile : MonoBehaviour
     private string _poolKey;
     private Coroutine _explodeRoutine;
     private bool _exploded;
+    private Action _onReturnedToPool;
+    private bool _explodeOnEnvironmentImpact;
 
     public void Init(
         PlayerController owner,
         PlayerSkillConfig config,
         PlayerSkillRuntimeData runtimeData,
         Vector3 direction,
-        string poolKey)
+        string poolKey,
+        Action onReturnedToPool = null,
+        bool explodeOnEnvironmentImpact = false,
+        bool useGravity = true)
     {
         StopAllCoroutines();
         _explodeRoutine = null;
@@ -35,6 +43,8 @@ public class SkillGrenadeProjectile : MonoBehaviour
         _config = config != null ? config.Clone() : PlayerSkillConfig.CreateDefaultGrenade();
         _runtimeData = runtimeData;
         _poolKey = string.IsNullOrEmpty(poolKey) ? _config.projectileResourceKey : poolKey;
+        _onReturnedToPool = onReturnedToPool;
+        _explodeOnEnvironmentImpact = explodeOnEnvironmentImpact;
         _rigidbody = GetComponent<Rigidbody>();
         _exploded = false;
 
@@ -48,7 +58,7 @@ public class SkillGrenadeProjectile : MonoBehaviour
         _rigidbody.angularVelocity = Vector3.zero;
         _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         _rigidbody.isKinematic = true;
-        _rigidbody.useGravity = true;
+        _rigidbody.useGravity = useGravity;
 
         TrailRenderer[] trails = GetComponentsInChildren<TrailRenderer>(true);
         for (int i = 0; i < trails.Length; i++)
@@ -82,6 +92,12 @@ public class SkillGrenadeProjectile : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+        if (_explodeOnEnvironmentImpact)
+        {
+            Explode();
+            return;
+        }
+
         TryExplodeOnEnemy(collision != null ? collision.collider : null);
     }
 
@@ -123,6 +139,13 @@ public class SkillGrenadeProjectile : MonoBehaviour
         EventCenter.Instance.EventTrigger(
             GameEvent.SkillVisualStarted,
             new SkillVisualEventData(_owner, config, config.explosionEffectKey, config.explosionAudioKey, position, Vector3.up, 0.35f, 1f));
+        EventCenter.Instance.EventTrigger(
+            GameEvent.ExplosionOccurred,
+            new ExplosionOccurredEventData(
+                position,
+                ExplosionHapticIntensity,
+                ExplosionHapticMaxDistance,
+                _owner != null ? _owner.gameObject : gameObject));
 
         _hitEnemies.Clear();
         int enemyLayer = CombatLayerNames.EnemyLayer;
@@ -265,8 +288,11 @@ public class SkillGrenadeProjectile : MonoBehaviour
             _rigidbody.isKinematic = true;
         }
 
+        Action onReturnedToPool = _onReturnedToPool;
+        _onReturnedToPool = null;
         string poolKey = string.IsNullOrEmpty(_poolKey) ? gameObject.name : _poolKey;
         PoolMgr.Instance.pushObj(poolKey, gameObject);
+        onReturnedToPool?.Invoke();
     }
 
     private void OnDisable()
@@ -284,6 +310,8 @@ public class SkillGrenadeProjectile : MonoBehaviour
 
         _owner = null;
         _runtimeData = null;
+        _onReturnedToPool = null;
+        _explodeOnEnvironmentImpact = false;
         _exploded = false;
     }
 

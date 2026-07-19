@@ -36,6 +36,22 @@ namespace Blessing.Data
         // 金币获取
         GoldGain,
         // 获得当前未携带的另一把主武器
-        GrantMissingPrimaryWeapon
+        GrantMissingPrimaryWeapon,
+        // 武器射击速度
+        WeaponFireRate,
+        // 武器换弹速度
+        WeaponReloadSpeed,
+        // 武器备弹上限
+        WeaponReserveAmmo,
+        // 技能伤害
+        SkillDamage,
+        // 击杀恢复备弹
+        KillAmmoRestore,
+        // 击杀恢复生命
+        KillHealthRestore,
+        // 击杀触发狂暴的持续时间
+        KillBerserkDuration,
+        // 击杀随机基础属性成长强度
+        KillRandomBaseStat
     }
 }

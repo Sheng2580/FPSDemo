@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Blessing.Data;
+using Enemy;
 using PlayerData;
 using UnityEngine;
 
@@ -191,7 +192,7 @@ public sealed class BlessingCandidateProvider
             .Replace("{valueText}", valueText)
             .Replace("{tier}", BlessingCardViewData.ToTierText(tier))
             .Replace("{stack}", nextStack.ToString())
-            .Replace("{maxStack}", Mathf.Max(1, config.maxStack).ToString());
+            .Replace("{maxStack}", config.maxStack > 0 ? config.maxStack.ToString() : "无限");
     }
 
     private string FormatTemplateValue(float value)
@@ -228,7 +229,8 @@ public sealed class BlessingCandidateProvider
 
     private int ResolveWaveIndex()
     {
-        return 1;
+        EnemySpawnManager spawnManager = UnityEngine.Object.FindObjectOfType<EnemySpawnManager>();
+        return spawnManager != null ? Mathf.Max(1, spawnManager.CurrentWaveIndex) : 1;
     }
 
     private int[] ResolveWeaponIds()

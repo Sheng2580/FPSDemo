@@ -16,10 +16,13 @@ namespace Pickup
     {
         private const string CombatSceneName = "Combat";
         private const string SpawnTimerId = "PickupManager_SpawnTimer";
+        private const float RewardBerserkWeightMultiplier = 0.35f;
         private static bool RuntimeEnabled => true;
 
         private static PickupManager activeInstance;
         private static bool sceneLoadedSubscribed;
+
+        public static PickupManager ActiveInstance => activeInstance;
 
         [Header("生成")]
         [SerializeField] private bool autoSpawn = true;
@@ -41,6 +44,7 @@ namespace Pickup
         private Transform _playerTransform;
         private int _currentWaveIndex = 1;
         private bool _configsLoaded;
+        private int _pendingSpawnCount;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRuntimeState()
@@ -159,6 +163,7 @@ namespace Pickup
             EventCenter.Instance.RemoveEventListener<EnemyWaveEventData>(GameEvent.EnemyWaveStarted, OnEnemyWaveChanged);
             EventCenter.Instance.RemoveEventListener<EnemyWaveEventData>(GameEvent.EnemyWaveProgressChanged, OnEnemyWaveChanged);
             StopSpawnTimer();
+            _pendingSpawnCount = 0;
             RecycleAllActivePickups();
         }
 
@@ -210,6 +215,40 @@ namespace Pickup
             ReturnPickupToPool(pickupItem);
         }
 
+        public bool TrySpawnRewardPickup(
+            Vector3 preferredPosition,
+            PickupItemType? excludedType,
+            int requestedMaxActiveCount,
+            out PickupItemConfig spawnedConfig)
+        {
+            spawnedConfig = null;
+            RemoveInvalidActivePickups();
+            int configuredLimit = Mathf.Max(0, maxActivePickupCount);
+            int activeLimit = requestedMaxActiveCount > 0
+                ? Mathf.Min(configuredLimit, requestedMaxActiveCount)
+                : configuredLimit;
+            if (SceneManager.GetActiveScene().name != CombatSceneName
+                || _activePickups.Count + _pendingSpawnCount >= activeLimit)
+            {
+                return false;
+            }
+
+            LoadConfigsIfNeeded();
+            SyncWaveIndexFromSpawner();
+            PickupItemConfig config = RollConfig(
+                null,
+                excludedType,
+                RewardBerserkWeightMultiplier);
+            if (config == null || !TryFindRewardSpawnPosition(preferredPosition, out Vector3 spawnPosition))
+            {
+                return false;
+            }
+
+            spawnedConfig = config;
+            SpawnPickup(config, spawnPosition);
+            return true;
+        }
+
         private void StartSpawnTimer()
         {
             StopSpawnTimer();
@@ -256,7 +295,7 @@ namespace Pickup
         private void TrySpawnPickup()
         {
             RemoveInvalidActivePickups();
-            if (_activePickups.Count >= Mathf.Max(0, maxActivePickupCount))
+            if (_activePickups.Count + _pendingSpawnCount >= Mathf.Max(0, maxActivePickupCount))
             {
                 return;
             }
@@ -285,8 +324,10 @@ namespace Pickup
 
         private void SpawnPickup(PickupItemConfig config, Vector3 position)
         {
+            _pendingSpawnCount++;
             PoolMgr.Instance.GetObjForAB(config.assetBundleName, config.assetName, obj =>
             {
+                _pendingSpawnCount = Mathf.Max(0, _pendingSpawnCount - 1);
                 if (obj == null)
                 {
                     return;
@@ -317,7 +358,10 @@ namespace Pickup
             });
         }
 
-        private PickupItemConfig RollConfig(PickupItemType? requiredType = null)
+        private PickupItemConfig RollConfig(
+            PickupItemType? requiredType = null,
+            PickupItemType? excludedType = null,
+            float berserkWeightMultiplier = 1f)
         {
             float totalWeight = 0f;
             int currentWave = Mathf.Max(1, _currentWaveIndex);
@@ -325,10 +369,10 @@ namespace Pickup
             for (int i = 0; i < _configs.Count; i++)
             {
                 PickupItemConfig config = _configs[i];
-                if (IsAvailableConfig(config, currentWave, requiredType))
+                if (IsAvailableConfig(config, currentWave, requiredType, excludedType))
                 {
                     fallbackConfig = config;
-                    totalWeight += Mathf.Max(0f, config.weight);
+                    totalWeight += ResolveRollWeight(config, berserkWeightMultiplier);
                 }
             }
 
@@ -341,12 +385,12 @@ namespace Pickup
             for (int i = 0; i < _configs.Count; i++)
             {
                 PickupItemConfig config = _configs[i];
-                if (!IsAvailableConfig(config, currentWave, requiredType))
+                if (!IsAvailableConfig(config, currentWave, requiredType, excludedType))
                 {
                     continue;
                 }
 
-                randomWeight -= Mathf.Max(0f, config.weight);
+                randomWeight -= ResolveRollWeight(config, berserkWeightMultiplier);
                 if (randomWeight <= 0f)
                 {
                     return config;
@@ -354,6 +398,21 @@ namespace Pickup
             }
 
             return fallbackConfig;
+        }
+
+        private static float ResolveRollWeight(
+            PickupItemConfig config,
+            float berserkWeightMultiplier)
+        {
+            if (config == null)
+            {
+                return 0f;
+            }
+
+            float multiplier = config.itemType == PickupItemType.Berserk
+                ? Mathf.Max(0f, berserkWeightMultiplier)
+                : 1f;
+            return Mathf.Max(0f, config.weight) * multiplier;
         }
 
         private bool ShouldGuaranteeAmmoPickup()
@@ -380,11 +439,32 @@ namespace Pickup
         private static bool IsAvailableConfig(
             PickupItemConfig config,
             int currentWave,
-            PickupItemType? requiredType)
+            PickupItemType? requiredType,
+            PickupItemType? excludedType = null)
         {
             return config != null &&
                    config.unlockWave <= currentWave &&
-                   (!requiredType.HasValue || config.itemType == requiredType.Value);
+                   (!requiredType.HasValue || config.itemType == requiredType.Value) &&
+                   (!excludedType.HasValue || config.itemType != excludedType.Value);
+        }
+
+        private bool TryFindRewardSpawnPosition(Vector3 preferredPosition, out Vector3 position)
+        {
+            const int rewardPositionAttempts = 8;
+            const float rewardScatterRadius = 1.5f;
+            for (int i = 0; i < rewardPositionAttempts; i++)
+            {
+                Vector2 scatter = i == 0 ? Vector2.zero : Random.insideUnitCircle * rewardScatterRadius;
+                Vector3 candidate = preferredPosition + new Vector3(scatter.x, 0f, scatter.y);
+                if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, navMeshSampleRadius, NavMesh.AllAreas))
+                {
+                    position = hit.position + Vector3.up * spawnHeightOffset;
+                    return true;
+                }
+            }
+
+            position = Vector3.zero;
+            return false;
         }
 
         private bool TryFindSpawnPosition(out Vector3 position)

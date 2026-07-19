@@ -88,7 +88,8 @@ namespace Blessing.Data
             unlockEnergyLevel = Mathf.Max(1, unlockEnergyLevel);
             unlockWave = Mathf.Max(1, unlockWave);
             weight = Mathf.Max(0f, weight);
-            maxStack = Mathf.Max(1, maxStack);
+            // 0 表示可无限叠加
+            maxStack = Mathf.Max(0, maxStack);
             guaranteedUntilSelectedFromRoll = Mathf.Max(0, guaranteedUntilSelectedFromRoll);
             requiredWeaponId = Mathf.Max(0, requiredWeaponId);
 

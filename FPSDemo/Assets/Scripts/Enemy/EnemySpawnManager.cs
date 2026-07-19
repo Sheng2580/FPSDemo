@@ -29,6 +29,7 @@ namespace Enemy
         private const float BurstSpawnScatterRadius = 6f;
         private const float SpawnPointSampleRadius = 4f;
         private const float SpawnPointSceneScanInterval = 1f;
+        private const float StragglerCheckInterval = 1f;
         private const int MinRemainCountForBurstSpawn = 5;
         private const string SingleSpawnPointNameKeyword = "BirthplaceS";
         private const string BurstSpawnPointNameKeyword = "BirthplaceB";
@@ -76,6 +77,19 @@ namespace Enemy
             }
         }
 
+        private sealed class StragglerMonitor
+        {
+            public Vector3 lastPosition;
+            public float lastProgressTime;
+            public int relocationAttempts;
+
+            public StragglerMonitor(Vector3 position, float time)
+            {
+                lastPosition = position;
+                lastProgressTime = time;
+            }
+        }
+
         private readonly struct EnemyPrefabAddress
         {
             public readonly string bundleName;
@@ -109,6 +123,13 @@ namespace Enemy
         [SerializeField] private bool preferEditorDirectPrefab;
 #endif
 
+        [Header("波次收尾")]
+        [SerializeField, Min(1)] private int stragglerMaxCount = 2;
+        [SerializeField, Min(1f)] private float stragglerSafeDistance = 15f;
+        [SerializeField, Min(1f)] private float stragglerTimeout = 20f;
+        [SerializeField, Min(0.1f)] private float stragglerMovementThreshold = 1f;
+        [SerializeField, Min(0f)] private float stragglerCombatGraceTime = 5f;
+
         [Header("调试")]
         [Tooltip("波次和出生点日志 默认关闭 需要排查刷怪时再打开")]
         [SerializeField] private bool debugSpawnState;
@@ -116,6 +137,7 @@ namespace Enemy
 
         private readonly List<EnemyController> _activeEnemies = new List<EnemyController>();
         private readonly Dictionary<int, int> _aliveCountByEnemyId = new Dictionary<int, int>();
+        private readonly Dictionary<EnemyController, StragglerMonitor> _stragglerMonitors = new Dictionary<EnemyController, StragglerMonitor>();
         private readonly Dictionary<string, GameObject> _loadedPrefabByResourceKey = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _loadingPrefabResourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _missingPrefabWarnings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -135,6 +157,8 @@ namespace Enemy
         private float _nextSpawnPointSceneScanTime;
         private int _nextSingleSpawnPointIndex;
         private int _nextBurstSpawnPointIndex;
+        private float _nextStragglerCheckTime;
+        private int _lastStragglerCount = -1;
 
         public int CurrentWaveIndex => Mathf.Max(1, _currentWaveIndex);
 
@@ -189,6 +213,7 @@ namespace Enemy
             }
 
             _activeEnemies.Remove(enemy);
+            _stragglerMonitors.Remove(enemy);
             StartCoroutine(ReturnEnemyAfterDelay(enemy));
         }
 
@@ -222,6 +247,13 @@ namespace Enemy
             int maxCount = ResolveSceneMaxEnemyCount(_currentWave);
             if (_currentWaveSpawnedCount >= _currentWaveTargetCount)
             {
+                if (_activeEnemies.Count == 0)
+                {
+                    CompleteCurrentWave();
+                    return;
+                }
+
+                TickStragglerRecovery();
                 if (_activeEnemies.Count == 0)
                 {
                     CompleteCurrentWave();
@@ -277,6 +309,7 @@ namespace Enemy
             _currentWaveStartTime = Time.time;
             _currentWaveTargetCount = ResolveWaveTotalSpawnCount(_currentWave, _currentWaveIndex);
             _nextSpawnTime = Time.time;
+            ResetStragglerRecovery();
 
             Debug.Log(
                 $"[EnemyWave] 第 {_currentWaveIndex} 波开始 Tier={ResolveDifficultyTier(_currentWave, _currentWaveIndex)} Total={_currentWaveTargetCount} Batch={ResolveSpawnCountForWaveElapsed(_currentWave, 0f)} Max={ResolveSceneMaxEnemyCount(_currentWave)} Entries={BuildWaveCandidateSummary(_currentWave, _currentWaveIndex)}",
@@ -290,6 +323,7 @@ namespace Enemy
 
         private void CompleteCurrentWave()
         {
+            ResetStragglerRecovery();
             float delay = ResolveWaveClearDelay(_currentWave);
             Debug.Log(
                 $"[EnemyWave] 第 {_currentWaveIndex} 波清理完成 NextDelay={delay:0.##}",
@@ -1583,6 +1617,141 @@ namespace Enemy
             }
 
             return _spawnPath.status == NavMeshPathStatus.PathComplete;
+        }
+
+        private void TickStragglerRecovery()
+        {
+            int activeCount = _activeEnemies.Count;
+            if (activeCount <= 0 || activeCount > Mathf.Max(1, stragglerMaxCount))
+            {
+                ResetStragglerRecovery();
+                return;
+            }
+
+            if (_lastStragglerCount != activeCount)
+            {
+                _stragglerMonitors.Clear();
+                _lastStragglerCount = activeCount;
+            }
+
+            if (Time.time < _nextStragglerCheckTime)
+            {
+                return;
+            }
+
+            _nextStragglerCheckTime = Time.time + StragglerCheckInterval;
+            float safeDistanceSqr = stragglerSafeDistance * stragglerSafeDistance;
+            float movementThresholdSqr = stragglerMovementThreshold * stragglerMovementThreshold;
+
+            for (int i = _activeEnemies.Count - 1; i >= 0; i--)
+            {
+                EnemyController enemy = _activeEnemies[i];
+                if (enemy == null || !enemy.IsActive || enemy.IsDead)
+                {
+                    continue;
+                }
+
+                if (!_stragglerMonitors.TryGetValue(enemy, out StragglerMonitor monitor))
+                {
+                    monitor = new StragglerMonitor(enemy.transform.position, Time.time);
+                    _stragglerMonitors.Add(enemy, monitor);
+                    continue;
+                }
+
+                Vector3 playerOffset = playerTarget.position - enemy.transform.position;
+                playerOffset.y = 0f;
+                Vector3 movement = enemy.transform.position - monitor.lastPosition;
+                movement.y = 0f;
+                bool isNearPlayer = playerOffset.sqrMagnitude <= safeDistanceSqr;
+                bool hasMoved = movement.sqrMagnitude >= movementThresholdSqr;
+                bool hasRecentCombat = Time.time - enemy.LastCombatActivityTime <= stragglerCombatGraceTime;
+
+                if (isNearPlayer || hasMoved || hasRecentCombat)
+                {
+                    monitor.lastPosition = enemy.transform.position;
+                    monitor.lastProgressTime = Time.time;
+                    continue;
+                }
+
+                if (Time.time - monitor.lastProgressTime < stragglerTimeout)
+                {
+                    continue;
+                }
+
+                bool hadCompletePath = HasCompletePathToPlayer(enemy.transform.position);
+                if (monitor.relocationAttempts == 0 && TryRelocateStraggler(enemy, out Vector3 relocationPosition))
+                {
+                    monitor.relocationAttempts++;
+                    monitor.lastPosition = relocationPosition;
+                    monitor.lastProgressTime = Time.time;
+                    Debug.Log(
+                        $"[EnemyWave] 残敌重新定位 Enemy={enemy.EnemyName} Wave={_currentWaveIndex} PreviousPathComplete={hadCompletePath}",
+                        enemy);
+                    continue;
+                }
+
+                RecycleStragglerWithoutReward(enemy, hadCompletePath);
+            }
+        }
+
+        private bool TryRelocateStraggler(EnemyController enemy, out Vector3 relocationPosition)
+        {
+            relocationPosition = Vector3.zero;
+            CacheSpawnPointsIfNeeded();
+            if (enemy == null || spawnPoints == null || spawnPoints.Count == 0)
+            {
+                return false;
+            }
+
+            int startIndex = UnityEngine.Random.Range(0, spawnPoints.Count);
+            float safeDistanceSqr = stragglerSafeDistance * stragglerSafeDistance;
+            for (int i = 0; i < spawnPoints.Count; i++)
+            {
+                Transform spawnPoint = spawnPoints[(startIndex + i) % spawnPoints.Count];
+                if (spawnPoint == null)
+                {
+                    continue;
+                }
+
+                Vector3 playerOffset = spawnPoint.position - playerTarget.position;
+                playerOffset.y = 0f;
+                if (playerOffset.sqrMagnitude < safeDistanceSqr
+                    || !TryResolveSpawnPosition(spawnPoint, SingleSpawnClearRadius, BurstSpawnScatterRadius, out Vector3 candidate)
+                    || !enemy.TryRelocate(candidate))
+                {
+                    continue;
+                }
+
+                relocationPosition = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void RecycleStragglerWithoutReward(EnemyController enemy, bool hadCompletePath)
+        {
+            if (enemy == null)
+            {
+                return;
+            }
+
+            _activeEnemies.Remove(enemy);
+            _stragglerMonitors.Remove(enemy);
+            enemy.ReturnToPool();
+            EventCenter.Instance.EventTrigger(
+                GameEvent.EnemyReturnedToPool,
+                new EnemyReturnedToPoolEventData(enemy));
+            Debug.LogWarning(
+                $"[EnemyWave] 残敌无奖励回池 Enemy={enemy.EnemyName} Wave={_currentWaveIndex} PreviousPathComplete={hadCompletePath}",
+                this);
+        }
+
+        private void ResetStragglerRecovery()
+        {
+            _stragglerMonitors.Clear();
+            _lastStragglerCount = -1;
+            _nextStragglerCheckTime = 0f;
         }
 
         private void EnsureSpawnPath()

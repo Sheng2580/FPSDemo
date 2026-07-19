@@ -195,6 +195,15 @@ namespace Enemy.Data
         public int GetTotalSpawnCountForDifficultyWave(int difficultyWaveIndex)
         {
             int safeWaveIndex = Mathf.Max(1, difficultyWaveIndex);
+            if (difficultyTierIndex >= 3 && waveTotalSpawnGrowth > 0)
+            {
+                double growthFactor = 1d + waveTotalSpawnGrowth / (double)Mathf.Max(1, waveTotalSpawnCount);
+                double grownCount = waveTotalSpawnCount * Math.Pow(growthFactor, safeWaveIndex - 1);
+                return grownCount >= int.MaxValue
+                    ? int.MaxValue
+                    : Mathf.Max(1, Mathf.RoundToInt((float)grownCount));
+            }
+
             return Mathf.Max(1, waveTotalSpawnCount + (safeWaveIndex - 1) * waveTotalSpawnGrowth);
         }
 

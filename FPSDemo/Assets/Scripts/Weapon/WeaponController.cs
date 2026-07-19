@@ -58,8 +58,8 @@ namespace Weapon
         public bool ReloadInput => _reloadInput;
         public bool AimInput => _aimInput;
         public float ADSAmount => _adsAmount;
-        public bool InfiniteAmmoActive => Time.time < _infiniteAmmoEndTime;
-        public float InfiniteAmmoRemainingTime => Mathf.Max(0f, _infiniteAmmoEndTime - Time.time);
+        public bool InfiniteAmmoActive => Time.unscaledTime < _infiniteAmmoEndTime;
+        public float InfiniteAmmoRemainingTime => Mathf.Max(0f, _infiniteAmmoEndTime - Time.unscaledTime);
 
         private void Reset()
         {
@@ -105,6 +105,7 @@ namespace Weapon
             EventCenter.Instance.RemoveEventListener<PlayerActionLockEventData>(GameEvent.PlayerActionLockChanged, OnPlayerActionLockChanged);
             EventCenter.Instance.RemoveEventListener<SkillCastEventData>(GameEvent.SkillCastStarted, OnSkillCastStarted);
             EventCenter.Instance.RemoveEventListener<PlayerBerserkChangedEventData>(GameEvent.PlayerBerserkChanged, OnPlayerBerserkChanged);
+            ClearRuntimeInfiniteAmmo();
             ResetAimVisuals();
         }
 
@@ -167,7 +168,7 @@ namespace Weapon
                 return;
             }
 
-            _infiniteAmmoEndTime = Mathf.Max(_infiniteAmmoEndTime, Time.time + duration);
+            _infiniteAmmoEndTime = Mathf.Max(_infiniteAmmoEndTime, Time.unscaledTime + duration);
         }
 
         public int AddReserveAmmoToCurrentWeapon(int amount)

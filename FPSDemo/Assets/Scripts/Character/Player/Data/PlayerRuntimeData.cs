@@ -26,6 +26,14 @@ namespace PlayerData
         public float pickupAmmoMultiplier = 1f;
         // 医疗道具恢复倍率
         public float pickupHealingMultiplier = 1f;
+        // 每次击杀为每把携带武器恢复的备弹
+        public float killAmmoRestore;
+        // 每次击杀恢复的生命
+        public float killHealthRestore;
+        // 击杀触发狂暴时增加的基础持续时间
+        public float killBerserkDuration;
+        // 击杀随机基础属性成长的累计强度
+        public float killRandomBaseStatStrength;
         // 是否无敌
         public bool isInvincible;
         // 是否霸体
@@ -41,6 +49,10 @@ namespace PlayerData
             explosionDamageMultiplier = 1f;
             pickupAmmoMultiplier = 1f;
             pickupHealingMultiplier = 1f;
+            killAmmoRestore = 0f;
+            killHealthRestore = 0f;
+            killBerserkDuration = 0f;
+            killRandomBaseStatStrength = 0f;
             isInvincible = false;
             isSuperArmor = false;
         }

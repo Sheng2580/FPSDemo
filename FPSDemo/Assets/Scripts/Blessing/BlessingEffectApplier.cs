@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Blessing.Data;
+using Combat;
+using Pickup;
 using PlayerData;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -12,14 +14,47 @@ using Weapon.Data;
 [DisallowMultipleComponent]
 public class BlessingEffectApplier : MonoBehaviour
 {
+    private const float MinimumFireIntervalMultiplier = 0.2f;
+    private const float MinimumReloadTimeMultiplier = 0.4f;
+    private const float BlessingTipDuration = 1.5f;
+    private const float MaximumKillBerserkChance = 0.3f;
+    private const float MaximumKillGrowthChance = 0.3f;
+    private const float MaximumKillGrowthMoveSpeedMultiplier = 1.65f;
+    private const float MaximumKillGrowthJumpHeightMultiplier = 1.75f;
+
+    private readonly struct WeaponTimingBaseline
+    {
+        public readonly float fireInterval;
+        public readonly float reloadTime;
+        public readonly float reloadStartTime;
+        public readonly float reloadSingleRoundTime;
+        public readonly float reloadEndTime;
+
+        public WeaponTimingBaseline(WeaponConfig config)
+        {
+            fireInterval = Mathf.Max(0.01f, config.fireInterval);
+            reloadTime = Mathf.Max(0f, config.reloadTime);
+            reloadStartTime = Mathf.Max(0f, config.reloadStartTime);
+            reloadSingleRoundTime = Mathf.Max(0f, config.reloadSingleRoundTime);
+            reloadEndTime = Mathf.Max(0f, config.reloadEndTime);
+        }
+    }
+
     private readonly Dictionary<int, BlessingConfig> _configMap = new Dictionary<int, BlessingConfig>();
     private readonly Dictionary<WeaponConfig, int> _weaponBonusLevels = new Dictionary<WeaponConfig, int>();
+    private readonly Dictionary<WeaponConfig, WeaponTimingBaseline> _weaponTimingBaselines = new Dictionary<WeaponConfig, WeaponTimingBaseline>();
     private readonly BlessingTriggerRuntime _triggerRuntime = new BlessingTriggerRuntime();
     private PlayerController _player;
     private PlayerInventory _inventory;
     private PlayerEnergyRuntime _energyRuntime;
     private PlayerSkillController _skillController;
     private WeaponController _weaponController;
+    private PickupEffectResolver _pickupEffectResolver;
+    private float _killBerserkChance;
+    private string _killBerserkPostProcessKey;
+    private float _killGrowthChance;
+    private float _killGrowthCooldown;
+    private float _nextKillGrowthTriggerTime;
     private bool _configsLoaded;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -39,6 +74,7 @@ public class BlessingEffectApplier : MonoBehaviour
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
         EventCenter.Instance.AddEventListener<PlayerEnergyBlessingSelectedEventData>(GameEvent.PlayerEnergyBlessingSelected, OnBlessingSelected);
+        EventCenter.Instance.AddEventListener<EnemyDamagedEventData>(GameEvent.EnemyDamaged, OnEnemyDamaged);
         EventCenter.Instance.AddEventListener<EnemyDiedEventData>(GameEvent.EnemyDied, OnEnemyDied);
     }
 
@@ -46,25 +82,41 @@ public class BlessingEffectApplier : MonoBehaviour
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
         EventCenter.Instance.RemoveEventListener<PlayerEnergyBlessingSelectedEventData>(GameEvent.PlayerEnergyBlessingSelected, OnBlessingSelected);
+        EventCenter.Instance.RemoveEventListener<EnemyDamagedEventData>(GameEvent.EnemyDamaged, OnEnemyDamaged);
         EventCenter.Instance.RemoveEventListener<EnemyDiedEventData>(GameEvent.EnemyDied, OnEnemyDied);
         _weaponBonusLevels.Clear();
+        _weaponTimingBaselines.Clear();
+        _killBerserkChance = 0f;
+        _killBerserkPostProcessKey = string.Empty;
+        ResetKillGrowthTrigger();
         _triggerRuntime.Reset();
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         _weaponBonusLevels.Clear();
+        _weaponTimingBaselines.Clear();
+        _killBerserkChance = 0f;
+        _killBerserkPostProcessKey = string.Empty;
+        ResetKillGrowthTrigger();
         _triggerRuntime.Reset();
         _player = null;
         _inventory = null;
         _energyRuntime = null;
         _skillController = null;
         _weaponController = null;
+        _pickupEffectResolver = null;
+    }
+
+    private void OnEnemyDamaged(EnemyDamagedEventData eventData)
+    {
+        _triggerRuntime.OnEnemyDamaged(eventData);
     }
 
     private void OnEnemyDied(EnemyDiedEventData eventData)
     {
         _triggerRuntime.OnEnemyDied(eventData);
+        ApplyKillRewards(eventData);
     }
 
     private void OnBlessingSelected(PlayerEnergyBlessingSelectedEventData eventData)
@@ -134,6 +186,11 @@ public class BlessingEffectApplier : MonoBehaviour
         {
             _weaponController = FindObjectOfType<WeaponController>();
         }
+
+        if (_pickupEffectResolver == null)
+        {
+            _pickupEffectResolver = FindObjectOfType<PickupEffectResolver>();
+        }
     }
 
     private void ApplyBlessingConfig(BlessingConfig config, BlessingTier tier)
@@ -152,6 +209,8 @@ public class BlessingEffectApplier : MonoBehaviour
             }
         }
 
+        ConfigureKillBerserkTrigger(config);
+        ConfigureKillGrowthTrigger(config);
         _triggerRuntime.ApplyConfig(config);
     }
 
@@ -175,6 +234,12 @@ public class BlessingEffectApplier : MonoBehaviour
             case BlessingStatType.PickupHealing:
                 ApplyPlayerRuntimeMultiplier(effect.statType, effect.modifyType, value);
                 break;
+            case BlessingStatType.KillAmmoRestore:
+            case BlessingStatType.KillHealthRestore:
+            case BlessingStatType.KillBerserkDuration:
+            case BlessingStatType.KillRandomBaseStat:
+                ApplyPlayerKillReward(effect.statType, effect.modifyType, value);
+                break;
             case BlessingStatType.EnergyGain:
                 ApplyEnergyGain(effect.modifyType, value);
                 break;
@@ -182,10 +247,14 @@ public class BlessingEffectApplier : MonoBehaviour
             case BlessingStatType.WeaponUpgradeLevel:
             case BlessingStatType.WeaponMagazine:
             case BlessingStatType.WeaponRecoil:
+            case BlessingStatType.WeaponFireRate:
+            case BlessingStatType.WeaponReloadSpeed:
+            case BlessingStatType.WeaponReserveAmmo:
                 ApplyWeaponStat(config, effect, value);
                 break;
             case BlessingStatType.SkillCooldownReduction:
             case BlessingStatType.SkillMaxCount:
+            case BlessingStatType.SkillDamage:
                 ApplySkillStat(config, effect.statType, effect.modifyType, value);
                 break;
             case BlessingStatType.GoldGain:
@@ -226,7 +295,10 @@ public class BlessingEffectApplier : MonoBehaviour
             return;
         }
 
-        runtimeData.moveSpeedMultiplier = Mathf.Max(0.01f, ApplyNumericModifier(runtimeData.moveSpeedMultiplier, modifyType, value));
+        runtimeData.moveSpeedMultiplier = Mathf.Clamp(
+            ApplyNumericModifier(runtimeData.moveSpeedMultiplier, modifyType, value),
+            0.01f,
+            MaximumKillGrowthMoveSpeedMultiplier);
     }
 
     private void ApplyJumpHeight(BlessingModifyType modifyType, float value)
@@ -237,7 +309,10 @@ public class BlessingEffectApplier : MonoBehaviour
             return;
         }
 
-        runtimeData.jumpHeightMultiplier = Mathf.Max(0.01f, ApplyNumericModifier(runtimeData.jumpHeightMultiplier, modifyType, value));
+        runtimeData.jumpHeightMultiplier = Mathf.Clamp(
+            ApplyNumericModifier(runtimeData.jumpHeightMultiplier, modifyType, value),
+            0.01f,
+            MaximumKillGrowthJumpHeightMultiplier);
     }
 
     private void ApplyPlayerRuntimeMultiplier(BlessingStatType statType, BlessingModifyType modifyType, float value)
@@ -282,6 +357,39 @@ public class BlessingEffectApplier : MonoBehaviour
         }
 
         runtimeData.energyGainMultiplier = Mathf.Max(0f, ApplyNumericModifier(runtimeData.energyGainMultiplier, modifyType, value));
+    }
+
+    private void ApplyPlayerKillReward(BlessingStatType statType, BlessingModifyType modifyType, float value)
+    {
+        PlayerRuntimeData runtimeData = _player != null && _player.Stats != null ? _player.Stats.RuntimeData : null;
+        if (runtimeData == null)
+        {
+            return;
+        }
+
+        switch (statType)
+        {
+            case BlessingStatType.KillAmmoRestore:
+                runtimeData.killAmmoRestore = Mathf.Max(
+                    0f,
+                    ApplyNumericModifier(runtimeData.killAmmoRestore, modifyType, value));
+                break;
+            case BlessingStatType.KillHealthRestore:
+                runtimeData.killHealthRestore = Mathf.Max(
+                    0f,
+                    ApplyNumericModifier(runtimeData.killHealthRestore, modifyType, value));
+                break;
+            case BlessingStatType.KillBerserkDuration:
+                runtimeData.killBerserkDuration = Mathf.Max(
+                    0f,
+                    ApplyNumericModifier(runtimeData.killBerserkDuration, modifyType, value));
+                break;
+            case BlessingStatType.KillRandomBaseStat:
+                runtimeData.killRandomBaseStatStrength = Mathf.Max(
+                    0f,
+                    ApplyNumericModifier(runtimeData.killRandomBaseStatStrength, modifyType, value));
+                break;
+        }
     }
 
     private void ApplyWeaponStat(BlessingConfig config, BlessingEffectConfig effect, float value)
@@ -343,6 +451,7 @@ public class BlessingEffectApplier : MonoBehaviour
             return false;
         }
 
+        EnsureWeaponTimingBaseline(weaponConfig);
         switch (statType)
         {
             case BlessingStatType.WeaponDamage:
@@ -359,6 +468,12 @@ public class BlessingEffectApplier : MonoBehaviour
                 weaponConfig.viewRecoilRotation *= recoilMultiplier;
                 weaponConfig.viewRecoilPosition *= recoilMultiplier;
                 return true;
+            case BlessingStatType.WeaponFireRate:
+                return ApplyWeaponFireRate(weaponConfig, modifyType, value);
+            case BlessingStatType.WeaponReloadSpeed:
+                return ApplyWeaponReloadSpeed(weaponConfig, modifyType, value);
+            case BlessingStatType.WeaponReserveAmmo:
+                return ApplyWeaponReserveAmmo(weaponConfig, runtimeData, modifyType, value);
         }
 
         return false;
@@ -378,6 +493,7 @@ public class BlessingEffectApplier : MonoBehaviour
         int previousReserveAmmo = Mathf.Max(0, weaponConfig.maxReserveAmmo);
 
         PermanentUpgradeRules.ApplyWeaponBonusLevels(weaponConfig, previousBonusLevel, nextBonusLevel);
+        ClampWeaponTimings(weaponConfig);
         _weaponBonusLevels[weaponConfig] = nextBonusLevel;
 
         if (runtimeData != null)
@@ -395,6 +511,97 @@ public class BlessingEffectApplier : MonoBehaviour
         }
 
         return true;
+    }
+
+    private bool ApplyWeaponFireRate(
+        WeaponConfig weaponConfig,
+        BlessingModifyType modifyType,
+        float value)
+    {
+        float speedMultiplier = Mathf.Max(0.01f, ResolveMultiplierModifier(modifyType, value));
+        weaponConfig.fireInterval /= speedMultiplier;
+        ClampWeaponTimings(weaponConfig);
+        return true;
+    }
+
+    private bool ApplyWeaponReloadSpeed(
+        WeaponConfig weaponConfig,
+        BlessingModifyType modifyType,
+        float value)
+    {
+        float speedMultiplier = Mathf.Max(0.01f, ResolveMultiplierModifier(modifyType, value));
+        weaponConfig.reloadTime /= speedMultiplier;
+        weaponConfig.reloadStartTime /= speedMultiplier;
+        weaponConfig.reloadSingleRoundTime /= speedMultiplier;
+        weaponConfig.reloadEndTime /= speedMultiplier;
+        ClampWeaponTimings(weaponConfig);
+        return true;
+    }
+
+    private bool ApplyWeaponReserveAmmo(
+        WeaponConfig weaponConfig,
+        WeaponRuntimeData runtimeData,
+        BlessingModifyType modifyType,
+        float value)
+    {
+        int previousMaxReserveAmmo = Mathf.Max(0, weaponConfig.maxReserveAmmo);
+        int nextMaxReserveAmmo = Mathf.Max(
+            0,
+            Mathf.RoundToInt(ApplyNumericModifier(previousMaxReserveAmmo, modifyType, value)));
+        int delta = nextMaxReserveAmmo - previousMaxReserveAmmo;
+        weaponConfig.maxReserveAmmo = nextMaxReserveAmmo;
+        if (runtimeData != null)
+        {
+            runtimeData.currentReserveAmmo = delta >= 0
+                ? Mathf.Min(nextMaxReserveAmmo, runtimeData.currentReserveAmmo + delta)
+                : Mathf.Clamp(runtimeData.currentReserveAmmo, 0, nextMaxReserveAmmo);
+        }
+
+        return true;
+    }
+
+    private void EnsureWeaponTimingBaseline(WeaponConfig weaponConfig)
+    {
+        if (weaponConfig != null && !_weaponTimingBaselines.ContainsKey(weaponConfig))
+        {
+            _weaponTimingBaselines.Add(weaponConfig, new WeaponTimingBaseline(weaponConfig));
+        }
+    }
+
+    private void ClampWeaponTimings(WeaponConfig weaponConfig)
+    {
+        if (weaponConfig == null
+            || !_weaponTimingBaselines.TryGetValue(weaponConfig, out WeaponTimingBaseline baseline))
+        {
+            return;
+        }
+
+        weaponConfig.fireInterval = Mathf.Max(
+            baseline.fireInterval * MinimumFireIntervalMultiplier,
+            weaponConfig.fireInterval);
+        weaponConfig.reloadTime = ClampOptionalTiming(
+            weaponConfig.reloadTime,
+            baseline.reloadTime,
+            MinimumReloadTimeMultiplier);
+        weaponConfig.reloadStartTime = ClampOptionalTiming(
+            weaponConfig.reloadStartTime,
+            baseline.reloadStartTime,
+            MinimumReloadTimeMultiplier);
+        weaponConfig.reloadSingleRoundTime = ClampOptionalTiming(
+            weaponConfig.reloadSingleRoundTime,
+            baseline.reloadSingleRoundTime,
+            MinimumReloadTimeMultiplier);
+        weaponConfig.reloadEndTime = ClampOptionalTiming(
+            weaponConfig.reloadEndTime,
+            baseline.reloadEndTime,
+            MinimumReloadTimeMultiplier);
+    }
+
+    private static float ClampOptionalTiming(float currentValue, float baselineValue, float minimumMultiplier)
+    {
+        return baselineValue > 0f
+            ? Mathf.Max(baselineValue * minimumMultiplier, currentValue)
+            : Mathf.Max(0f, currentValue);
     }
 
     private bool ApplyWeaponMagazine(WeaponConfig weaponConfig, WeaponRuntimeData runtimeData, BlessingModifyType modifyType, float value)
@@ -437,16 +644,25 @@ public class BlessingEffectApplier : MonoBehaviour
             return;
         }
 
-        if (statType == BlessingStatType.SkillCooldownReduction && (config == null || !config.requiresSkillType))
+        if ((statType == BlessingStatType.SkillCooldownReduction || statType == BlessingStatType.SkillDamage)
+            && (config == null || !config.requiresSkillType))
         {
-            float reduction = ResolveCooldownReduction(modifyType, value);
-            _skillController.ApplyCooldownReduction(SkillType.Dodge, reduction);
-            _skillController.ApplyCooldownReduction(SkillType.Push, reduction);
-            _skillController.ApplyCooldownReduction(SkillType.Grenade, reduction);
+            ApplySkillStatToType(SkillType.Dodge, statType, modifyType, value);
+            ApplySkillStatToType(SkillType.Push, statType, modifyType, value);
+            ApplySkillStatToType(SkillType.Grenade, statType, modifyType, value);
             return;
         }
 
         SkillType skillType = config != null && config.requiresSkillType ? config.requiredSkillType : SkillType.Grenade;
+        ApplySkillStatToType(skillType, statType, modifyType, value);
+    }
+
+    private void ApplySkillStatToType(
+        SkillType skillType,
+        BlessingStatType statType,
+        BlessingModifyType modifyType,
+        float value)
+    {
         switch (statType)
         {
             case BlessingStatType.SkillCooldownReduction:
@@ -455,7 +671,257 @@ public class BlessingEffectApplier : MonoBehaviour
             case BlessingStatType.SkillMaxCount:
                 _skillController.AddMaxCount(skillType, Mathf.RoundToInt(value));
                 break;
+            case BlessingStatType.SkillDamage:
+                _skillController.ApplyDamageMultiplier(
+                    skillType,
+                    ResolveMultiplierModifier(modifyType, value));
+                break;
         }
+    }
+
+    private void ConfigureKillBerserkTrigger(BlessingConfig config)
+    {
+        if (!HasEffect(config, BlessingStatType.KillBerserkDuration) || config.triggers == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < config.triggers.Length; i++)
+        {
+            BlessingTriggerConfig trigger = config.triggers[i];
+            if (trigger == null || trigger.triggerType != BlessingTriggerType.OnKillEnemy)
+            {
+                continue;
+            }
+
+            _killBerserkChance = Mathf.Min(
+                MaximumKillBerserkChance,
+                _killBerserkChance + Mathf.Clamp01(trigger.chance));
+            if (!string.IsNullOrEmpty(trigger.effectKey))
+            {
+                _killBerserkPostProcessKey = trigger.effectKey;
+            }
+        }
+    }
+
+    private void ConfigureKillGrowthTrigger(BlessingConfig config)
+    {
+        if (!HasEffect(config, BlessingStatType.KillRandomBaseStat) || config.triggers == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < config.triggers.Length; i++)
+        {
+            BlessingTriggerConfig trigger = config.triggers[i];
+            if (trigger == null || trigger.triggerType != BlessingTriggerType.OnKillEnemy)
+            {
+                continue;
+            }
+
+            _killGrowthChance = Mathf.Min(
+                MaximumKillGrowthChance,
+                _killGrowthChance + Mathf.Clamp01(trigger.chance));
+            _killGrowthCooldown = Mathf.Max(_killGrowthCooldown, trigger.cooldown);
+        }
+    }
+
+    private void ResetKillGrowthTrigger()
+    {
+        _killGrowthChance = 0f;
+        _killGrowthCooldown = 0f;
+        _nextKillGrowthTriggerTime = 0f;
+    }
+
+    private void ApplyKillRewards(EnemyDiedEventData eventData)
+    {
+        if (!IsPlayerKill(eventData.damageInfo))
+        {
+            return;
+        }
+
+        CacheRuntimeReferences();
+        PlayerRuntimeData runtimeData = _player != null && _player.Stats != null ? _player.Stats.RuntimeData : null;
+        if (runtimeData == null)
+        {
+            return;
+        }
+
+        int ammoRestore = Mathf.Max(0, Mathf.RoundToInt(runtimeData.killAmmoRestore));
+        if (ammoRestore > 0)
+        {
+            _inventory?.AddReserveAmmoToAllWeapons(ammoRestore);
+        }
+
+        int healthRestore = Mathf.Max(0, Mathf.RoundToInt(runtimeData.killHealthRestore));
+        if (healthRestore > 0)
+        {
+            _player.Heal(healthRestore);
+        }
+
+        TryApplyKillGrowth(runtimeData);
+
+        _pickupEffectResolver ??= FindObjectOfType<PickupEffectResolver>();
+        if (runtimeData.killBerserkDuration <= 0f
+            || _killBerserkChance <= 0f
+            || _pickupEffectResolver == null
+            || _pickupEffectResolver.IsBerserkActive
+            || Random.value > _killBerserkChance)
+        {
+            return;
+        }
+
+        float addedDuration = _pickupEffectResolver.AddBerserkDuration(
+            _player,
+            runtimeData.killBerserkDuration,
+            _killBerserkPostProcessKey);
+        if (addedDuration > 0f)
+        {
+            TriggerBlessingTip("祝福触发", $"狂暴 +{addedDuration:0.#} 秒", "Berserk");
+        }
+    }
+
+    private void TryApplyKillGrowth(PlayerRuntimeData runtimeData)
+    {
+        if (runtimeData == null
+            || runtimeData.killRandomBaseStatStrength <= 0f
+            || _killGrowthChance <= 0f
+            || Time.time < _nextKillGrowthTriggerTime
+            || Random.value > _killGrowthChance)
+        {
+            return;
+        }
+
+        _nextKillGrowthTriggerTime = Time.time + Mathf.Max(0.1f, _killGrowthCooldown);
+        float strength = runtimeData.killRandomBaseStatStrength;
+        switch (Random.Range(0, 5))
+        {
+            case 0:
+                int hpIncrease = Mathf.Max(1, Mathf.RoundToInt(5f * strength));
+                ApplyMaxHp(BlessingModifyType.Add, hpIncrease);
+                TriggerBlessingTip("越战越勇", $"最大生命 +{hpIncrease}", "Heal");
+                break;
+            case 1:
+                float moveIncrease = 0.02f * strength;
+                runtimeData.moveSpeedMultiplier = Mathf.Min(
+                    MaximumKillGrowthMoveSpeedMultiplier,
+                    runtimeData.moveSpeedMultiplier * (1f + moveIncrease));
+                TriggerBlessingTip("越战越勇", $"移动速度 +{moveIncrease:P0}", "Ammo");
+                break;
+            case 2:
+                float jumpIncrease = 0.03f * strength;
+                runtimeData.jumpHeightMultiplier = Mathf.Min(
+                    MaximumKillGrowthJumpHeightMultiplier,
+                    runtimeData.jumpHeightMultiplier * (1f + jumpIncrease));
+                TriggerBlessingTip("越战越勇", $"跳跃高度 +{jumpIncrease:P0}", "Grenade");
+                break;
+            case 3:
+                float damageIncrease = 0.03f * strength;
+                ApplyAllWeaponDamageGrowth(damageIncrease);
+                TriggerBlessingTip("越战越勇", $"所有武器伤害 +{damageIncrease:P0}", "Berserk");
+                break;
+            default:
+                float cooldownReduction = 0.015f * strength;
+                ApplyAllSkillCooldownGrowth(cooldownReduction);
+                TriggerBlessingTip("越战越勇", $"技能冷却 -{cooldownReduction:P0}", "Grenade");
+                break;
+        }
+    }
+
+    private void ApplyAllWeaponDamageGrowth(float percentIncrease)
+    {
+        bool appliedToCurrentWeapon = false;
+        bool applied = false;
+        if (_inventory != null && _inventory.CarriedWeapons != null)
+        {
+            IReadOnlyList<CarriedWeaponSlot> weapons = _inventory.CarriedWeapons;
+            for (int i = 0; i < weapons.Count; i++)
+            {
+                CarriedWeaponSlot slot = weapons[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                slot.EnsureRuntimeReady();
+                bool slotApplied = ApplyWeaponStatToRuntime(
+                    slot.RuntimeConfig,
+                    slot.RuntimeData,
+                    BlessingStatType.WeaponDamage,
+                    BlessingModifyType.PercentAdd,
+                    percentIncrease);
+                applied |= slotApplied;
+                appliedToCurrentWeapon |= slotApplied && slot == _inventory.CurrentWeapon;
+            }
+        }
+
+        if (!applied)
+        {
+            appliedToCurrentWeapon = ApplyWeaponStatToRuntime(
+                ResolveCurrentWeaponConfig(),
+                ResolveCurrentWeaponRuntimeData(),
+                BlessingStatType.WeaponDamage,
+                BlessingModifyType.PercentAdd,
+                percentIncrease);
+        }
+
+        if (appliedToCurrentWeapon)
+        {
+            _weaponController?.RefreshCurrentWeaponRuntimeView();
+        }
+    }
+
+    private void ApplyAllSkillCooldownGrowth(float reduction)
+    {
+        if (_skillController == null)
+        {
+            return;
+        }
+
+        _skillController.ApplyCooldownReduction(SkillType.Dodge, reduction);
+        _skillController.ApplyCooldownReduction(SkillType.Push, reduction);
+        _skillController.ApplyCooldownReduction(SkillType.Grenade, reduction);
+    }
+
+    private static bool IsPlayerKill(DamageInfo damageInfo)
+    {
+        return damageInfo.attacker != null
+               && damageInfo.attacker.GetComponentInParent<PlayerController>() != null;
+    }
+
+    private static bool HasEffect(BlessingConfig config, BlessingStatType statType)
+    {
+        if (config?.effects == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < config.effects.Length; i++)
+        {
+            if (config.effects[i] != null && config.effects[i].statType == statType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void TriggerBlessingTip(string title, string description, string colorKey)
+    {
+        PickupTipEventData eventData = new PickupTipEventData(
+            title,
+            description,
+            colorKey,
+            BlessingTipDuration);
+        if (UIManager.Instance == null)
+        {
+            EventCenter.Instance.EventTrigger(GameEvent.PickupTipRequested, eventData);
+            return;
+        }
+
+        UIManager.Instance.OpenPanelAsy<TipCanvas>(_ =>
+            EventCenter.Instance.EventTrigger(GameEvent.PickupTipRequested, eventData));
     }
 
     private void ApplyGoldGain(BlessingModifyType modifyType, float value)

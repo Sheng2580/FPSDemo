@@ -44,6 +44,7 @@ public enum GameEvent
     WeaponFired,
     WeaponHit,
     DamageResolved,
+    ExplosionOccurred,
     MobileJumpPressed,
     MobileDodgePressed,
     MobilePushPressed,
@@ -491,6 +492,26 @@ public readonly struct DamageResolvedEventData
     public DamageResolvedEventData(DamageInfo damageInfo)
     {
         this.damageInfo = damageInfo;
+    }
+}
+
+public readonly struct ExplosionOccurredEventData
+{
+    public readonly Vector3 position;
+    public readonly float intensity;
+    public readonly float maxDistance;
+    public readonly GameObject source;
+
+    public ExplosionOccurredEventData(
+        Vector3 position,
+        float intensity,
+        float maxDistance,
+        GameObject source)
+    {
+        this.position = position;
+        this.intensity = Mathf.Clamp01(intensity);
+        this.maxDistance = Mathf.Max(0.1f, maxDistance);
+        this.source = source;
     }
 }
 

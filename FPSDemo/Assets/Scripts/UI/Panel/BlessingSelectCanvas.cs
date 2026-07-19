@@ -22,6 +22,7 @@ public class BlessingSelectCanvas : BaseCanvas
     [SerializeField] private RectTransform cardRoot;
     [SerializeField] private RectTransform cardButton;
     [SerializeField] private CanvasGroup cardRootGroup;
+    [SerializeField] private Graphic selectionInputBlocker;
     [SerializeField] private Button confirmButton;
     [SerializeField] private CanvasGroup confirmButtonGroup;
     [SerializeField] private Button cardButtonClickArea;
@@ -243,6 +244,11 @@ public class BlessingSelectCanvas : BaseCanvas
             }
         }
 
+        if (selectionInputBlocker == null && cardRoot != null)
+        {
+            selectionInputBlocker = cardRoot.GetComponent<Graphic>();
+        }
+
         if (confirmButtonGroup == null && confirmButton != null)
         {
             confirmButtonGroup = confirmButton.GetComponent<CanvasGroup>();
@@ -297,7 +303,16 @@ public class BlessingSelectCanvas : BaseCanvas
         }
 
         SetConfirmButtonVisible(visible);
+        SetSelectionInputBlocked(visible);
         SetCardRootVisible(visible);
+    }
+
+    private void SetSelectionInputBlocked(bool blocked)
+    {
+        if (selectionInputBlocker != null)
+        {
+            selectionInputBlocker.raycastTarget = blocked;
+        }
     }
 
     private void SetCardRootVisible(bool visible)

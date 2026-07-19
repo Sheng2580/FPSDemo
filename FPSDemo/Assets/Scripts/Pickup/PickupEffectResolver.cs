@@ -19,6 +19,18 @@ namespace Pickup
 
         private string _activeBerserkPostProcessKey;
         private Timer _berserkTimer;
+        private float _berserkEndTime = -1f;
+        private bool _berserkActive;
+
+        public bool IsBerserkActive => _berserkActive && GetBerserkRemainingTime() > 0f;
+
+        private void Update()
+        {
+            if (_berserkActive && GetBerserkRemainingTime() <= 0f)
+            {
+                EndBerserk(true);
+            }
+        }
 
         private void OnEnable()
         {
@@ -28,7 +40,7 @@ namespace Pickup
         private void OnDisable()
         {
             EventCenter.Instance.RemoveEventListener<PickupCollectedEventData>(GameEvent.PickupCollected, OnPickupCollected);
-            ClearBerserkTimer(true);
+            EndBerserk(true);
         }
 
         private void OnPickupCollected(PickupCollectedEventData eventData)
@@ -106,16 +118,36 @@ namespace Pickup
 
         private float ApplyBerserk(PlayerController player, PickupItemConfig config)
         {
+            return AddBerserkDuration(player, config.berserkDuration, config.postProcessKey);
+        }
+
+        public float AddBerserkDuration(PlayerController player, float baseDuration, string postProcessKey)
+        {
             PlayerRuntimeData runtimeData = ResolveRuntimeData(player);
             float multiplier = runtimeData != null ? Mathf.Max(0f, runtimeData.berserkDurationMultiplier) : 1f;
-            float addedDuration = Mathf.Max(0f, config.berserkDuration * multiplier);
-            if (addedDuration <= 0f)
+            float addedDuration = Mathf.Max(0f, baseDuration * multiplier);
+            if (addedDuration <= 0f || float.IsNaN(addedDuration) || float.IsInfinity(addedDuration))
             {
                 return 0f;
             }
 
             float remainingTime = GetBerserkRemainingTime() + addedDuration;
-            _activeBerserkPostProcessKey = config.postProcessKey;
+            float nextEndTime = Time.unscaledTime + remainingTime;
+            if (float.IsNaN(remainingTime)
+                || float.IsInfinity(remainingTime)
+                || float.IsNaN(nextEndTime)
+                || float.IsInfinity(nextEndTime))
+            {
+                return 0f;
+            }
+
+            if (!string.IsNullOrEmpty(postProcessKey))
+            {
+                _activeBerserkPostProcessKey = postProcessKey;
+            }
+
+            _berserkActive = true;
+            _berserkEndTime = nextEndTime;
             RestartBerserkTimer(remainingTime);
             EventCenter.Instance.EventTrigger(
                 GameEvent.PlayerBerserkChanged,
@@ -125,7 +157,7 @@ namespace Pickup
 
         private void RestartBerserkTimer(float duration)
         {
-            ClearBerserkTimer(false);
+            RemoveBerserkTimer();
 
             MultiTimerManager timerManager = MultiTimerManager.Instance;
             if (timerManager == null)
@@ -133,15 +165,14 @@ namespace Pickup
                 return;
             }
 
-            _berserkTimer = timerManager.CreateTimer(BerserkTimerId, false);
+            _berserkTimer = timerManager.CreateTimer(BerserkTimerId, true);
             _berserkTimer.SetTargetTime(Mathf.Max(0.1f, duration));
             _berserkTimer.OnTimeUp += OnBerserkTimeUp;
             _berserkTimer.Start();
         }
 
-        private void ClearBerserkTimer(bool sendEndEvent)
+        private void RemoveBerserkTimer()
         {
-            float remainingTime = GetBerserkRemainingTime();
             if (_berserkTimer != null)
             {
                 _berserkTimer.OnTimeUp -= OnBerserkTimeUp;
@@ -152,8 +183,15 @@ namespace Pickup
                     timerManager.RemoveTimer(BerserkTimerId);
                 }
             }
+        }
 
-            if (sendEndEvent && remainingTime > 0f)
+        private void EndBerserk(bool sendEndEvent)
+        {
+            bool wasActive = _berserkActive;
+            RemoveBerserkTimer();
+            _berserkActive = false;
+            _berserkEndTime = -1f;
+            if (sendEndEvent && wasActive)
             {
                 EventCenter.Instance.EventTrigger(
                     GameEvent.PlayerBerserkChanged,
@@ -163,20 +201,17 @@ namespace Pickup
 
         private float GetBerserkRemainingTime()
         {
-            if (_berserkTimer == null)
+            if (!_berserkActive)
             {
                 return 0f;
             }
 
-            return Mathf.Max(0f, _berserkTimer.TargetTime - _berserkTimer.CurrentTime);
+            return Mathf.Max(0f, _berserkEndTime - Time.unscaledTime);
         }
 
         private void OnBerserkTimeUp()
         {
-            ClearBerserkTimer(false);
-            EventCenter.Instance.EventTrigger(
-                GameEvent.PlayerBerserkChanged,
-                new PlayerBerserkChangedEventData(false, 0f, 0f, _activeBerserkPostProcessKey));
+            EndBerserk(true);
         }
 
         private void TriggerTip(PickupItemConfig config, float displayValue)
